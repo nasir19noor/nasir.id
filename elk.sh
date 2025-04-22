@@ -1,9 +1,9 @@
 sudo apt update
 #install java
-apt install openjdk-21-jre-headless
+# apt install openjdk-21-jre-headless
 
 #install nginx
-apt install nginx
+# apt install nginx
 
 #install elasticsearch
 curl -fsSL https://artifacts.elastic.co/GPG-KEY-elasticsearch |sudo gpg --dearmor -o /usr/share/keyrings/elastic.gpg
