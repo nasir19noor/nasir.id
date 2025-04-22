@@ -51,7 +51,7 @@ server {
  }
 }
 EOT
-sudo ln -s /etc/nginx/sites-available/elk.nasir.id/etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/elk.nasir.id /etc/nginx/sites-enabled/elk.nasir.id
 sudo nginx -t
 sudo systemctl reload nginx
 
