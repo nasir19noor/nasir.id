@@ -1,0 +1,1 @@
+{"Modules":[{"Key":"","Source":"","Dir":"."},{"Key":"terrafrom_state_bucket","Source":"git::https://github.com/nasir19noor/terraform.git//aws/modules/s3","Dir":".terraform/modules/terrafrom_state_bucket/aws/modules/s3"}]}
