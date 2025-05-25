@@ -4,6 +4,7 @@ on:
   push:
     branches: [ '**' ] 
     paths:
+      - 'cloudflare/**.tf'  
       - 'cloudflare/**.tfvars'  
       - '.github/workflows/cloudflare-plan.yml'
 

@@ -6,6 +6,7 @@ on:
       - main 
     paths:
       - 'cloudflare/**.tfvars'  
+      - 'cloudflare/**.tf'
       - '.github/workflows/cloudflare-apply.yml'
 
 env:
