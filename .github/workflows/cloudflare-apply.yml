@@ -15,8 +15,8 @@ env:
   CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
 jobs:
-  terraform-plan:
-    name: Cloudflare Plan
+  terraform-apply:
+    name: Cloudflare Apply
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository

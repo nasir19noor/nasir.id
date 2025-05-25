@@ -3,6 +3,6 @@ resource "cloudflare_record" "nasir-id" {
   name    = local.root
   content = local.contabo_ip
   type    = "A"
-  ttl     = 3600
+  ttl     = 1
   proxied = true
 }
