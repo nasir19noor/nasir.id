@@ -2,10 +2,11 @@ name: 'Terraform Plan'
 
 on:
   push:
-    branches: [ '**' ] 
+    branches:
+      - main 
     paths:
       - 'cloudflare/**.tfvars'  
-      - '.github/workflows/cloudflare-plan.yml'
+      - '.github/workflows/cloudflare-apply.yml'
 
 env:
   TF_VERSION: '1.11.4'   
@@ -80,3 +81,9 @@ jobs:
           terraform plan -no-color
         continue-on-error: true
         
+      - name: Terraform Apply
+        id: apply
+        run: |
+          cd cloudflare
+          terraform apply -auto-approve
+        continue-on-error: false
