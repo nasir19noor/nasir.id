@@ -25,7 +25,9 @@ aws:
       encrypted: true
 cloudflare:
   zone_id: "nasir.id"
-  nasir_id: "@"
+  root: "@"
+contabo:
+  ip: "161.97.86.160"  
       
  
 
