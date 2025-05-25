@@ -68,11 +68,15 @@ jobs:
           terraform init
 
       - name: Terraform Validate
-        run: terraform validate
+        run: |
+          cd cloudflare
+          terraform validate
 
       - name: Terraform Plan
         id: plan
-        run: terraform plan -no-color
+        run: |
+          cd cloudflare
+          terraform plan -no-color
         continue-on-error: true
         
       - name: Terraform Plan Status
