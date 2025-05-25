@@ -4,4 +4,5 @@ resource "cloudflare_record" "nasir-id" {
   content = local.contabo_ip
   type    = "A"
   ttl     = 3600
+  proxied = true
 }
