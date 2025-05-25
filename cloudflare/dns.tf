@@ -1,3 +1,4 @@
+# MX Record for Google Workspace
 resource "cloudflare_record" "mx-1" {
   zone_id = data.cloudflare_zones.nasir_id.zones[0].id
   name    = local.root
@@ -41,4 +42,14 @@ resource "cloudflare_record" "mx-5" {
   type    = "MX"
   priority = 10
   ttl     = 3600
+}
+
+# A record nasir.id
+resource "cloudflare_record" "nasir-id" {
+  zone_id = data.cloudflare_zones.nasir_id.zones[0].id
+  name    = local.root
+  content = local.contabo_ip
+  type    = "A"
+  ttl     = 1
+  proxied = true
 }
