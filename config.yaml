@@ -1,7 +1,7 @@
 aws:
   global:
     region: "ap-southeast-1"
-    state_bucket: "nasir-terraform-state"
+    state_bucket: "terraform.nasir.id"
 
   network:
     vpc_name: "nasir-eks-vpc"
@@ -23,11 +23,9 @@ aws:
       volume_type: "gp3"
       delete_on_termination: true
       encrypted: true
-
-eks:
-  cluster_name: "nasir-cluster" 
-  cluster_version: "1.32"     
-
+cloudflare:
+  zone_id: "nasir.id"
+  nasir_id: "@"
       
  
 
