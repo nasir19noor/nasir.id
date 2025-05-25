@@ -1,3 +1,5 @@
-data "cloudflare_zone" "nasir" {
-  name = "nasir.id"
+data "cloudflare_zones" "nasir_id" {
+  filter {
+    name = "nasir.id"
+  }
 }
