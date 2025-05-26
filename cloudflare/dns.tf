@@ -56,7 +56,7 @@ resource "cloudflare_record" "nasir-id" {
 
 resource "cloudflare_record" "nasir-id-1" {
   zone_id = data.cloudflare_zones.nasir_id.zones[0].id
-  name    = "3"
+  name    = "4"
   content = local.contabo_ip
   type    = "A"
   ttl     = 300
