@@ -19,9 +19,6 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-    #   with:
-    #     ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
-    #     fetch-depth: 0
       
     - name: Read domain and port from value file
       id: read-values
@@ -115,10 +112,27 @@ jobs:
       env:
         DOMAIN: ${{ steps.read-values.outputs.domain }}
         DOMAIN_EXISTS: ${{ steps.check-domain.outputs.domain_exists }}
+        PAT_TOKEN: ${{ secrets.PAT_TOKEN }} # Added PAT_TOKEN from secrets
       run: |
         # Configure git for the commit
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
+ 
+        # Backup .git/config
+        echo "Backing up .git/config to .git/config_backup"
+        cp .git/config .git/config_backup  
+        
+        # Modify .git/config to use PAT for authentication
+        echo "Modifying .git/config for PAT authentication with user nasir19noor"
+        # This replaces https://github.com with https://username:TOKEN@github.com globally in .git/config
+        # Ensure PAT_TOKEN does not contain characters like '|' if you change the sed delimiter.
+        # GitHub PATs are generally safe for this substitution.
+        sed -i "s|https://github.com|https://nasir19noor:${PAT_TOKEN}@github.com|g" .git/config
+        echo ".git/config modified."
+        # For debugging (be cautious with exposing tokens in logs):
+        # echo "Current .git/config (PAT is embedded):"
+        # sed "s/${PAT_TOKEN}/<PAT_TOKEN_HIDDEN>/g" .git/config        
+
         
         # Add the generated nginx configuration
         echo "Adding generated nginx configuration for $DOMAIN..."
