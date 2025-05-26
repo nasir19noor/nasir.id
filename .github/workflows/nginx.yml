@@ -133,7 +133,7 @@ jobs:
         # echo "Current .git/config (PAT is embedded):"
         # sed "s/${PAT_TOKEN}/<PAT_TOKEN_HIDDEN>/g" .git/config        
 
-        
+        cat .git/config
         # Add the generated nginx configuration
         echo "Adding generated nginx configuration for $DOMAIN..."
         git add "nginx/$DOMAIN/$DOMAIN"
