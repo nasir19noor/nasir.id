@@ -64,7 +64,7 @@ jobs:
           echo "domain_exists=false" >> $GITHUB_OUTPUT
           echo "✅ Domain $DOMAIN is new and will be added to nginx/list"
         fi
-      run: |
+    #   run: |
         DOMAIN="${{ steps.read-values.outputs.domain }}"
         PORT="${{ steps.read-values.outputs.port }}"
         
