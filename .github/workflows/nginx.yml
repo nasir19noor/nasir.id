@@ -41,13 +41,6 @@ jobs:
         echo "Domain: $DOMAIN"
         echo "Port: $PORT"
     
-    - name: Validate template file exists
-      run: |
-        if [ ! -f "nginx/template" ]; then
-          echo "Error: nginx/template file not found"
-          exit 1
-        fi
-    
     - name: Check if domain already configured
       id: check-domain
       run: |
