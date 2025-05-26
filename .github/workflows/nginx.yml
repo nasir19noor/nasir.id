@@ -1,0 +1,154 @@
+name: Deploy Nginx Configuration
+
+on:
+  push:
+    paths:
+      - 'nginx/value'
+    branches:
+      - main
+  pull_request:
+    paths:
+      - 'nginx/value'
+    branches:
+      - main
+
+jobs:
+  deploy-nginx:
+    runs-on: [self-hosted, contabo]
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Read domain and port from value file
+      id: read-values
+      run: |
+        if [ ! -f "nginx/value" ]; then
+          echo "Error: nginx/value file not found"
+          exit 1
+        fi
+        
+        DOMAIN=$(sed -n '1p' nginx/value | tr -d '\r\n ')
+        PORT=$(sed -n '2p' nginx/value | tr -d '\r\n ')
+        
+        if [ -z "$DOMAIN" ] || [ -z "$PORT" ]; then
+          echo "Error: Domain or port is empty"
+          exit 1
+        fi
+        
+        echo "domain=$DOMAIN" >> $GITHUB_OUTPUT
+        echo "port=$PORT" >> $GITHUB_OUTPUT
+        echo "Domain: $DOMAIN"
+        echo "Port: $PORT"
+    
+    - name: Validate template file exists
+      run: |
+        if [ ! -f "nginx/template" ]; then
+          echo "Error: nginx/template file not found"
+          exit 1
+        fi
+    
+    - name: Check if domain already configured
+      id: check-domain
+      run: |
+        DOMAIN="${{ steps.read-values.outputs.domain }}"
+        
+        # Create nginx/list file if it doesn't exist
+        touch nginx/list
+        
+        # Check if domain already exists in the list
+        if grep -q "^$DOMAIN$" nginx/list; then
+          echo "domain_exists=true" >> $GITHUB_OUTPUT
+          echo "⚠️ Domain $DOMAIN is already configured in nginx/list"
+        else
+          echo "domain_exists=false" >> $GITHUB_OUTPUT
+          echo "✅ Domain $DOMAIN is new and will be added to nginx/list"
+        fi
+      run: |
+        DOMAIN="${{ steps.read-values.outputs.domain }}"
+        PORT="${{ steps.read-values.outputs.port }}"
+        
+        # Create nginx directory for domain
+        mkdir -p "nginx/$DOMAIN"
+        
+        # Generate configuration from template
+        sed -e "s/\$domain/$DOMAIN/g" -e "s/\$port/$PORT/g" nginx/template > "nginx/$DOMAIN/$DOMAIN"
+        
+        echo "Generated configuration file:"
+        cat "nginx/$DOMAIN/$DOMAIN"
+        
+    - name: Deploy to nginx
+      if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+      env:
+        DOMAIN: ${{ steps.read-values.outputs.domain }}
+        PORT: ${{ steps.read-values.outputs.port }}
+      run: |
+        echo "Deploying nginx configuration for domain: $DOMAIN on port: $PORT"
+        
+        # Step 1: Obtain SSL certificate with certbot
+        echo "Step 1: Obtaining SSL certificate..."
+        sudo certbot certonly --standalone -d $DOMAIN --non-interactive --agree-tos --email admin@$DOMAIN || {
+          echo "Warning: SSL certificate generation failed. Continuing with deployment..."
+        }
+        
+        # Step 2: Copy generated configuration to sites-available
+        echo "Step 3: Installing nginx configuration..."
+        sudo cp "nginx/$DOMAIN/$DOMAIN" "/etc/nginx/sites-available/$DOMAIN"
+        
+        # Step 3: Enable the site by creating symlink
+        echo "Step 4: Enabling site..."
+        cd /etc/nginx/sites-enabled
+        sudo ln -sf "/etc/nginx/sites-available/$DOMAIN" "/etc/nginx/sites-enabled/$DOMAIN"
+        
+        # Step 4: Test nginx configuration
+        echo "Step 5: Testing nginx configuration..."
+        sudo nginx -t
+        
+        if [ $? -eq 0 ]; then
+          # Step 6: Restart nginx service
+          echo "Step 6: Restarting nginx..."
+          sudo service nginx restart
+          echo "✅ Nginx configuration deployed successfully!"
+        else
+          echo "❌ Nginx configuration test failed. Not restarting nginx."
+          exit 1
+        fi
+    
+    - name: Update domain list and commit changes
+      if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && steps.check-domain.outputs.domain_exists == 'false'
+      env:
+        DOMAIN: ${{ steps.read-values.outputs.domain }}
+      run: |
+        echo "Adding $DOMAIN to nginx/list..."
+        echo "$DOMAIN" >> nginx/list
+        
+        # Configure git for the commit
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+        # Add and commit the changes
+        git add nginx/list
+        git commit -m "Add $DOMAIN to nginx domain list" || {
+          echo "No changes to commit or commit failed"
+          exit 0
+        }
+        
+        # Push the changes back to the repository
+        git push || {
+          echo "Failed to push changes"
+          exit 1
+        }
+        
+        echo "✅ Domain $DOMAIN added to nginx/list successfully!"
+    
+    - name: Show domain already configured notification
+      if: steps.check-domain.outputs.domain_exists == 'true'
+      run: |
+        echo "::notice title=Domain Already Configured::Domain ${{ steps.read-values.outputs.domain }} is already configured in nginx/list"
+    
+    - name: Upload generated configuration as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: nginx-config-${{ steps.read-values.outputs.domain }}
+        path: nginx/${{ steps.read-values.outputs.domain }}/
+        retention-days: 30
