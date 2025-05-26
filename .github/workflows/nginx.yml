@@ -20,7 +20,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
+        ssh-key: ${{ secrets.PAT_TOKEN }}
         fetch-depth: 0
       
     - name: Read domain and port from value file
@@ -117,8 +117,8 @@ jobs:
         DOMAIN_EXISTS: ${{ steps.check-domain.outputs.domain_exists }}
       run: |
         # Configure git for the commit
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
+        git config --local user.email "nasir@nasir.id"
+        git config --local user.name "nasir19noor"
         
         # Add the generated nginx configuration
         echo "Adding generated nginx configuration for $DOMAIN..."
