@@ -74,55 +74,73 @@ jobs:
       env:
         DOMAIN: ${{ steps.read-values.outputs.domain }}
         PORT: ${{ steps.read-values.outputs.port }}
+        SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
       run: |
         echo "Deploying nginx configuration for domain: $DOMAIN on port: $PORT"
         
         # Step 1: Obtain SSL certificate with certbot
         echo "Step 1: Obtaining SSL certificate..."
-        sudo certbot certonly --standalone -d $DOMAIN --non-interactive --agree-tos --email admin@$DOMAIN || {
+        echo "$SSH_PASSWORD" | sudo -S certbot certonly --standalone -d $DOMAIN --non-interactive --agree-tos --email admin@$DOMAIN || {
           echo "Warning: SSL certificate generation failed. Continuing with deployment..."
         }
         
         # Step 2: Copy generated configuration to sites-available
         echo "Step 3: Installing nginx configuration..."
-        sudo cp "nginx/$DOMAIN/$DOMAIN" "/etc/nginx/sites-available/$DOMAIN"
+        echo "$SSH_PASSWORD" | sudo -S cp "nginx/$DOMAIN/$DOMAIN" "/etc/nginx/sites-available/$DOMAIN"
         
         # Step 3: Enable the site by creating symlink
         echo "Step 4: Enabling site..."
         cd /etc/nginx/sites-enabled
-        sudo ln -sf "/etc/nginx/sites-available/$DOMAIN" "/etc/nginx/sites-enabled/$DOMAIN"
+        echo "$SSH_PASSWORD" | sudo -S ln -sf "/etc/nginx/sites-available/$DOMAIN" "/etc/nginx/sites-enabled/$DOMAIN"
         
         # Step 4: Test nginx configuration
         echo "Step 5: Testing nginx configuration..."
-        sudo nginx -t
+        echo "$SSH_PASSWORD" | sudo -S nginx -t
         
         if [ $? -eq 0 ]; then
           # Step 6: Restart nginx service
           echo "Step 6: Restarting nginx..."
-          sudo service nginx restart
+          echo "$SSH_PASSWORD" | sudo -S service nginx restart
           echo "✅ Nginx configuration deployed successfully!"
         else
           echo "❌ Nginx configuration test failed. Not restarting nginx."
           exit 1
         fi
     
-    - name: Update domain list and commit changes
-      if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && steps.check-domain.outputs.domain_exists == 'false'
+    - name: Update domain list and commit all changes
+      if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
       env:
         DOMAIN: ${{ steps.read-values.outputs.domain }}
+        DOMAIN_EXISTS: ${{ steps.check-domain.outputs.domain_exists }}
       run: |
-        echo "Adding $DOMAIN to nginx/list..."
-        echo "$DOMAIN" >> nginx/list
-        
         # Configure git for the commit
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         
-        # Add and commit the changes
-        git add nginx/list
-        git commit -m "Add $DOMAIN to nginx domain list" || {
-          echo "No changes to commit or commit failed"
+        # Add the generated nginx configuration
+        echo "Adding generated nginx configuration for $DOMAIN..."
+        git add "nginx/$DOMAIN/$DOMAIN"
+        
+        # Add domain to list if it's new
+        if [ "$DOMAIN_EXISTS" = "false" ]; then
+          echo "Adding $DOMAIN to nginx/list..."
+          echo "$DOMAIN" >> nginx/list
+          git add nginx/list
+          COMMIT_MSG="Deploy nginx config for $DOMAIN and add to domain list"
+        else
+          COMMIT_MSG="Update nginx config for $DOMAIN"
+        fi
+        
+        # Check if there are changes to commit
+        if git diff --staged --quiet; then
+          echo "No changes to commit"
           exit 0
+        fi
+        
+        # Commit the changes
+        git commit -m "$COMMIT_MSG" || {
+          echo "Commit failed"
+          exit 1
         }
         
         # Push the changes back to the repository
@@ -131,7 +149,11 @@ jobs:
           exit 1
         }
         
-        echo "✅ Domain $DOMAIN added to nginx/list successfully!"
+        if [ "$DOMAIN_EXISTS" = "false" ]; then
+          echo "✅ Domain $DOMAIN added to nginx/list and configuration committed successfully!"
+        else
+          echo "✅ Nginx configuration for $DOMAIN updated and committed successfully!"
+        fi
     
     - name: Show domain already configured notification
       if: steps.check-domain.outputs.domain_exists == 'true'
