@@ -53,9 +53,6 @@ jobs:
       run: |
         DOMAIN="${{ steps.read-values.outputs.domain }}"
         
-        # Create nginx/list file if it doesn't exist
-        touch nginx/list
-        
         # Check if domain already exists in the list
         if grep -q "^$DOMAIN$" nginx/list; then
           echo "domain_exists=true" >> $GITHUB_OUTPUT
@@ -64,7 +61,9 @@ jobs:
           echo "domain_exists=false" >> $GITHUB_OUTPUT
           echo "✅ Domain $DOMAIN is new and will be added to nginx/list"
         fi
-    #   run: |
+
+    - name: Generate nginx configuration
+      run: |
         DOMAIN="${{ steps.read-values.outputs.domain }}"
         PORT="${{ steps.read-values.outputs.port }}"
         
