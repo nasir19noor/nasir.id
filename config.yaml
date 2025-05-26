@@ -27,7 +27,7 @@ cloudflare:
   zone_id: "nasir.id"
   root: "@"
 contabo:
-  ip: "161.97.86.160"  
+  ip: "161.97.100.1"  
       
  
 
