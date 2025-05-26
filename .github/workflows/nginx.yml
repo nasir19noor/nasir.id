@@ -77,7 +77,7 @@ jobs:
         SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
       run: |
         echo "Deploying nginx configuration for domain: $DOMAIN on port: $PORT"
-        
+        echo "$SSH_PASSWORD" | sudo -S service nginx stop
         # Step 1: Obtain SSL certificate with certbot
         echo "Step 1: Obtaining SSL certificate..."
         echo "$SSH_PASSWORD" | sudo -S certbot certonly --standalone -d $DOMAIN --non-interactive --agree-tos --email admin@$DOMAIN --force-renewal || {
