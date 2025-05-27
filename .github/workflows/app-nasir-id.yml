@@ -15,19 +15,19 @@ on:
       - main
 
 jobs:
-  deploy-nginx:
+  deploy-nasir-id:
     runs-on: [self-hosted, contabo]
     
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Deploy to nginx
+    - name: Deploy to nasir.id
       if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
       env:
         SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
       run: |
         echo "Remove existing code"
         echo "$SSH_PASSWORD" | sudo -S rm -rf "/var/www/html/*"
-        echo "$SSH_PASSWORD" | sudo -S cp -r "apps/nasir-id/index.html"  "/var/www/html/"
+        echo "$SSH_PASSWORD" | sudo -S cp -r "apps/nasir-id/*"  "/var/www/html/"
   
