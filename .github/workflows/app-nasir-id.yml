@@ -6,11 +6,11 @@ on:
       - 'apps/nasir-id/**'
       - '.github/workflows/app-nasir-id.yml'
     branches:
-      - main
-      - '.github/workflows/app-nasir-id.yml'      
+      - main    
   pull_request:
     paths:
       - 'apps/nasir-id/**'
+      - '.github/workflows/app-nasir-id.yml'      
     branches:
       - main
 
