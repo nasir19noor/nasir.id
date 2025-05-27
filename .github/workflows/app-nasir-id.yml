@@ -28,6 +28,6 @@ jobs:
         SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
       run: |
         echo "Remove existing code"
-        echo "$SSH_PASSWORD" | sudo -S rm -rf "/var/www/html/*""
-        echo "$SSH_PASSWORD" | sudo -S cp -r "apps/nasir-id/*"  "/var/www/html/"
+        echo "$SSH_PASSWORD" | sudo -S rm -rf "/var/www/html/*"
+        echo "$SSH_PASSWORD" | sudo -S cp -r "apps/nasir-id/inde.html"  "/var/www/html/"
   
