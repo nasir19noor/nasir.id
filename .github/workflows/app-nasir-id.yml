@@ -29,5 +29,6 @@ jobs:
       run: |
         echo "Remove existing code"
         echo "$SSH_PASSWORD" | sudo -S rm -rf "/var/www/html/*"
-        echo "$SSH_PASSWORD" | sudo -S cp -r "apps/nasir-id/index.html"  "/var/www/html/"
-        echo "$SSH_PASSWORD" | sudo -S cp -r "apps/nasir-id/about.html"  "/var/www/html/"  
+        # echo "$SSH_PASSWORD" | sudo -S cp -r "apps/nasir-id/index.html"  "/var/www/html/"
+        # echo "$SSH_PASSWORD" | sudo -S cp -r "apps/nasir-id/about.html"  "/var/www/html/"  
+        echo "$SSH_PASSWORD" | sudo -S cp -r "apps/nasir-id/**"  "/var/www/html/"  
