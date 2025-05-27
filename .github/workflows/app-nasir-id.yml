@@ -3,9 +3,11 @@ name: Deploy nasir.id
 on:
   push:
     paths:
-      - 'app/nasir-id/*.*'
+      - 'apps/nasir-id/*.*'
+      - '.github/workflows/app-nasir-id.yml'
     branches:
       - main
+      - '.github/workflows/app-nasir-id.yml'      
   pull_request:
     paths:
       - 'apps/nasir-id/*.*'
@@ -27,5 +29,5 @@ jobs:
       run: |
         echo "Remove existing code"
         echo "$SSH_PASSWORD" | sudo -S rm -r /var/www/html/*.*
-        echo "$SSH_PASSWORD" | sudo cp "app/nasir-id" "/var/www/html/"
+        echo "$SSH_PASSWORD" | sudo cp "apps/nasir-id" "/var/www/html/"
   
