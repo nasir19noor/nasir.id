@@ -101,7 +101,7 @@ jobs:
         working-directory: ${{ matrix.directory }}
         run: |
           pwd
-          cp ../../backend.conf .
+          cp ../../../backend.conf .
           cat backend.conf
           terraform init -backend-config=backend.conf
 
