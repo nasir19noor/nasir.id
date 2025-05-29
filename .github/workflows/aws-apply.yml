@@ -119,5 +119,5 @@ jobs:
       - name: Terraform Apply
         id: apply
         working-directory: ${{ matrix.directory }}
-        run: terraform plan 
-        continue-on-error: true        
+        run: terraform apply -auto-approve
+        continue-on-error: false       
