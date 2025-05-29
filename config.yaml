@@ -4,13 +4,13 @@ aws:
     state_bucket: "terraform.nasir.id"
 
   network:
-    vpc_name: "nasir-eks-vpc"
+    vpc_name: "nasir-vpc"
     description: "eks-vpc"
     cidr_block: "10.0.0.0/16"
     instance_tenancy: "default"
     enable_dns_support: true
     enable_dns_hostnames: true
-    subnet_count: 2
+    subnet_count: 3
     subnet_mask: "24"
 
   ec2:

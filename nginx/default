@@ -10,6 +10,11 @@ server {
 server {
   listen 443 ssl;
   server_name nasir.id www.nasir.id;
+  root /var/www/html;
+  index index.php index.html index.htm;
+  location / {
+      try_files $uri $uri/ /index.php?$args;
+  }
 
   access_log /var/log/nginx/nasir.id.access.log;
   error_log /var/log/nginx/nasir.id.error.log;
@@ -17,11 +22,11 @@ server {
   ssl_certificate /etc/letsencrypt/live/nasir.id/fullchain.pem;
   ssl_certificate_key /etc/letsencrypt/live/nasir.id/privkey.pem;
 
-  location / {
-    proxy_pass http://161.97.100.1:80;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
+  location ~ \.php$ {
+      fastcgi_pass unix:/var/run/php/php8.3-fpm.sock;  
+      fastcgi_index index.php;
+      include fastcgi_params;
+      fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
   }
 }
+
