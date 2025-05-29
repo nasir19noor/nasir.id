@@ -54,15 +54,6 @@ resource "cloudflare_record" "nasir-id" {
   proxied = true
 }
 
-resource "cloudflare_record" "nasir-id-1" {
-  zone_id = data.cloudflare_zones.nasir_id.zones[0].id
-  name    = "7"
-  content = local.contabo_ip
-  type    = "A"
-  ttl     = 300
-  proxied = false
-}
-
 resource "cloudflare_record" "hello-nasir-id" {
   zone_id = data.cloudflare_zones.nasir_id.zones[0].id
   name    = "hello"
