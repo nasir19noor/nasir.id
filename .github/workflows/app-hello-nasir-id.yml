@@ -1,16 +1,16 @@
-name: Deploy nasir.id
+name: Deploy hello.nasir.id
 
 on:
   push:
     paths:
-      - 'apps/nasir-id/**'
-      - '.github/workflows/app-nasir-id.yml'
+      - 'apps/hello-nasir-id/**'
+      - '.github/workflows/app-hello-nasir-id.yml'
     branches:
       - main    
   pull_request:
     paths:
-      - 'apps/nasir-id/**'
-      - '.github/workflows/app-nasir-id.yml'      
+      - 'apps/hello-nasir-id/**'
+      - '.github/workflows/app-hello-nasir-id.yml'      
     branches:
       - main
 
@@ -22,13 +22,13 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Deploy to nasir.id
+    - name: Deploy to hello.nasir.id
     #   if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
       env:
         SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
       run: |
         echo "Remove existing code"
-        echo "$SSH_PASSWORD" | sudo -S rm -rf "/var/www/html/*"
+        echo "$SSH_PASSWORD" | sudo -S rm -rf "/var/www/html/hello/*"
         # echo "$SSH_PASSWORD" | sudo -S cp -r "apps/nasir-id/index.html"  "/var/www/html/"
         # echo "$SSH_PASSWORD" | sudo -S cp -r "apps/nasir-id/about.html"  "/var/www/html/"  
-        echo "$SSH_PASSWORD" | sudo -S cp -r apps/nasir-id/**  "/var/www/html/"  
+        echo "$SSH_PASSWORD" | sudo -S cp -r apps/hello-nasir-id/**  "/var/www/html/hello/"  

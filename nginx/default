@@ -1,32 +1,71 @@
 server {
-  listen 80;
-  listen [::]:80;
-
-  server_name nasir.id www.nasir.id;
-
-  return 301 https://$host$request_uri;
+    listen 80;
+    listen [::]:80;
+    server_name nasir.id www.nasir.id;
+    return 301 https://$host$request_uri;
 }
 
 server {
-  listen 443 ssl;
-  server_name nasir.id www.nasir.id;
-  root /var/www/html;
-  index index.php index.html index.htm;
-  location / {
-      try_files $uri $uri/ /index.php?$args;
-  }
+    listen 443 ssl http2;
+    server_name nasir.id www.nasir.id;
 
-  access_log /var/log/nginx/nasir.id.access.log;
-  error_log /var/log/nginx/nasir.id.error.log;
+    # Fixed typo: worpress -> wordpress
+    #root /var/www/html/;
+    root /var/www/html/wordpress/;
+    index index.php index.html index.htm;
 
-  ssl_certificate /etc/letsencrypt/live/nasir.id/fullchain.pem;
-  ssl_certificate_key /etc/letsencrypt/live/nasir.id/privkey.pem;
+    # SSL Configuration
+    ssl_certificate /etc/letsencrypt/live/nasir.id/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/nasir.id/privkey.pem;
 
-  location ~ \.php$ {
-      fastcgi_pass unix:/var/run/php/php8.3-fpm.sock;  
-      fastcgi_index index.php;
-      include fastcgi_params;
-      fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-  }
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header X-Content-Type-Options "nosniff" always;
+
+    # Logs
+    access_log /var/log/nginx/nasir.id.access.log;
+    error_log /var/log/nginx/nasir.id.error.log;
+
+    # WordPress specific configuration
+    location / {
+        try_files $uri $uri/ /index.php?$args;
+    }
+
+    # PHP processing with improved configuration
+    location ~ \.php$ {
+        try_files $uri =404;
+        fastcgi_split_path_info ^(.+\.php)(/.+)$;
+        fastcgi_pass unix:/var/run/php/php8.3-fpm.sock;
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        include fastcgi_params;
+
+        # Timeout settings
+        fastcgi_connect_timeout 60s;
+        fastcgi_send_timeout 60s;
+        fastcgi_read_timeout 60s;
+        fastcgi_buffer_size 128k;
+        fastcgi_buffers 4 256k;
+        fastcgi_busy_buffers_size 256k;
+        fastcgi_temp_file_write_size 256k;
+    }
+
+    # Security: Block access to sensitive files
+    location ~* /(?:uploads|files)/.*\.php$ {
+        deny all;
+    }
+
+    location ~ /\. {
+        deny all;
+        access_log off;
+        log_not_found off;
+    }
+
+    # Optimize static file serving
+    location ~* \.(css|gif|ico|jpeg|jpg|js|png)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
 }
 

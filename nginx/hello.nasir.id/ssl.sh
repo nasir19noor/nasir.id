@@ -1,0 +1,1 @@
+sudo certbot certonly --standalone -d hello.nasir.id
