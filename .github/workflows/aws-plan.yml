@@ -2,7 +2,10 @@ name: 'AWS Plan'
 
 on:
   push:
-    branches: [ '**' ] 
+    # branches: [ '**' ] 
+    branches: 
+      - '**'
+      - '!main'
     paths:
       - 'aws/services/**.tf' 
       - 'aws/services/**.tfvars'  
