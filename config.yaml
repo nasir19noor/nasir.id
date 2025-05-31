@@ -12,6 +12,8 @@ aws:
     enable_dns_hostnames: true
     subnet_count: 3
     subnet_mask: "24"
+  s3:
+    bucket_name_wordpress: "worpress.nasir.id"
 
   ec2:
     kafka: 
