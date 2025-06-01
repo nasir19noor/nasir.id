@@ -60,7 +60,7 @@ resource "cloudflare_record" "hello-nasir-id" {
   content = local.contabo_ip
   type    = "A"
   ttl     = 300
-  proxied = false
+  proxied = true
 }
 
 resource "cloudflare_record" "n8n" {
@@ -69,7 +69,7 @@ resource "cloudflare_record" "n8n" {
   content = local.contabo_ip
   type    = "A"
   ttl     = 300
-  proxied = false
+  proxied = true
 }
 
 resource "cloudflare_record" "upload" {
@@ -78,5 +78,5 @@ resource "cloudflare_record" "upload" {
   content = local.contabo_ip
   type    = "A"
   ttl     = 300
-  proxied = false
+  proxied = true
 }

@@ -1,3 +1,4 @@
-nasir.id
-hello.nasir.id
-n8n.nasir.id
+nasir.id,80
+hello.nasir.id,80
+n8n.nasir.id,5678
+upload.nasir.id,8000
