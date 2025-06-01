@@ -9,4 +9,8 @@ module "s3_wordpress" {
   restrict_public_buckets = false
 }
 
+module "s3_backup" {
+  source = "git::https://github.com/nasir19noor/terraform.git//aws/modules/s3"
+  bucket = local.bucket_name_backup
+}
 
