@@ -71,3 +71,12 @@ resource "cloudflare_record" "n8n" {
   ttl     = 300
   proxied = false
 }
+
+resource "cloudflare_record" "upload" {
+  zone_id = data.cloudflare_zones.nasir_id.zones[0].id
+  name    = "upload"
+  content = local.contabo_ip
+  type    = "A"
+  ttl     = 300
+  proxied = false
+}
