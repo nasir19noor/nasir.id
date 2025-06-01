@@ -14,7 +14,7 @@ aws:
     subnet_mask: "24"
   s3:
     bucket_name_wordpress: "wordpress.nasir.id"
-    bucket_name_wordpress: "backup.nasir.id"
+    bucket_name_backup: "backup.nasir.id"
 
   ec2:
     kafka: 
