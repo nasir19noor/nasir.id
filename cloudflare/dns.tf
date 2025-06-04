@@ -80,3 +80,12 @@ resource "cloudflare_record" "upload" {
   ttl     = 1
   proxied = true
 }
+
+resource "cloudflare_record" "vault" {
+  zone_id = data.cloudflare_zones.nasir_id.zones[0].id
+  name    = "upload"
+  content = local.contabo_ip
+  type    = "A"
+  ttl     = 1
+  proxied = true
+}
