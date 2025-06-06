@@ -1,5 +1,5 @@
 """
-ASGI config for upload project.
+ASGI config for s3project project.
 
 It exposes the ASGI callable as a module-level variable named ``application``.
 
@@ -11,6 +11,6 @@ import os
 
 from django.core.asgi import get_asgi_application
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'upload.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 's3project.settings')
 
 application = get_asgi_application()
