@@ -45,7 +45,7 @@ ROOT_URLCONF = 's3project.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -64,12 +64,12 @@ WSGI_APPLICATION = 's3project.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-    }
-}
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+#     }
+# }
 
 
 # Password validation
@@ -104,34 +104,64 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # --- Vault Configuration ---
 VAULT_ADDR = os.environ.get('VAULT_ADDR', 'https://vault.nasir.id').strip('\'"')
 VAULT_TOKEN = os.environ.get('VAULT_TOKEN')
-VAULT_SECRET_PATH = 'aws/nasir'
+VAULT_AWS_SECRET_PATH = 'aws/nasir'
+VAULT_DB_SECRET_PATH = 'postgresql/upload'
 VAULT_MOUNT_POINT = 'kv'
 
 aws_secrets = {}
+db_secrets = {}
+
 try:
-    if 'runserver' in sys.argv and not VAULT_TOKEN:
-        print("WARNING: VAULT_TOKEN environment variable not set. Skipping Vault connection.")
-    elif VAULT_TOKEN:
+    # If a vault token is provided, attempt to connect and fetch secrets.
+    # This is necessary for any command that needs secrets (runserver, migrate, etc.)
+    if VAULT_TOKEN:
         client = hvac.Client(url=VAULT_ADDR, token=VAULT_TOKEN)
         if client.is_authenticated():
-            response = client.secrets.kv.v2.read_secret_version(
-                path=VAULT_SECRET_PATH, mount_point=VAULT_MOUNT_POINT
+            # Fetch AWS secrets
+            aws_response = client.secrets.kv.v2.read_secret_version(
+                path=VAULT_AWS_SECRET_PATH, mount_point=VAULT_MOUNT_POINT
             )
-            aws_secrets = response['data']['data']
-            print("Successfully fetched secrets from Vault.")
+            aws_secrets = aws_response['data']['data']
+            print("Successfully fetched AWS secrets from Vault.")
+
+            # Fetch Database secrets
+            db_response = client.secrets.kv.v2.read_secret_version(
+                path=VAULT_DB_SECRET_PATH, mount_point=VAULT_MOUNT_POINT
+            )
+            db_secrets = db_response['data']['data']
+            print("Successfully fetched Database secrets from Vault.")
         else:
             print("Could not authenticate with Vault. Please check your VAULT_TOKEN.")
+    else:
+        # Warn the user if the token is missing, as it's required for most operations.
+        print("WARNING: VAULT_TOKEN environment variable not set. Database and S3 functionality will be disabled.")
+
 except Exception as e:
     print(f"Error connecting to or reading from Vault: {e}")
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': db_secrets.get('DB_NAME'),
+        'USER': db_secrets.get('DB_USER'),
+        'PASSWORD': db_secrets.get('DB_PASSWORD'),
+        'HOST': db_secrets.get('DB_HOST', 'localhost'),
+        'PORT': db_secrets.get('DB_PORT', '5432'),
+    }
+}    
 
 # --- AWS S3 Settings ---
 AWS_ACCESS_KEY_ID = aws_secrets.get('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = aws_secrets.get('AWS_SECRET_ACCESS_KEY')
-AWS_STORAGE_BUCKET_NAME = 'upload.nasir.id' # Reverting to the original bucket
+AWS_STORAGE_BUCKET_NAME = 'upload.nasir.id' # Your bucket name
 AWS_S3_REGION_NAME = 'ap-southeast-1'
 
-# For buckets with dots, you MUST use AWS_S3_CUSTOM_DOMAIN and set the addressing style.
-AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com'
+# Set the custom domain to your actual domain name.
+# This requires that you have configured DNS (and likely a CDN)
+# to point `upload.nasir.id` to your S3 bucket.
+AWS_S3_CUSTOM_DOMAIN = 's3.ap-southeast-1.amazonaws.com/upload.nasir.id'
+
+# The addressing style should still be virtual for buckets with dots.
 AWS_S3_ADDRESSING_STYLE = 'virtual'
 
 AWS_S3_FILE_OVERWRITE = False
@@ -148,7 +178,7 @@ STORAGES = {
     },
 }
 
-# The URL is constructed using the custom domain.
+# The URL is now constructed using the custom domain with the http protocol.
 MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/'
 # The root is the root of the bucket since upload_to='' in the model.
 MEDIA_ROOT = ''
@@ -156,3 +186,13 @@ MEDIA_ROOT = ''
 AWS_S3_OBJECT_PARAMETERS = {
     'CacheControl': 'max-age=86400', # Cache for 1 day
 }
+
+# --- Authentication Settings ---
+# URL to redirect to for login, e.g., when a user tries to access a protected page
+LOGIN_URL = 'login'
+
+# URL to redirect to after a successful login
+LOGIN_REDIRECT_URL = 'upload_file' 
+
+# URL to redirect to after a successful logout
+LOGOUT_REDIRECT_URL = 'login'
