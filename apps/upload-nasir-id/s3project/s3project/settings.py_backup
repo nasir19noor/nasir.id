@@ -127,12 +127,8 @@ except Exception as e:
 # --- AWS S3 Settings ---
 AWS_ACCESS_KEY_ID = aws_secrets.get('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = aws_secrets.get('AWS_SECRET_ACCESS_KEY')
-AWS_STORAGE_BUCKET_NAME = 'upload.nasir.id' # Reverting to the original bucket
+AWS_STORAGE_BUCKET_NAME = 'nasir-upload'
 AWS_S3_REGION_NAME = 'ap-southeast-1'
-
-# For buckets with dots, you MUST use AWS_S3_CUSTOM_DOMAIN and set the addressing style.
-AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com'
-AWS_S3_ADDRESSING_STYLE = 'virtual'
 
 AWS_S3_FILE_OVERWRITE = False
 AWS_DEFAULT_ACL = 'public-read'
@@ -148,9 +144,9 @@ STORAGES = {
     },
 }
 
-# The URL is constructed using the custom domain.
-MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/'
-# The root is the root of the bucket since upload_to='' in the model.
+# Define the base URL for media files
+MEDIA_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/'
+# Set the root for media files to the root of the bucket
 MEDIA_ROOT = ''
 
 AWS_S3_OBJECT_PARAMETERS = {

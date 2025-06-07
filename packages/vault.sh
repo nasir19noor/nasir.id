@@ -82,3 +82,72 @@ sudo systemctl daemon-reload
 sudo systemctl enable vault
 sudo systemctl start vault
 sudo systemctl status vault
+
+#configure ssl
+service nginx stop
+sudo certbot certonly --standalone -d vault.nasir.id 
+sudo systemctl start nginx
+
+sudo tee /etc/nginx/sites-available/vault.nasir.id << 'EOF'
+server {
+    listen 80;
+    server_name vault.nasir.id;
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name vault.nasir.id;
+
+    ssl_certificate /etc/letsencrypt/live/vault.nasir.id/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/vault.nasir.id/privkey.pem;
+    
+    # SSL Configuration
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-RSA-AES256-GCM-SHA512:DHE-RSA-AES256-GCM-SHA512:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 10m;
+    
+    # Security headers
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Frame-Options DENY;
+    add_header X-Content-Type-Options nosniff;
+    add_header X-XSS-Protection "1; mode=block";
+
+    location / {
+        proxy_pass http://127.0.0.1:8200;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Port $server_port;
+        
+        # WebSocket support for UI
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        
+        # Timeouts
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+}
+EOF
+
+sudo ln -s /etc/nginx/sites-available/vault.nasir.id /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+
+#initialize vault
+export VAULT_ADDR="https://vault.nasir.id"
+vault operator init
+
+#unseal Vault
+vault operator unseal <key1>
+vault operator unseal <key2>
+vault operator unseal <key3>
+
+#Login to Vault
+vault auth <root_token>

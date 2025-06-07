@@ -4,4 +4,5 @@ boto3==1.29.7
 django-storages==1.14.2
 python-decouple==3.8
 hvac
-storages
+boto3
+time
