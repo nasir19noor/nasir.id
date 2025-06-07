@@ -19,6 +19,6 @@ output "s3_upload_arn" {
   value = module.s3_upload.s3_bucket_arn
 }
 
-output "s3_upload_website_endpoint" {
-  value = module.s3_upload.website_endpoint
-}
+# output "s3_upload_website_endpoint" {
+#   value = module.s3_upload.website_endpoint
+# }
