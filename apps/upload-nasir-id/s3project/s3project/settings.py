@@ -14,7 +14,27 @@ SECRET_KEY = 'django-insecure-key-for-development'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*'] # Be more specific in production
+ALLOWED_HOSTS = ['upload.nasir.id'] 
+
+# This setting is the direct fix for your CSRF error.
+# It tells Django to trust POST requests coming from your domain over HTTPS.
+CSRF_TRUSTED_ORIGINS = ['https://upload.nasir.id']
+
+# This tells Django to trust the 'X-Forwarded-Proto' header that Nginx sets.
+# This header informs Django that the original request was made over HTTPS,
+# even though the connection between Nginx and Django is plain HTTP.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Ensures the session cookie is only sent over HTTPS.
+SESSION_COOKIE_SECURE = True
+
+# Ensures the CSRF cookie is only sent over HTTPS.
+CSRF_COOKIE_SECURE = True
+
+# --- Large File Upload Settings ---
+# Set the maximum size of an upload to 100 MB (in bytes).
+# Django's default is 2.5 MB.
+DATA_UPLOAD_MAX_MEMORY_SIZE = 1048576000 
 
 
 # Application definition
