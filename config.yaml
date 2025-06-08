@@ -20,6 +20,8 @@ aws:
     domain_name_assets: "assets.nasir.id" 
     create_route53_records: false
     validation_method: "DNS"
+  cloudfront:
+    domain_name_assets: "assets.nasir.id"   
 
   ec2:
     kafka: 
