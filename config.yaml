@@ -16,6 +16,8 @@ aws:
     bucket_name_wordpress: "wordpress.nasir.id"
     bucket_name_backup: "backup.nasir.id"
     bucket_name_upload: "upload.nasir.id"
+  acm:
+    domain_name_assets: "assets.nasir.id"  
 
   ec2:
     kafka: 
