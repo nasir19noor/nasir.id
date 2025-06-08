@@ -1,6 +1,10 @@
 module "cloudfront_assets" {
   source = "git::https://github.com/nasir19noor/terraform.git//aws/modules/cloudfront"
   
+  providers = {
+    aws = aws.us-east-1
+  }  
+
   distribution_name = "assets.nasir.id"
   domain_name       = local.domain_name_assets
   comment           = "CloudFront distribution for ${local.domain_name_assets}"
@@ -44,10 +48,6 @@ module "cloudfront_assets" {
   geo_restriction = {
     restriction_type = "none"
     locations        = []
-  }
-
-  providers = {
-    aws = aws.us_east_1
   }
   
 }
