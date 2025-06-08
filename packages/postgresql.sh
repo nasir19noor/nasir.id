@@ -35,3 +35,8 @@ GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO upload;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO upload;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO upload;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO upload;
+
+CREATE USER s3uploader_user WITH PASSWORD 'your-secure-password';
+GRANT ALL PRIVILEGES ON DATABASE s3uploader_db TO s3uploader_user;
+-- The following command is crucial to allow the user to create tables.
+GRANT ALL ON SCHEMA public TO upload;

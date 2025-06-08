@@ -89,3 +89,12 @@ resource "cloudflare_record" "vault" {
   ttl     = 1
   proxied = true
 }
+
+resource "cloudflare_record" "assets" {
+  zone_id = data.cloudflare_zones.nasir_id.zones[0].id
+  name    = "assets"
+  content = "s3.ap-southeast-1.amazonaws.com/upload.nasir.id"
+  type    = "CNAME"
+  ttl     = 1
+  proxied = true
+}

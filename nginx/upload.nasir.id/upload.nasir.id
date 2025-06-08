@@ -17,6 +17,9 @@ server {
   ssl_certificate /etc/letsencrypt/live/upload.nasir.id/fullchain.pem;
   ssl_certificate_key /etc/letsencrypt/live/upload.nasir.id/privkey.pem;
 
+  # Add this line to allow uploads up to 1000 MB
+  client_max_body_size 1000M;
+
   location / {
     proxy_pass http://161.97.100.1:8000;
     proxy_set_header Host $host;
