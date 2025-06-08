@@ -14,7 +14,7 @@ SECRET_KEY = 'django-insecure-key-for-development'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['upload.nasir.id'] 
+ALLOWED_HOSTS = ['upload.nasir.id', 'localhost', '127.0.0.1', '161.97.100.1'] 
 
 # This setting is the direct fix for your CSRF error.
 # It tells Django to trust POST requests coming from your domain over HTTPS.
