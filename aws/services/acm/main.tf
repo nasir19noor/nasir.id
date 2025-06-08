@@ -3,3 +3,4 @@ module "s3_wordpress" {
   source   = "git::https://github.com/nasir19noor/terraform.git//aws/modules/acm"
   bucket   = local.domain_name_assets
 }
+
