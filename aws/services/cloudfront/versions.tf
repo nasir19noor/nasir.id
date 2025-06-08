@@ -14,6 +14,6 @@ provider "aws" {
 }
 
 provider "aws" {
-  alias  = "us_east_1"
+  alias  = "acm_provider"
   region = "us-east-1"
 }
