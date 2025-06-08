@@ -1,6 +1,10 @@
 module "acm_assets" {
   source = "git::https://github.com/nasir19noor/terraform.git//aws/modules/acm"
 
+  providers = {
+    aws = aws.acm_provider
+  }
+
   domain_name = local.domain_name_assets
   subject_alternative_names = [
     "${local.domain_name_assets}"
