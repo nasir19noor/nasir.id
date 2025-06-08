@@ -98,3 +98,12 @@ resource "cloudflare_record" "assets" {
   ttl     = 1
   proxied = true
 }
+
+resource "cloudflare_record" "assets_acm" {
+  zone_id = data.cloudflare_zones.nasir_id.zones[0].id
+  name    = "_3c4a03e63b16108a5c8930220098fe53"
+  content = "_4c3847f4d8babde6128bee26c801501d.xlfgrmvvlj.acm-validations.aws."
+  type    = "CNAME"
+  ttl     = 300
+  proxied = false
+}
