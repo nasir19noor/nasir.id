@@ -31,7 +31,7 @@ module "s3_upload" {
 
 module "s3_website" {
   source = "git::https://github.com/nasir19noor/terraform.git//aws/modules/s3"
-  bucket = local.bucket_name_upload
+  bucket = "website.nasir.id"
 
   # Disable all public access blocking to allow public access
   block_public_acls       = false
