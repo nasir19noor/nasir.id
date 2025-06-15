@@ -29,4 +29,9 @@ module "s3_upload" {
   enable_public_read_access = true
 }
 
+module "s3_website" {
+  source = "git::https://github.com/nasir19noor/terraform.git//aws/modules/s3"
+  bucket = "website.nasir.id"
+}
+
 
