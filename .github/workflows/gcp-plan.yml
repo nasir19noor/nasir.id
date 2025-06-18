@@ -129,6 +129,8 @@ jobs:
 
       - name: Terraform Init
         working-directory: ${{ matrix.directory }}
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ env.GOOGLE_APPLICATION_CREDENTIALS }}        
         run: |
           pwd
           cp ../../backend.conf .
