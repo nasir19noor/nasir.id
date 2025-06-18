@@ -18,8 +18,8 @@ env:
 
 jobs:
 
-  gcp-coonfig:
-    name: gcp-config
+  gcp-config:
+    name: GCP Configuration
     runs-on: [self-hosted, contabo]
     steps:
       - name: Configure GCP
@@ -95,7 +95,7 @@ jobs:
 
   terraform-plan:
     name: Terraform Plan
-    needs: detect-changed-dirs
+    needs: detect-changed-dirs, 
     if: ${{ needs.detect-changed-dirs.outputs.dirs != '[]' }}
     runs-on: [self-hosted, contabo]
     strategy:
