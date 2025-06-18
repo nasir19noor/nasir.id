@@ -4,8 +4,9 @@ on:
   push:
     # branches: [ '**' ] 
     branches: 
-      - '**'
-      - '!main'
+      # - '**'
+      # - '!main'
+      - 'main'
     paths:
       - 'gcp/services/**.tf' 
       - 'gcp/services/**.tfvars'  
