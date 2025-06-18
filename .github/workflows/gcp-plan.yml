@@ -33,14 +33,6 @@ jobs:
           vault kv get -field=key kv/gcp > gcp-service-account.json
           /home/nasir/google-cloud-sdk/bin/gcloud auth activate-service-account --key-file=gcp-service-account.json
           /home/nasir/google-cloud-sdk/bin/gcloud config set project nasir-456515
-          /home/nasir/google-cloud-sdk/bin/gcloud auth list
-          /home/nasir/google-cloud-sdk/bin/gcloud config list
-          gcloud projects list
-
-          # Test specific GCP services (examples)
-          gcloud compute instances list
-          gcloud storage buckets list
-          gcloud iam service-accounts list
   detect-changed-dirs:
     name: Detect Changed Directories
     runs-on: ubuntu-latest
@@ -118,11 +110,10 @@ jobs:
       - name: Configure backend.conf
         run: |
           pwd
+          cd gcp
           ls -la
-          state_bucket=$(yq e '.aws.global.state_bucket' config.yaml)
+          state_bucket=$(yq e '.global.state_bucket' config.yaml)
           sed -i "s/^bucket = .*/bucket = \"${state_bucket}\"/" backend.conf
-          region=$(yq e '.aws.global.region' config.yaml)
-          sed -i "s/^region = .*/region = \"${region}\"/" backend.conf 
           sleep 100
           cat backend.conf                
 
@@ -130,7 +121,7 @@ jobs:
         working-directory: ${{ matrix.directory }}
         run: |
           pwd
-          cp ../../../backend.conf .
+          cp ../../backend.conf .
           cat backend.conf
           terraform init -backend-config=backend.conf
 
