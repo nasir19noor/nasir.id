@@ -32,7 +32,6 @@ jobs:
           vault kv get kv/gcp
           vault kv get -field=key kv/gcp > gcp-service-account.json
           /home/nasir/google-cloud-sdk/bin/gcloud auth activate-service-account --key-file=gcp-service-account.json
-          /home/nasir/google-cloud-sdk/bin/gcloud auth application-default login --key-file=gcp-service-account.json
           /home/nasir/google-cloud-sdk/bin/gcloud config set project nasir-456515
 
     # steps:
