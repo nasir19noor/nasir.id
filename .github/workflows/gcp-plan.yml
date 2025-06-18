@@ -23,6 +23,9 @@ jobs:
     runs-on: [self-hosted, contabo]
     steps:
       - name: Configure GCP
+        env:
+          VAULT_ADDR: "http://127.0.0.1:8200"  # Use http:// instead of https://
+          VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}      
         run: |
           pwd
           whoami
