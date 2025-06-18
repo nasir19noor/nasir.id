@@ -95,7 +95,7 @@ jobs:
 
   terraform-plan:
     name: Terraform Plan
-    needs: detect-changed-dirs, gcp-config
+    needs: [detect-changed-dirs, gcp-config]
     if: ${{ needs.detect-changed-dirs.outputs.dirs != '[]' }}
     runs-on: [self-hosted, contabo]
     strategy:
