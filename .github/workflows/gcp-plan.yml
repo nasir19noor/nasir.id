@@ -30,8 +30,8 @@ jobs:
           pwd
           whoami
           vault kv get kv/gcp
-          vault kv get -field=key kv/gcp > /tmp/gcp-service-account.json
-          gcloud auth activate-service-account --key-file=/tmp/gcp-service-account.json
+          vault kv get -field=key kv/gcp > gcp-service-account.json
+          gcloud auth activate-service-account --key-file=gcp-service-account.json
           gcloud config set project nasir-456515
           gcloud auth list
           gcloud config list
