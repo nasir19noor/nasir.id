@@ -24,6 +24,8 @@ jobs:
     steps:
       - name: Configure GCP
         run: |
+          pwd
+          whoami
           vault kv get kv/gcp
           vault kv get -field=key kv/gcp > /tmp/gcp-service-account.json
           gcloud auth activate-service-account --key-file=/tmp/gcp-service-account.json
