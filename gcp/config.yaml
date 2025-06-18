@@ -1,0 +1,70 @@
+global:
+  region: "asia-southeast1"
+  state_bucket: "gke-nasir-tf-state-2"
+  project_id: "nasir-456515"
+
+network:
+  vpc_name: "gke-nasir-vpc" 
+  auto_create_subnetworks: false
+  description: "GKE Nasir VPC"
+  subnet_name: "gke-nasir-asia-southeast1"
+  subnet_ip: "10.0.0.0/16"
+  subnet_description: "GKE Nasir asia southeast 1"
+
+management:
+  instance_name: "management-vm"
+  zone: "asia-southeast1-c"
+  instance: "linux"
+  instance_type: "n1-standard-1"
+  disk_size_gb: 50
+  disk_type: "pd-balanced"
+  image: "ubuntu-os-cloud/ubuntu-2204-lts"
+  create_internal_static_ip: true
+  create_external_static_ip: true
+  allow_stopping_for_update: true  
+
+firewall-ssh:
+  name: "gke-nasir-vpc-allow-ssh"
+  description: "allow ssh"
+  protocol: "tcp"
+  ports: ["22"]
+  source_ranges: ["0.0.0.0/0"]
+  target_tags: ["management"]  
+
+gke:
+  name: "nasir-cluster"
+  description: "GKE Nasir Cluster"
+  kubernetes_version: "1.32.4-gke.1353003"
+  datapath_provider: "LEGACY_DATAPATH"  
+  enable_l4_ilb_subsetting: true
+  networking_mode: "VPC_NATIVE"
+  ip_range_pods: "sub-gke-pod"
+  ip_range_services: "sub-gke-svc"
+  master_ipv4_cidr_block: "10.21.14.0/28"
+  regional: false
+  zones: ["asia-southeast1-c"]
+  deletion_protection: false
+  enable_private_nodes: true
+  enable_private_endpoint: true
+  service_account: "google_service_account.gke_sa.email"
+  remove_default_node_pool: true
+  node_pool_name: "nasir-node-pool"
+  machine_type: "n1-standard-2"
+  image_type: "COS_CONTAINERD"
+  local_ssd_count: 0
+  disk_size_gb: 50
+  disk_type: "pd-balanced"
+  preemptible: false
+  node_locations: "asia-southeast1-c"
+  autoscaling: true
+  min_count: 1
+  max_count: 2
+  initial_node_count: 1
+  max_pods_per_node: 110
+  node_metadata: "GKE_METADATA"
+  auto_repair: true
+  auto_upgrade: true
+  master_authorized_networks_cidr_blocks: "10.0.0.0/16"
+
+
+
