@@ -1,5 +1,5 @@
 locals {
-  config                  = yamldecode(file("../config.yaml"))
+  config                  = yamldecode(file("../../config.yaml"))
   region                  = local.config.global.region
   project_id              = local.config.global.project_id
   network_name            = local.config.network.vpc_name
