@@ -3,12 +3,11 @@ name: 'AWS Plan'
 on:
   push:
     branches: 
-      - '**'
-      - '!main'
+      - 'main'
     paths:
       - 'gcp/services/**.tf' 
       - 'gcp/services/**.tfvars'  
-      - '.github/workflows/gcp-plan.yml'
+      - '.github/workflows/gcp-apply.yml'
 
 env:
   TF_VERSION: '1.11.4'  
@@ -33,6 +32,13 @@ jobs:
           #/home/nasir/google-cloud-sdk/bin/gcloud auth application-default login --no-launch-browser
           /home/nasir/google-cloud-sdk/bin/gcloud config set project nasir-456515
           echo "GOOGLE_APPLICATION_CREDENTIALS=$(pwd)/gcp-service-account.json" >> $GITHUB_ENV
+
+    # steps:
+    #   - name: Configure GCP SDK
+    #     uses: google-github-actions/setup-gcloud@v1
+    #     with:
+    #       service_account_key: ${{ secrets.GCP_SA_KEY }}
+    #       project_id: nasir-456515    
 
   detect-changed-dirs:
     name: Detect Changed Directories
@@ -133,9 +139,12 @@ jobs:
       - name: Terraform Plan
         id: plan
         working-directory: ${{ matrix.directory }}
-        run: terraform plan -no-color
+        run: terraform plan
         continue-on-error: true
+
+      - name: Terraform Apply
+        id: plan
+        working-directory: ${{ matrix.directory }}
+        run: terraform plan
+        continue-on-error: true        
         
-      - name: Terraform Plan Status
-        if: steps.plan.outcome == 'failure'
-        run: exit 1
