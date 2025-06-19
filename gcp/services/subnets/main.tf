@@ -1,5 +1,5 @@
 module "vpc_subnets" {
-  source        = "../../../modules/subnets"
+  source        = "git::https://github.com/nasir19noor/terraform.git//gcp/modules/subnets"
   project_id    = local.project_id
   network_name  = local.network_name
   
