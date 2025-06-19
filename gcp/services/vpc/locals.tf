@@ -6,3 +6,4 @@ locals {
   auto_create_subnetworks = local.config.network.auto_create_subnetworks
   description             = local.config.network.description
 }    
+
