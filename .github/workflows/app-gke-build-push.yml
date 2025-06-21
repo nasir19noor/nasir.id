@@ -30,6 +30,7 @@ jobs:
 
     - name: Submit Build to Google Cloud Build
       run: |
+        gcloud auth list
         gcloud builds submit . --project=${{ env.PROJECT_ID }} --config=apps/gke-django/cloudbuild.yaml
     - name: Verify Image Push (Optional)
       run: |
