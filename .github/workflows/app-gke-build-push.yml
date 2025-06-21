@@ -50,3 +50,5 @@ jobs:
       run: |
         echo "Image push command submitted to Cloud Build successfully."
         echo "Check Cloud Build logs in GCP console for detailed status."
+
+
