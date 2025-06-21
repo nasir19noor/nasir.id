@@ -1,0 +1,42 @@
+name: Build and Push Docker Image to Artifact Registry
+
+on:
+  push:
+    paths:
+      - 'apps/gke-django/**'
+      - '.github/workflows/app-gke-build-push.yml'
+    branches:
+      - main    
+  pull_request:
+    paths:
+      - 'apps/gke-django/**'
+      - '.github/workflows/app-gke-build-push.yml'   
+    branches:
+      - main
+
+env:
+  PROJECT_ID: nasir-456515 
+  AR_REPO: nasir           
+  AR_LOCATION: asia-southeast1 
+  IMAGE_NAME: gke-app      
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest # Or your self-hosted runner label, e.g., 'self-hosted'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Build and Push Docker Image via Cloud Build
+      id: build-image
+      uses: google-github-actions/cloudbuild-goreleaser-action@v2
+      with:
+        build_config: 'apps/gke-django/cloudbuild.yaml'
+        # tags: '${{ env.AR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.IMAGE_NAME }}:latest'
+        tags: 'asia-southeast1-docker.pkg.dev/nasir-456515//${{ env.IMAGE_NAME }}:latest'
+
+    - name: Verify Image Push (Optional)
+      run: |
+        echo "Image push command submitted to Cloud Build successfully."
+        echo "Check Cloud Build logs in GCP console for detailed status."
