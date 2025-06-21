@@ -107,3 +107,12 @@ resource "cloudflare_record" "assets_acm" {
   ttl     = 300
   proxied = false
 }
+
+resource "cloudflare_record" "gke" {
+  zone_id = data.cloudflare_zones.nasir_id.zones[0].id
+  name    = "gke"
+  content = "35.240.238.154"
+  type    = "A"
+  ttl     = 1
+  proxied = true
+}
