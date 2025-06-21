@@ -28,7 +28,7 @@ module "firewall-allow-30080" {
   source = "git::https://github.com/nasir19noor/terraform.git//gcp/modules/firewall"
 
   project       = local.project_id
-  name          = "allow-service port 30080"
+  name          = "allow-service-30080"
   network       = local.network
   description   = "allow service container port"
   protocol      = local.ssh_protocol
