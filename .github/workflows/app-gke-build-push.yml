@@ -28,14 +28,9 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Build and Push Docker Image via Cloud Build
-      id: build-image
-      uses: google-github-actions/submit-build@v1 
-      with:
-        build_config: 'apps/gke-django/cloudbuild.yaml'
-        # tags: '${{ env.AR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.IMAGE_NAME }}:latest'
-        tags: 'asia-southeast1-docker.pkg.dev/nasir-456515//${{ env.IMAGE_NAME }}:latest'
-
+    - name: Submit Build to Google Cloud Build
+      run: |
+        gcloud builds submit . --project=${{ env.PROJECT_ID }} --config=apps/gke-django/cloudbuild.yaml
     - name: Verify Image Push (Optional)
       run: |
         echo "Image push command submitted to Cloud Build successfully."
