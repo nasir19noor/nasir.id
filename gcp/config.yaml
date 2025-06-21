@@ -65,6 +65,8 @@ gke:
   auto_repair: true
   auto_upgrade: true
   master_authorized_networks_cidr_blocks: "10.0.0.0/16"
+artifact-registry:
+  name: "nasir"  
 
 
 
