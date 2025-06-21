@@ -30,7 +30,7 @@ jobs:
 
     - name: Build and Push Docker Image via Cloud Build
       id: build-image
-      uses: google-github-actions/cloudbuild-goreleaser-action@v2
+      uses: google-github-actions/submit-build@v1 
       with:
         build_config: 'apps/gke-django/cloudbuild.yaml'
         # tags: '${{ env.AR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.IMAGE_NAME }}:latest'
