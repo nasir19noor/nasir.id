@@ -47,6 +47,7 @@ jobs:
         /home/nasir/google-cloud-sdk/bin/gcloud auth list
         # /home/nasir/google-cloud-sdk/bin/gcloud builds submit . --project=${{ env.PROJECT_ID }} --config=apps/gke-django/cloudbuild.yaml
         cd apps/gke-django
+        service docker status
         docker build -t django-app:latest .
         docker push asia-southeast1-docker.pkg.dev/nasir-456515/nasir/django-app:latest
     - name: Verify Image Push (Optional)
