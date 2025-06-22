@@ -1,0 +1,77 @@
+name: Deploy to GKE
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Docker Image Tag (e.g., latest, or a specific version)'
+        required: false
+        default: 'latest' 
+
+env:
+  PROJECT_ID: nasir-456515 
+  AR_REPO: nasir           
+  AR_LOCATION: asia-southeast1 
+  IMAGE_NAME: gke-app      
+  GKE_CLUSTER: your-gke-cluster-name 
+  GKE_ZONE: asia-southeast1-c 
+  GKE_NAMESPACE: nasir     
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, contabo]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Authenticate Google Cloud CLI
+      env:
+        GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }} 
+      run: |
+        echo "$GCP_SA_KEY" > ./gcp-key.json
+        gcloud auth activate-service-account --key-file=./gcp-key.json --project=${{ env.PROJECT_ID }}
+        gcloud config set project ${{ env.PROJECT_ID }}
+        rm ./gcp-key.json
+        
+    - name: Set up GKE credentials
+      run: |
+        gcloud container clusters get-credentials "${{ env.GKE_CLUSTER }}" --zone "${{ env.GKE_ZONE }}" --project "${{ env.PROJECT_ID }}"
+
+    - name: Check and Create Kubernetes Namespace
+      run: |
+        kubectl get namespace ${{ env.GKE_NAMESPACE }} || kubectl create namespace ${{ env.GKE_NAMESPACE }}
+
+    - name: Create or Update Django Secret Key in Kubernetes
+      run: |
+        kubectl delete secret django-secret-key -n ${{ env.GKE_NAMESPACE }} --ignore-not-found
+        kubectl create secret generic django-secret-key \
+          --from-literal=SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }} \
+          -n ${{ env.GKE_NAMESPACE }}
+
+    - name: Deploy to GKE
+      run: |
+        IMAGE_FULL_PATH="${{ env.AR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.image_tag }}"
+        
+        echo "Deploying image: $IMAGE_FULL_PATH"
+        
+        sed -i "s|asia-southeast1-docker.pkg.dev/nasir-456515/nasir/gke-app:latest|$IMAGE_FULL_PATH|" k8s/gke-app-deployment.yaml
+        
+        kubectl apply -f k8s/nasir-namespace.yaml # Apply namespace just in case
+        kubectl apply -f k8s/gke-app-deployment.yaml
+        kubectl apply -f k8s/gke-app-service.yaml
+
+    - name: Verify Deployment (Optional)
+      run: |
+        echo "Deployment to GKE submitted. Waiting for rollout..."
+        kubectl rollout status deployment/gke-app-deployment -n ${{ env.GKE_NAMESPACE }}
+        echo "Verifying service external IP..."
+        kubectl get service gke-app-service -n ${{ env.GKE_NAMESPACE }}
+        sleep 60
+        echo "Attempting to retrieve external IP address..."
+        EXTERNAL_IP=$(kubectl get service gke-app-service -n ${{ env.GKE_NAMESPACE }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+        if [ -z "$EXTERNAL_IP" ]; then
+          echo "External IP not yet assigned or failed to retrieve. Please check the service status manually."
+        else
+          echo "Application should be accessible at: http://$EXTERNAL_IP"
+        fi
