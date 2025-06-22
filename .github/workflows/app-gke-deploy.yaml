@@ -65,7 +65,7 @@ jobs:
         
         kubectl apply -f gcp/k8s/namespace.yaml # Apply namespace just in case
         kubectl apply -f gcp/k8s/deployment.yaml
-        kubectl apply -f k8s/service.yaml
+        kubectl apply -f gcp/k8s/service.yaml
 
     - name: Verify Deployment (Optional)
       run: |
