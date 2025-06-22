@@ -13,7 +13,7 @@ env:
   AR_REPO: nasir           
   AR_LOCATION: asia-southeast1 
   IMAGE_NAME: gke-app      
-  GKE_CLUSTER: your-gke-cluster-name 
+  GKE_CLUSTER: nasir-cluster
   GKE_ZONE: asia-southeast1-c 
   GKE_NAMESPACE: nasir     
 
