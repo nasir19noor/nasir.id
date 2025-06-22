@@ -52,7 +52,7 @@ jobs:
         service docker status
         pwd
         ls -la
-        gcloud auth configure-docker asia-southeast1-docker.pkg.dev
+        /home/nasir/google-cloud-sdk/bin/gcloud auth configure-docker asia-southeast1-docker.pkg.dev
         echo "$SSH_PASSWORD" | sudo -S docker build -t asia-southeast1-docker.pkg.dev/nasir-456515/nasir/django-app:latest .
         echo "$SSH_PASSWORD" | sudo -S docker push asia-southeast1-docker.pkg.dev/nasir-456515/nasir/django-app:latest
         # docker build -t django-app:latest .
