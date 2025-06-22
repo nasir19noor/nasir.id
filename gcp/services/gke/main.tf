@@ -86,4 +86,3 @@ resource "google_project_iam_member" "gke_sa_roles" {
   role    = each.key
   member  = "serviceAccount:${google_service_account.gke_sa.email}"
 }
-
