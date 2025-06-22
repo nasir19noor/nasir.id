@@ -21,20 +21,6 @@ env:
   IMAGE_NAME: gke-app      
 
 jobs:
-#   gcp-config:
-#     name: GCP Configuration
-#     runs-on: [self-hosted, contabo]
-#     steps:
-#       - name: Configure GCP
-#         env:
-#           VAULT_ADDR: "http://127.0.0.1:8200"  # Use http:// instead of https://
-#           VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}      
-#         run: |
-#           pwd
-#           whoami
-#           /home/nasir/google-cloud-sdk/bin/gcloud auth activate-service-account --key-file=gcp-service-account.json
-#           /home/nasir/google-cloud-sdk/bin/gcloud config set project nasir-456515
-#           echo "GOOGLE_APPLICATION_CREDENTIALS=$(pwd)/gcp-service-account.json" >> $GITHUB_ENV    
   build-and-push:
     runs-on: [self-hosted, contabo]
     
@@ -45,10 +31,12 @@ jobs:
     - name: Authenticate to Google Cloud
       uses: google-github-actions/auth@v1
       with:
-        credentials_json: ${{ secrets.GCP_SA_KEY }}      
+        credentials_json: ${{ secrets.GCP_SA_KEY }}    
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2          
     - name: Configure Docker for Artifact Registry
-      run: /home/nasir/google-cloud-sdk/bin/gcloud auth configure-docker asia-southeast1-docker.pkg.dev
-    - name: Submit Build to Google Cloud Build
+      run: /home/nasir/google-cloud-sdk/bin/gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin asia-southeast1-docker.pkg.dev
+    - name: Build and Push Docker Image
       env:
         SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}  
       run: |
@@ -65,7 +53,6 @@ jobs:
         #docker push asia-southeast1-docker.pkg.dev/nasir-456515/nasir/django-app:latest
     - name: Verify Image Push (Optional)
       run: |
-        echo "Image push command submitted to Cloud Build successfully."
-        echo "Check Cloud Build logs in GCP console for detailed status."
+        echo "Image pushed successfully to asia-southeast1-docker.pkg.dev/nasir-456515/nasir/django-app:latest"
 
 
