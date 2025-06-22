@@ -52,7 +52,7 @@ jobs:
         service docker status
         pwd
         ls -la
-        echo "$SSH_PASSWORD" | sudo -S docker build -t django-app:latest .
+        echo "$SSH_PASSWORD" | sudo -S docker build -t asia-southeast1-docker.pkg.dev/nasir-456515/nasir/django-app:latest .
         echo "$SSH_PASSWORD" | sudo -S docker push asia-southeast1-docker.pkg.dev/nasir-456515/nasir/django-app:latest
         # docker build -t django-app:latest .
         #docker push asia-southeast1-docker.pkg.dev/nasir-456515/nasir/django-app:latest
