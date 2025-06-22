@@ -44,10 +44,7 @@ jobs:
 
     - name: Submit Build to Google Cloud Build
       env:
-        SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
-      run: |
-        echo "Remove existing code"
-        echo "$SSH_PASSWORD" | sudo -S rm -rf "/var/www/html/hello/*"    
+        SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}  
       run: |
         /home/nasir/google-cloud-sdk/bin/gcloud auth list
         # /home/nasir/google-cloud-sdk/bin/gcloud builds submit . --project=${{ env.PROJECT_ID }} --config=apps/gke-django/cloudbuild.yaml
