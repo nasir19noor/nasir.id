@@ -35,7 +35,9 @@ jobs:
     - name: Set up Cloud SDK
       uses: google-github-actions/setup-gcloud@v2          
     - name: Configure Docker for Artifact Registry
-      run: /home/nasir/google-cloud-sdk/bin/gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin asia-southeast1-docker.pkg.dev
+      run: |
+        /home/nasir/google-cloud-sdk/bin/gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin asia-southeast1-docker.pkg.dev
+        echo $GOOGLE_APPLICATION_CREDENTIALS
     - name: Build and Push Docker Image
       env:
         SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}  
@@ -47,10 +49,10 @@ jobs:
         pwd
         ls -la
         /home/nasir/google-cloud-sdk/bin/gcloud auth configure-docker asia-southeast1-docker.pkg.dev
-        echo "$SSH_PASSWORD" | sudo -S docker build -t asia-southeast1-docker.pkg.dev/nasir-456515/nasir/django-app:latest .
-        echo "$SSH_PASSWORD" | sudo -S docker push asia-southeast1-docker.pkg.dev/nasir-456515/nasir/django-app:latest
-        # docker build -t django-app:latest .
-        #docker push asia-southeast1-docker.pkg.dev/nasir-456515/nasir/django-app:latest
+        #echo "$SSH_PASSWORD" | sudo -S docker build -t asia-southeast1-docker.pkg.dev/nasir-456515/nasir/django-app:latest .
+        #echo "$SSH_PASSWORD" | sudo -S docker push asia-southeast1-docker.pkg.dev/nasir-456515/nasir/django-app:latest
+        docker build -t asia-southeast1-docker.pkg.dev/nasir-456515/nasir/django-app:latest .
+        docker push asia-southeast1-docker.pkg.dev/nasir-456515/nasir/django-app:latest
     - name: Verify Image Push (Optional)
       run: |
         echo "Image pushed successfully to asia-southeast1-docker.pkg.dev/nasir-456515/nasir/django-app:latest"
