@@ -30,13 +30,13 @@ jobs:
         GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }} 
       run: |
         echo "$GCP_SA_KEY" > ./gcp-key.json
-        gcloud auth activate-service-account --key-file=./gcp-key.json --project=${{ env.PROJECT_ID }}
-        gcloud config set project ${{ env.PROJECT_ID }}
+        /home/nasir/google-cloud-sdk/bin/gcloud auth activate-service-account --key-file=./gcp-key.json --project=${{ env.PROJECT_ID }}
+        /home/nasir/google-cloud-sdk/bin/gcloud config set project ${{ env.PROJECT_ID }}
         rm ./gcp-key.json
         
     - name: Set up GKE credentials
       run: |
-        gcloud container clusters get-credentials "${{ env.GKE_CLUSTER }}" --zone "${{ env.GKE_ZONE }}" --project "${{ env.PROJECT_ID }}"
+        /home/nasir/google-cloud-sdk/bin/gcloud container clusters get-credentials "${{ env.GKE_CLUSTER }}" --zone "${{ env.GKE_ZONE }}" --project "${{ env.PROJECT_ID }}"
 
     - name: Check and Create Kubernetes Namespace
       run: |
