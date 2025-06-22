@@ -35,8 +35,12 @@ jobs:
     - name: Set up Cloud SDK
       uses: google-github-actions/setup-gcloud@v2          
     - name: Configure Docker for Artifact Registry
+      env:
+        SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }} 
       run: |
         /home/nasir/google-cloud-sdk/bin/gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin asia-southeast1-docker.pkg.dev
+        echo "$SSH_PASSWORD" | sudo -S gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin asia-southeast1-docker.pkg.dev
+
         echo $GOOGLE_APPLICATION_CREDENTIALS
         cat $GOOGLE_APPLICATION_CREDENTIALS
     - name: Build and Push Docker Image
