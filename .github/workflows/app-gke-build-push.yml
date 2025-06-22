@@ -43,13 +43,22 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Submit Build to Google Cloud Build
+      env:
+        SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+      run: |
+        echo "Remove existing code"
+        echo "$SSH_PASSWORD" | sudo -S rm -rf "/var/www/html/hello/*"    
       run: |
         /home/nasir/google-cloud-sdk/bin/gcloud auth list
         # /home/nasir/google-cloud-sdk/bin/gcloud builds submit . --project=${{ env.PROJECT_ID }} --config=apps/gke-django/cloudbuild.yaml
         cd apps/gke-django
         service docker status
-        docker build -t django-app:latest .
-        docker push asia-southeast1-docker.pkg.dev/nasir-456515/nasir/django-app:latest
+        pwd
+        ls -la
+        echo "$SSH_PASSWORD" | sudo -S docker build -t django-app:latest .
+        echo "$SSH_PASSWORD" | sudo -S docker push asia-southeast1-docker.pkg.dev/nasir-456515/nasir/django-app:latest
+        # docker build -t django-app:latest .
+        #docker push asia-southeast1-docker.pkg.dev/nasir-456515/nasir/django-app:latest
     - name: Verify Image Push (Optional)
       run: |
         echo "Image push command submitted to Cloud Build successfully."
