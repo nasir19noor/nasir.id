@@ -33,7 +33,7 @@ jobs:
         echo "$GCP_SA_KEY" > ./gcp-key.json
         ${{ env.GCLOUD_CLI }} auth activate-service-account --key-file=./gcp-key.json --project=${{ env.PROJECT_ID }}
         ${{ env.GCLOUD_CLI }} config set project ${{ env.PROJECT_ID }}
-        cat /gcp-key.json
+        cat ./gcp-key.json
         rm ./gcp-key.json
         
     - name: Set up GKE credentials
