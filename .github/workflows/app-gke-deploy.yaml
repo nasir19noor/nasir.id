@@ -12,7 +12,7 @@ env:
   PROJECT_ID: nasir-456515 
   AR_REPO: nasir           
   AR_LOCATION: asia-southeast1 
-  IMAGE_NAME: gke-app      
+  IMAGE_NAME: django-app      
   GKE_CLUSTER: nasir-cluster
   GKE_ZONE: asia-southeast1-c 
   GKE_NAMESPACE: nasir     
