@@ -36,8 +36,11 @@ jobs:
         cat ./gcp-key.json
         rm ./gcp-key.json
         
-    - name: Set up GKE credentials
+    - name: Add gcloud to PATH and Set up GKE credentials
       run: |
+        # Add gcloud to PATH for this step and subsequent steps
+        export PATH="/home/nasir/google-cloud-sdk/bin:$PATH"
+        echo "/home/nasir/google-cloud-sdk/bin" >> $GITHUB_PATH
         ${{ env.GCLOUD_CLI }} container clusters get-credentials "${{ env.GKE_CLUSTER }}" --zone "${{ env.GKE_ZONE }}" --project "${{ env.PROJECT_ID }}"
 
     - name: Check and Create Kubernetes Namespace
