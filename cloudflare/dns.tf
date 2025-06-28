@@ -117,7 +117,7 @@ resource "cloudflare_record" "gke" {
   proxied = true
 }
 
-resource "cloudflare_record" "gke.flask" {
+resource "cloudflare_record" "gke_flask" {
   zone_id = data.cloudflare_zones.nasir_id.zones[0].id
   name    = "gke.flask"
   content = "34.107.128.211"
@@ -126,7 +126,7 @@ resource "cloudflare_record" "gke.flask" {
   proxied = true
 }
 
-resource "cloudflare_record" "gke.nginx" {
+resource "cloudflare_record" "gke_nginx" {
   zone_id = data.cloudflare_zones.nasir_id.zones[0].id
   name    = "gke.flask"
   content = "34.107.128.211"
