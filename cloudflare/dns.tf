@@ -116,3 +116,21 @@ resource "cloudflare_record" "gke" {
   ttl     = 1
   proxied = true
 }
+
+resource "cloudflare_record" "gke.flask" {
+  zone_id = data.cloudflare_zones.nasir_id.zones[0].id
+  name    = "gke.flask"
+  content = "34.160.243.160"
+  type    = "A"
+  ttl     = 1
+  proxied = true
+}
+
+resource "cloudflare_record" "gke.nginx" {
+  zone_id = data.cloudflare_zones.nasir_id.zones[0].id
+  name    = "gke.flask"
+  content = "34.160.243.160"
+  type    = "A"
+  ttl     = 1
+  proxied = true
+}
