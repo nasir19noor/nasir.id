@@ -126,14 +126,14 @@ resource "cloudflare_record" "gke_flask" {
   proxied = true
 }
 
-resource "cloudflare_record" "gke_nginx" {
-  zone_id = data.cloudflare_zones.nasir_id.zones[0].id
-  name    = "gke.flask"
-  content = "34.107.128.211"
-  type    = "A"
-  ttl     = 1
-  proxied = true
-}
+# resource "cloudflare_record" "gke_nginx" {
+#   zone_id = data.cloudflare_zones.nasir_id.zones[0].id
+#   name    = "gke.flask"
+#   content = "34.107.128.211"
+#   type    = "A"
+#   ttl     = 1
+#   proxied = true
+# }
 
 resource "cloudflare_record" "gke_react_movie" {
   zone_id = data.cloudflare_zones.nasir_id.zones[0].id
@@ -141,5 +141,5 @@ resource "cloudflare_record" "gke_react_movie" {
   content = "34.13.119.209"
   type    = "A"
   ttl     = 1
-  proxied = true
+  proxied = false
 }
