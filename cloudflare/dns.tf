@@ -138,7 +138,7 @@ resource "cloudflare_record" "gke_flask" {
 resource "cloudflare_record" "gke_react_movie" {
   zone_id = data.cloudflare_zones.nasir_id.zones[0].id
   name    = "gke.react-movie"
-  content = "34.13.119.209"
+  content = "35.186.153.90"
   type    = "A"
   ttl     = 1
   proxied = false
