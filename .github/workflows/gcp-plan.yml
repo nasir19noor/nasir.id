@@ -1,8 +1,8 @@
-name: 'Terraform Plan'
+name: 'GCP Plan'
 
 on:
   push:
-    branches: ['main']
+    branches-ignore: ['main']
     paths:
       - 'gcp/services/**.tf' 
       - 'gcp/services/**.tfvars'  
@@ -77,7 +77,7 @@ jobs:
   
 
   terraform-plan:
-    name: Terraform Plan
+    name: GCP Plan
     needs: [detect-changed-dirs]
     if: ${{ needs.detect-changed-dirs.outputs.dirs != '[]' }}
     runs-on: ubuntu-latest
@@ -99,7 +99,7 @@ jobs:
         uses: google-github-actions/auth@v2.0.0
         with:
           workload_identity_provider: 'projects/943652190384/locations/global/workloadIdentityPools/github/providers/github'
-          service_account: 'github-actions@nasir-482109.iam.gserviceaccount.com'            
+          service_account: 'github-actions@nasir-482109.iam.gserviceaccount.com'   
 
       - name: Setup Google Cloud CLI
         uses: google-github-actions/setup-gcloud@v2
