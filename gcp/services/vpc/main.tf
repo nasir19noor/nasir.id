@@ -5,3 +5,4 @@ module "vpc" {
   project_id                = local.project_id
   description               = local.description
 }
+
