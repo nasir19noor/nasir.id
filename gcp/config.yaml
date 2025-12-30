@@ -1,15 +1,15 @@
 global:
   region: "asia-southeast1"
-  state_bucket: "gke-nasir-tf-state-2"
-  project_id: "nasir-456515"
+  state_bucket: "nasir-ck-tf-state"
+  project_id: "nasir-482109"
 
 network:
-  vpc_name: "gke-nasir-vpc" 
+  vpc_name: "nasir-vpc" 
   auto_create_subnetworks: false
-  description: "GKE Nasir VPC"
-  subnet_name: "gke-nasir-asia-southeast1"
+  description: "Nasir VPC"
+  subnet_name: "subnet-asia-southeast1"
   subnet_ip: "10.0.0.0/16"
-  subnet_description: "GKE Nasir asia southeast 1"
+  subnet_description: "Nasir asia southeast 1"
 
 management:
   instance_name: "management-vm"
