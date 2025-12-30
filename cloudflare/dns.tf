@@ -25,6 +25,14 @@ resource "cloudflare_record" "spf" {
   ttl     = 3600
 }
 
+resource "cloudflare_record" "dkm" {
+  zone_id = data.cloudflare_zones.nasir_id.zones[0].id
+  name    = local.root
+  content = "v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCNQJWkkAegTEczSlTsQOOrUDVtrXyMgNUfEx4fDBNBxPc/pFqvgzmuTLcWZD5paYf9obJwHiWM7MRwbQCcxunZ6eH/5j7qevHehGfSZmDY79X1m6KkDgovSDqmVcLd4AS2/S7GbLt3EXDQDd7d/J8GMTSTHwmuRCU1Dy+otr4WsQIDAQAB"
+  type    = "TXT"
+  ttl     = 3600
+}
+
 
 
 
