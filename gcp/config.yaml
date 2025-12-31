@@ -33,38 +33,45 @@ firewall-ssh:
 
 gke:
   name: "nasir-cluster"
-  description: "GKE Nasir Cluster"
-  kubernetes_version: "1.32.2-gke.1297002"
-  datapath_provider: "LEGACY_DATAPATH"  
-  enable_l4_ilb_subsetting: true
-  networking_mode: "VPC_NATIVE"
   ip_range_pods: "sub-gke-pod"
   ip_range_services: "sub-gke-svc"
-  master_ipv4_cidr_block: "10.21.14.0/28"
-  regional: false
-  zones: ["asia-southeast1-c"]
+  cluster_description: "GKE Autopilot Cluster Nasir"
+  kubernetes_version: "latest"
+  release_channel: "REGULAR"  
   deletion_protection: false
+  cluster_labels:
+    environment: "lab"
+    owner: "nasir"
   enable_private_nodes: true
   enable_private_endpoint: false
-  service_account: "google_service_account.gke_sa.email"
-  remove_default_node_pool: true
-  node_pool_name: "nasir-node-pool"
-  machine_type: "n1-standard-2"
-  image_type: "COS_CONTAINERD"
-  local_ssd_count: 0
-  disk_size_gb: 50
-  disk_type: "pd-balanced"
-  preemptible: false
-  node_locations: "asia-southeast1-c"
-  autoscaling: true
-  min_count: 1
-  max_count: 2
-  initial_node_count: 1
-  max_pods_per_node: 110
-  node_metadata: "GKE_METADATA"
-  auto_repair: true
-  auto_upgrade: true
-  master_authorized_networks_cidr_blocks: "0.0.0.0/0"
+  master_ipv4_cidr_block: "10.0.0.0/0"
+  master_global_access_enabled: false
+  deploy_using_private_endpoint: false
+  master_authorized_networks:
+    - cidr_block: "0.0.0.0/0"
+      display_name: "all" 
+  http_load_balancing: true
+  horizontal_pod_autoscaling: true
+  dns_cache_enabled: true   
+  enable_vertical_pod_autoscaling: false   
+  logging_enabled_components: ["SYSTEM_COMPONENTS", "WORKLOADS"]
+  monitoring_enabled_components: ["SYSTEM_COMPONENTS", "WORKLOADS"]
+  enable_managed_prometheus: false       
+  enable_shielded_nodes: true
+  enable_binary_authorization: false  
+  database_encryption:
+    state: "GOOGLE_MANAGED_KEY"
+  identity_namespace: "nasir-482109.svc.id.goog"
+  maintenance_start_time: "03:00"
+  maintenance_end_time: "04:00" 
+  maintenance_recurrence: "FREQ=WEEKLY;BYDAY=SUN"
+  maintenance_exclusions: []
+  resource_usage_export_dataset_id: "gke_resource_usage_nasir"
+  enable_network_egress_export: false
+  enable_resource_consumption_export: false
+  authenticator_security_group: ""
+  network_project_id: "nasir-482109"  
+
 artifact-registry:
   name: "nasir"  
 
