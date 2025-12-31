@@ -32,34 +32,34 @@ module "gke_autopilot" {
   master_authorized_networks_cidr_blocks = local.master_authorized_networks
 
   # Addons
-  http_load_balancing              = local.http_load_balancing
-  horizontal_pod_autoscaling       = local.horizontal_pod_autoscaling
-  dns_cache_config                 = local.dns_cache_config
-  enable_vertical_pod_autoscaling  = local.enable_vertical_pod_autoscaling
+  # http_load_balancing              = local.http_load_balancing
+  # horizontal_pod_autoscaling       = local.horizontal_pod_autoscaling
+  # dns_cache_config                 = local.dns_cache_config
+  # enable_vertical_pod_autoscaling  = local.enable_vertical_pod_autoscaling
 
   # Monitoring and logging
-  logging_enabled_components   = local.logging_enabled_components
-  monitoring_enabled_components = local.monitoring_enabled_components
-  enable_managed_prometheus    = local.enable_managed_prometheus
+  # logging_enabled_components   = local.logging_enabled_components
+  # monitoring_enabled_components = local.monitoring_enabled_components
+  # enable_managed_prometheus    = local.enable_managed_prometheus
 
   # Security
-  enable_shielded_nodes       = local.enable_shielded_nodes
-  enable_binary_authorization = local.enable_binary_authorization
-  database_encryption         = local.database_encryption
+  # enable_shielded_nodes       = local.enable_shielded_nodes
+  # enable_binary_authorization = local.enable_binary_authorization
+  # database_encryption         = local.database_encryption
 
   # Workload Identity
   identity_namespace = local.identity_namespace
 
   # Maintenance window
-  maintenance_start_time  = local.maintenance_start_time
-  maintenance_end_time    = local.maintenance_end_time
-  maintenance_recurrence  = local.maintenance_recurrence
-  maintenance_exclusions  = local.maintenance_exclusions
+  # maintenance_start_time  = local.maintenance_start_time
+  # maintenance_end_time    = local.maintenance_end_time
+  # maintenance_recurrence  = local.maintenance_recurrence
+  # maintenance_exclusions  = local.maintenance_exclusions
 
   # Resource usage export
-  resource_usage_export_dataset_id     = local.resource_usage_export_dataset_id
-  enable_network_egress_export         = local.enable_network_egress_export
-  enable_resource_consumption_export   = local.enable_resource_consumption_export
+  # resource_usage_export_dataset_id     = local.resource_usage_export_dataset_id
+  # enable_network_egress_export         = local.enable_network_egress_export
+  # enable_resource_consumption_export   = local.enable_resource_consumption_export
 
   # Authentication
   authenticator_security_group = local.authenticator_security_group
