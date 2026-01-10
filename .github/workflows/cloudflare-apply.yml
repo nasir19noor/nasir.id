@@ -91,12 +91,12 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}  
           
-      - name: Create Terraform Variables File
-        run: |
-          cd cloudflare
-          cat > terraform.tfvars << EOF
-          cloudflare_api_token = "${{ secrets.CLOUDFLARE_API_TOKEN }}"
-          EOF          
+      # - name: Create Terraform Variables File
+      #   run: |
+      #     cd cloudflare
+      #     cat > terraform.tfvars << EOF
+      #     cloudflare_api_token = "${{ secrets.CLOUDFLARE_API_TOKEN }}"
+      #     EOF          
 
       - name: Terraform Init
         run: |
@@ -116,7 +116,7 @@ jobs:
         id: plan
         run: |
           cd cloudflare
-          terraform plan -no-color
+          terraform plan -no-color -var="cloudflare_api_token=${{ secrets.CLOUDFLARE_API_TOKEN }}"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         continue-on-error: true
@@ -136,7 +136,7 @@ jobs:
         id: apply
         run: |
           cd cloudflare
-          terraform apply -auto-approve
+          terraform apply -auto-approve -var="cloudflare_api_token=${{ secrets.CLOUDFLARE_API_TOKEN }}"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         continue-on-error: false
