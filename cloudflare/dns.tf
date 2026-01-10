@@ -38,7 +38,7 @@ resource "cloudflare_record" "blog" {
   content = "216.106.184.20"
   type    = "A"
   proxied = true
-  ttl     = 3600
+  ttl     = 1
 }
 
 resource "cloudflare_record" "app" {
@@ -47,7 +47,7 @@ resource "cloudflare_record" "app" {
   content = "daf4f84c-936f-4e51-8583-031a7a50073b.cfargotunnel.com"
   type    = "CNAME"
   proxied = true
-  ttl     = 3600
+  ttl     = 1
 }
 
 resource "cloudflare_record" "ssh" {
@@ -55,8 +55,8 @@ resource "cloudflare_record" "ssh" {
   name    = "ssh.nasir.id"
   content = "daf4f84c-936f-4e51-8583-031a7a50073b.cfargotunnel.com"
   type    = "CNAME"
-  proxied =  true
-  ttl     = 3600
+  proxied = true
+  ttl     = 1
 }
 
 
