@@ -89,7 +89,14 @@ jobs:
             exit 1
           fi
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}          
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}  
+          
+      - name: Create Terraform Variables File
+        run: |
+          cd cloudflare
+          cat > terraform.tfvars << EOF
+          cloudflare_api_token = "${{ secrets.CLOUDFLARE_API_TOKEN }}"
+          EOF          
 
       - name: Terraform Init
         run: |
