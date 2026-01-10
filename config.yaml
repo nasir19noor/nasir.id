@@ -34,7 +34,7 @@ aws:
       delete_on_termination: true
       encrypted: true
 cloudflare:
-  zone_id: "nasir.id"
+  zone_name: "nasir.id"
   root: "@"
 contabo:
   ip: "161.97.100.1"  
