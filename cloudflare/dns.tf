@@ -37,8 +37,28 @@ resource "cloudflare_record" "blog" {
   name    = local.root
   content = "216.106.184.20"
   type    = "A"
+  proxied = true
   ttl     = 3600
 }
+
+resource "cloudflare_record" "app" {
+  zone_id = data.cloudflare_zones.nasir_id.zones[0].id
+  name    = "app.nasir.id"
+  content = "daf4f84c-936f-4e51-8583-031a7a50073b.cfargotunnel.com"
+  type    = "CNAME"
+  proxied = true
+  ttl     = 3600
+}
+
+resource "cloudflare_record" "ssh" {
+  zone_id = data.cloudflare_zones.nasir_id.zones[0].id
+  name    = "ssh.nasir.id"
+  content = "daf4f84c-936f-4e51-8583-031a7a50073b.cfargotunnel.com"
+  type    = "CNAME"
+  proxied =  true
+  ttl     = 3600
+}
+
 
 
 
