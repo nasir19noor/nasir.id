@@ -1,4 +1,3 @@
-# MX Record for Google Workspace
 resource "cloudflare_record" "mx-1" {
   zone_id = data.cloudflare_zones.nasir_id.zones[0].id
   name    = local.root
@@ -33,13 +32,14 @@ resource "cloudflare_record" "dkm" {
   ttl     = 3600
 }
 
-resource "cloudflare_record" "wordpressdkm" {
+resource "cloudflare_record" "blog" {
   zone_id = data.cloudflare_zones.nasir_id.zones[0].id
   name    = local.root
   content = "216.106.184.20"
   type    = "A"
   ttl     = 3600
 }
+
 
 
 
