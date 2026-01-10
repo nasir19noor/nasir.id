@@ -46,5 +46,3 @@ resource "cloudflare_record" "blog" {
 
 
 
-
-
