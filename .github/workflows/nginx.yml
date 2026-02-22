@@ -56,11 +56,19 @@ jobs:
 
             # Generate nginx config from template
             echo "Creating nginx configuration for $DOMAIN..."
-            sed -e "s/\$domain/$DOMAIN/g" \
-                -e "s/\$port/$PORT/g" \
-                -e "s/\$root/$ROOT/g" \
+            sed -e "s|\$domain|$DOMAIN|g" \
+                -e "s|\$port|$PORT|g" \
+                -e "s|\$root|$ROOT|g" \
                 nginx/template > "/tmp/nginx-$DOMAIN"
             echo "$SSH_PASSWORD" | sudo -S mv "/tmp/nginx-$DOMAIN" "/etc/nginx/sites-available/$DOMAIN"
+
+            # Create root directory if it doesn't exist
+            if [ ! -d "/$ROOT" ]; then
+              echo "Creating directory /$ROOT..."
+              echo "$SSH_PASSWORD" | sudo -S mkdir -p "/$ROOT"
+            else
+              echo "Directory /$ROOT already exists"
+            fi
 
             # Enable site
             echo "$SSH_PASSWORD" | sudo -S ln -sf "/etc/nginx/sites-available/$DOMAIN" "/etc/nginx/sites-enabled/$DOMAIN"
