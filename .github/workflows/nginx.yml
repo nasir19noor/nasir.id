@@ -1,4 +1,4 @@
-name: Deploy Nginx Configuration
+name: 'Nginx Configuration'
 
 on:
   push:
