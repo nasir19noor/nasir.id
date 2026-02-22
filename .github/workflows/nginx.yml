@@ -52,7 +52,7 @@ jobs:
 
             # Obtain SSL certificate
             echo "Obtaining SSL certificate for $DOMAIN..."
-            echo "$SSH_PASSWORD" | sudo -S certbot certonly --standalone -d "$DOMAIN" --non-interactive --agree-tos --email "admin@nasir.id"
+            echo "$SSH_PASSWORD" | sudo -S certbot certonly --standalone -d "$DOMAIN" --non-interactive --agree-tos --email "nasir19noor@gmail.com"
 
             # Generate nginx config from template
             echo "Creating nginx configuration for $DOMAIN..."
