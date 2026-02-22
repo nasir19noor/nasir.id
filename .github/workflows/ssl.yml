@@ -1,0 +1,42 @@
+name: Renew SSL Certificates
+
+on:
+  schedule:
+    - cron: '0 0 1 * *'
+  workflow_dispatch:
+
+jobs:
+  renew-ssl:
+    runs-on: [self-hosted, nasir-contabo]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Renew SSL certificates from nginx/list
+      env:
+        SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+      run: |
+        if [ ! -f "nginx/list" ]; then
+          echo "Error: nginx/list file not found"
+          exit 1
+        fi
+
+        # Stop nginx to free port 80 for certbot standalone
+        echo "Stopping nginx..."
+        echo "$SSH_PASSWORD" | sudo -S systemctl stop nginx
+
+        while IFS=',' read -r DOMAIN PORT ROOT || [ -n "$DOMAIN" ]; do
+          # Skip empty lines
+          [ -z "$DOMAIN" ] && continue
+
+          DOMAIN=$(echo "$DOMAIN" | tr -d '\r\n ')
+
+          echo "Renewing SSL certificate for $DOMAIN..."
+          echo "$SSH_PASSWORD" | sudo -S certbot renew --cert-name "$DOMAIN" --standalone --non-interactive
+
+        done < nginx/list
+
+        echo "Restarting nginx..."
+        echo "$SSH_PASSWORD" | sudo -S systemctl restart nginx
+        echo "SSL renewal completed and nginx restarted"
