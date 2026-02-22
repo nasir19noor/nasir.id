@@ -2,11 +2,11 @@ name: Renew SSL Certificates
 
 on:
   schedule:
-    - cron: '0 0 1 * *'
+    - cron: '0 0 * * *'
   workflow_dispatch:
 
 jobs:
-  renew-ssl:
+  ssl-renewal:
     runs-on: [self-hosted, nasir-contabo]
 
     steps:
