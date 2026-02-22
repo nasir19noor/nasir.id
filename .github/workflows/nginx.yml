@@ -3,183 +3,75 @@ name: Deploy Nginx Configuration
 on:
   push:
     paths:
-      - 'nginx/value'
+      - 'nginx/list'
     branches:
       - main
-  pull_request:
-    paths:
-      - 'nginx/value'
-    branches:
-      - main
+  workflow_dispatch:
 
 jobs:
   deploy-nginx:
-    runs-on: [self-hosted, contabo]
-    
+    runs-on: [self-hosted, nasir-contabo]
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      
-    - name: Read domain and port from value file
-      id: read-values
+
+    - name: Process nginx/list and deploy configurations
       run: |
-        if [ ! -f "nginx/value" ]; then
-          echo "Error: nginx/value file not found"
+        if [ ! -f "nginx/list" ]; then
+          echo "Error: nginx/list file not found"
           exit 1
-        fi
-        
-        DOMAIN=$(sed -n '1p' nginx/value | tr -d '\r\n ')
-        PORT=$(sed -n '2p' nginx/value | tr -d '\r\n ')
-        
-        if [ -z "$DOMAIN" ] || [ -z "$PORT" ]; then
-          echo "Error: Domain or port is empty"
-          exit 1
-        fi
-        
-        echo "domain=$DOMAIN" >> $GITHUB_OUTPUT
-        echo "port=$PORT" >> $GITHUB_OUTPUT
-        echo "Domain: $DOMAIN"
-        echo "Port: $PORT"
-    
-    - name: Check if domain already configured
-      id: check-domain
-      run: |
-        DOMAIN="${{ steps.read-values.outputs.domain }}"
-        
-        # Check if domain already exists in the list
-        if grep -q "^$DOMAIN$" nginx/list; then
-          echo "domain_exists=true" >> $GITHUB_OUTPUT
-          echo "⚠️ Domain $DOMAIN is already configured in nginx/list"
-        else
-          echo "domain_exists=false" >> $GITHUB_OUTPUT
-          echo "✅ Domain $DOMAIN is new and will be added to nginx/list"
         fi
 
-    - name: Generate nginx configuration
-      run: |
-        DOMAIN="${{ steps.read-values.outputs.domain }}"
-        PORT="${{ steps.read-values.outputs.port }}"
-        
-        # Create nginx directory for domain
-        mkdir -p "nginx/$DOMAIN"
-        
-        # Generate configuration from template
-        sed -e "s/\$domain/$DOMAIN/g" -e "s/\$port/$PORT/g" nginx/template > "nginx/$DOMAIN/$DOMAIN"
-        
-        echo "Generated configuration file:"
-        cat "nginx/$DOMAIN/$DOMAIN"
-        
-    - name: Deploy to nginx
-      if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-      env:
-        DOMAIN: ${{ steps.read-values.outputs.domain }}
-        PORT: ${{ steps.read-values.outputs.port }}
-        SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
-      run: |
-        echo "Deploying nginx configuration for domain: $DOMAIN on port: $PORT"
-        echo "$SSH_PASSWORD" | sudo -S service nginx stop
-        # Step 1: Obtain SSL certificate with certbot
-        echo "Step 1: Obtaining SSL certificate..."
-        echo "$SSH_PASSWORD" | sudo -S certbot certonly --standalone -d $DOMAIN --non-interactive --agree-tos --email admin@$DOMAIN --force-renewal || {
-          echo "Warning: SSL certificate generation failed. Continuing with deployment..."
-        }
-        
-        # Step 2: Copy generated configuration to sites-available
-        echo "Step 3: Installing nginx configuration..."
-        echo "$SSH_PASSWORD" | sudo -S cp "nginx/$DOMAIN/$DOMAIN" "/etc/nginx/sites-available/$DOMAIN"
-        
-        # Step 3: Enable the site by creating symlink
-        echo "Step 4: Enabling site..."
-        cd /etc/nginx/sites-enabled
-        echo "$SSH_PASSWORD" | sudo -S ln -sf "/etc/nginx/sites-available/$DOMAIN" "/etc/nginx/sites-enabled/$DOMAIN"
-        
-        # Step 4: Test nginx configuration
-        echo "Step 5: Testing nginx configuration..."
-        echo "$SSH_PASSWORD" | sudo -S nginx -t
-        
-        if [ $? -eq 0 ]; then
-          # Step 6: Restart nginx service
-          echo "Step 6: Restarting nginx..."
-          echo "$SSH_PASSWORD" | sudo -S service nginx restart
-          echo "✅ Nginx configuration deployed successfully!"
-        else
-          echo "❌ Nginx configuration test failed. Not restarting nginx."
-          exit 1
-        fi
-    
-    - name: Update domain list and commit all changes
-      if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-      env:
-        DOMAIN: ${{ steps.read-values.outputs.domain }}
-        DOMAIN_EXISTS: ${{ steps.check-domain.outputs.domain_exists }}
-        PAT_TOKEN: ${{ secrets.PAT_TOKEN }} # Added PAT_TOKEN from secrets
-      run: |
-        # Configure git for the commit
-        git config --local user.email "nasir@nasir.id"
-        git config --local user.name "nasir19noor"
- 
-        # Backup .git/config
-        echo "Backing up .git/config to .git/config_backup"
-        cp .git/config .git/config_backup  
-        
-        # Modify .git/config to use PAT for authentication
-        echo "Modifying .git/config for PAT authentication with user nasir19noor"
-        # This replaces https://github.com with https://username:TOKEN@github.com globally in .git/config
-        # Ensure PAT_TOKEN does not contain characters like '|' if you change the sed delimiter.
-        # GitHub PATs are generally safe for this substitution.
-        sed -i "s|https://github.com/nasir19noor/nasir.id|https://nasir19noor:${PAT_TOKEN}@github.com/nasir19noor/nasir.id.git|g" .git/config
-        echo ".git/config modified."
-        # For debugging (be cautious with exposing tokens in logs):
-        # echo "Current .git/config (PAT is embedded):"
-        # sed "s/${PAT_TOKEN}/<PAT_TOKEN_HIDDEN>/g" .git/config        
+        NGINX_STOPPED=false
 
-        cat .git/config
-        # Add the generated nginx configuration
-        echo "Adding generated nginx configuration for $DOMAIN..."
-        git add "nginx/$DOMAIN/$DOMAIN"
-        
-        # Add domain to list if it's new
-        if [ "$DOMAIN_EXISTS" = "false" ]; then
-          echo "Adding $DOMAIN to nginx/list..."
-          echo "$DOMAIN" >> nginx/list
-          git add nginx/list
-          COMMIT_MSG="Deploy nginx config for $DOMAIN and add to domain list"
+        while IFS=',' read -r DOMAIN PORT ROOT || [ -n "$DOMAIN" ]; do
+          # Skip empty lines
+          [ -z "$DOMAIN" ] && continue
+
+          # Trim whitespace and carriage returns
+          DOMAIN=$(echo "$DOMAIN" | tr -d '\r\n ')
+          PORT=$(echo "$PORT" | tr -d '\r\n ')
+          ROOT=$(echo "$ROOT" | tr -d '\r\n ')
+
+          echo "Checking: $DOMAIN (port: $PORT, root: /$ROOT)"
+
+          if [ -f "/etc/nginx/sites-available/$DOMAIN" ]; then
+            echo "domain is exit: $DOMAIN"
+          else
+            echo "Domain $DOMAIN not found. Setting up..."
+
+            # Stop nginx once to free port 80 for certbot standalone
+            if [ "$NGINX_STOPPED" = "false" ]; then
+              echo "Stopping nginx for certbot standalone mode..."
+              sudo systemctl stop nginx
+              NGINX_STOPPED=true
+            fi
+
+            # Obtain SSL certificate
+            echo "Obtaining SSL certificate for $DOMAIN..."
+            sudo certbot certonly --standalone -d "$DOMAIN" --non-interactive --agree-tos --email "admin@nasir.id"
+
+            # Generate nginx config from template
+            echo "Creating nginx configuration for $DOMAIN..."
+            sed -e "s/\$domain/$DOMAIN/g" \
+                -e "s/\$port/$PORT/g" \
+                -e "s/\$root/$ROOT/g" \
+                nginx/template | sudo tee "/etc/nginx/sites-available/$DOMAIN" > /dev/null
+
+            # Enable site
+            sudo ln -sf "/etc/nginx/sites-available/$DOMAIN" "/etc/nginx/sites-enabled/$DOMAIN"
+            echo "Configuration deployed for $DOMAIN"
+          fi
+
+        done < nginx/list
+
+        if [ "$NGINX_STOPPED" = "true" ]; then
+          echo "Testing nginx configuration..."
+          sudo nginx -t
+          echo "Restarting nginx..."
+          sudo systemctl restart nginx
+          echo "Nginx restarted successfully"
         else
-          COMMIT_MSG="Update nginx config for $DOMAIN"
+          echo "No new domains configured. Nginx not restarted."
         fi
-        
-        # Check if there are changes to commit
-        if git diff --staged --quiet; then
-          echo "No changes to commit"
-          exit 0
-        fi
-        
-        # Commit the changes
-        git commit -m "$COMMIT_MSG" || {
-          echo "Commit failed"
-          exit 1
-        }
-        
-        # Push the changes back to the repository
-        git push origin main || {
-          echo "Failed to push changes"
-          exit 1
-        }
-        
-        if [ "$DOMAIN_EXISTS" = "false" ]; then
-          echo "✅ Domain $DOMAIN added to nginx/list and configuration committed successfully!"
-        else
-          echo "✅ Nginx configuration for $DOMAIN updated and committed successfully!"
-        fi
-    
-    - name: Show domain already configured notification
-      if: steps.check-domain.outputs.domain_exists == 'true'
-      run: |
-        echo "::notice title=Domain Already Configured::Domain ${{ steps.read-values.outputs.domain }} is already configured in nginx/list"
-    
-    - name: Upload generated configuration as artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: nginx-config-${{ steps.read-values.outputs.domain }}
-        path: nginx/${{ steps.read-values.outputs.domain }}/
-        retention-days: 30
