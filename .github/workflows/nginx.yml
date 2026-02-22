@@ -56,10 +56,27 @@ jobs:
 
             # Generate nginx config from template
             echo "Creating nginx configuration for $DOMAIN..."
-            sed -e "s|\$domain|$DOMAIN|g" \
-                -e "s|\$port|$PORT|g" \
-                -e "s|\$root|$ROOT|g" \
-                nginx/template > "/tmp/nginx-$DOMAIN"
+            if [ "$PORT" = "80" ]; then
+              # Port 80 = static site: replace proxy_pass block with try_files
+              awk -v domain="$DOMAIN" -v root="$ROOT" '
+                BEGIN { in_loc=0; d="$" }
+                /location \/ \{/ {
+                  in_loc=1
+                  print "  location / {"
+                  print "    try_files " d "uri " d "uri/ =404;"
+                  print "  }"
+                  next
+                }
+                in_loc && /^\s*\}/ { in_loc=0; next }
+                in_loc { next }
+                { gsub(/\$domain/, domain); gsub(/\$root/, root); print }
+              ' nginx/template > "/tmp/nginx-$DOMAIN"
+            else
+              sed -e "s|\$domain|$DOMAIN|g" \
+                  -e "s|\$port|$PORT|g" \
+                  -e "s|\$root|$ROOT|g" \
+                  nginx/template > "/tmp/nginx-$DOMAIN"
+            fi
             echo "$SSH_PASSWORD" | sudo -S mv "/tmp/nginx-$DOMAIN" "/etc/nginx/sites-available/$DOMAIN"
 
             # Create root directory if it doesn't exist

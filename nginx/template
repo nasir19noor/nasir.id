@@ -12,7 +12,7 @@ server {
   server_name $domain www.$domain;
 
   # Document root for your HTML site
-  root /$root;
+  root $root;
   index index.html index.htm;  
 
   access_log /var/log/nginx/$domain.access.log;
