@@ -17,6 +17,8 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Process nginx/list and deploy configurations
+      env:
+        SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
       run: |
         if [ ! -f "nginx/list" ]; then
           echo "Error: nginx/list file not found"
@@ -44,23 +46,24 @@ jobs:
             # Stop nginx once to free port 80 for certbot standalone
             if [ "$NGINX_STOPPED" = "false" ]; then
               echo "Stopping nginx for certbot standalone mode..."
-              sudo systemctl stop nginx
+              echo "$SSH_PASSWORD" | sudo -S systemctl stop nginx
               NGINX_STOPPED=true
             fi
 
             # Obtain SSL certificate
             echo "Obtaining SSL certificate for $DOMAIN..."
-            sudo certbot certonly --standalone -d "$DOMAIN" --non-interactive --agree-tos --email "admin@nasir.id"
+            echo "$SSH_PASSWORD" | sudo -S certbot certonly --standalone -d "$DOMAIN" --non-interactive --agree-tos --email "admin@nasir.id"
 
             # Generate nginx config from template
             echo "Creating nginx configuration for $DOMAIN..."
             sed -e "s/\$domain/$DOMAIN/g" \
                 -e "s/\$port/$PORT/g" \
                 -e "s/\$root/$ROOT/g" \
-                nginx/template | sudo tee "/etc/nginx/sites-available/$DOMAIN" > /dev/null
+                nginx/template > "/tmp/nginx-$DOMAIN"
+            echo "$SSH_PASSWORD" | sudo -S mv "/tmp/nginx-$DOMAIN" "/etc/nginx/sites-available/$DOMAIN"
 
             # Enable site
-            sudo ln -sf "/etc/nginx/sites-available/$DOMAIN" "/etc/nginx/sites-enabled/$DOMAIN"
+            echo "$SSH_PASSWORD" | sudo -S ln -sf "/etc/nginx/sites-available/$DOMAIN" "/etc/nginx/sites-enabled/$DOMAIN"
             echo "Configuration deployed for $DOMAIN"
           fi
 
@@ -68,9 +71,9 @@ jobs:
 
         if [ "$NGINX_STOPPED" = "true" ]; then
           echo "Testing nginx configuration..."
-          sudo nginx -t
+          echo "$SSH_PASSWORD" | sudo -S nginx -t
           echo "Restarting nginx..."
-          sudo systemctl restart nginx
+          echo "$SSH_PASSWORD" | sudo -S systemctl restart nginx
           echo "Nginx restarted successfully"
         else
           echo "No new domains configured. Nginx not restarted."
