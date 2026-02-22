@@ -59,6 +59,15 @@ resource "cloudflare_record" "ssh" {
   ttl     = 1
 }
 
+resource "cloudflare_record" "games.nasir.id" {
+  zone_id = data.cloudflare_zones.nasir_id.zones[0].id
+  name    = "games.nasir.id"
+  content = "207.180.248.214"
+  type    = "A"
+  proxied = true
+  ttl     = 1
+}
+
 
 
 
