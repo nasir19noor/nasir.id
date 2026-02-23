@@ -1,0 +1,26 @@
+let ducks;
+let duckCount = 1;
+let duckImageNames = ["assets/duck-left.gif", "assets/duck-right.gif"];
+let duckWidth = 96;
+let duckHeight = 93;
+
+let gameWidth = window.screen.width;
+let gameHeight = window.screen.height*3/4;
+
+window.onload = function() {
+    addDucks();   
+}    
+
+function addDucks() {
+    ducks = [];  
+    for (let i = 0; i < duckCount; i++) {
+        let duckImageName = duckImageNames[Math.floor(Math.random()*2)];
+        let duckImage = document.createElement("img");
+        duckImage.src = duckImageName;
+        duckImage.width = duckWidth;
+        duckImage.height = duckHeight;
+        duckImage.draggable = false;
+        duckImage.style.position = "absolute";
+        document.body.appendChild(duckImage);
+    }  
+}    
