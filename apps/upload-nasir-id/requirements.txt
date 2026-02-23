@@ -1,7 +1,0 @@
-django==4.2.7
-psycopg2-binary
-boto3==1.29.7
-django-storages==1.14.2
-python-decouple==3.8
-hvac
-boto3

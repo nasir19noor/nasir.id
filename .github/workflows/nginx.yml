@@ -27,14 +27,16 @@ jobs:
 
         NGINX_STOPPED=false
 
-        while IFS=',' read -r DOMAIN PORT ROOT || [ -n "$DOMAIN" ]; do
+        while IFS=',' read -r DOMAIN PORT || [ -n "$DOMAIN" ]; do
           # Skip empty lines
           [ -z "$DOMAIN" ] && continue
 
           # Trim whitespace and carriage returns
           DOMAIN=$(echo "$DOMAIN" | tr -d '\r\n ')
           PORT=$(echo "$PORT" | tr -d '\r\n ')
-          ROOT=$(echo "$ROOT" | tr -d '\r\n ')
+
+          # Use full domain as directory name
+          ROOT="var/www/html/$DOMAIN"
 
           echo "Checking: $DOMAIN (port: $PORT, root: /$ROOT)"
 
