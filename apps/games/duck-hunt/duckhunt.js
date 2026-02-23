@@ -25,8 +25,8 @@ function addDucks() {
 
         let duck = {
             image: duckImage,
-            x: 100,
-            y:50        
+            x: randomPosition(gameWidth - duckWidth),
+            y: randomPosition(gameHeight - duckHeight)     
         }
 
         duck.image.style.left = String(duck.x) + "px";
@@ -34,3 +34,6 @@ function addDucks() {
     }  
 }    
 
+function randomPosition(limit) {
+    return Math.floor(Math.random()*limit);
+}
