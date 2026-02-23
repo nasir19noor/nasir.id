@@ -25,6 +25,9 @@ jobs:
         echo "Creating directory $DEPLOY_DIR if not exists..."
         echo "$SSH_PASSWORD" | sudo -S mkdir -p "$DEPLOY_DIR"
 
+        echo "Removing existing content..."
+        echo "$SSH_PASSWORD" | sudo -S rm -rf "$DEPLOY_DIR"/*
+
         echo "Copying files..."
         echo "$SSH_PASSWORD" | sudo -S cp -r apps/games/. "$DEPLOY_DIR/"
 

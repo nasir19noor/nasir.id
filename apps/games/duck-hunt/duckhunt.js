@@ -33,3 +33,4 @@ function addDucks() {
         duck.image.style.top = String(duck.y) + "px";
     }  
 }    
+
