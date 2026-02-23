@@ -36,9 +36,9 @@ jobs:
           PORT=$(echo "$PORT" | tr -d '\r\n ')
 
           # Use full domain as directory name
-          ROOT="var/www/html/$DOMAIN"
+          ROOT="/var/www/html/$DOMAIN"
 
-          echo "Checking: $DOMAIN (port: $PORT, root: /$ROOT)"
+          echo "Checking: $DOMAIN (port: $PORT, root: $ROOT)"
 
           if [ -f "/etc/nginx/sites-available/$DOMAIN" ]; then
             echo "domain is exit: $DOMAIN"
@@ -82,11 +82,11 @@ jobs:
             echo "$SSH_PASSWORD" | sudo -S mv "/tmp/nginx-$DOMAIN" "/etc/nginx/sites-available/$DOMAIN"
 
             # Create root directory if it doesn't exist
-            if [ ! -d "/$ROOT" ]; then
-              echo "Creating directory /$ROOT..."
-              echo "$SSH_PASSWORD" | sudo -S mkdir -p "/$ROOT"
+            if [ ! -d "$ROOT" ]; then
+              echo "Creating directory $ROOT..."
+              echo "$SSH_PASSWORD" | sudo -S mkdir -p "$ROOT"
             else
-              echo "Directory /$ROOT already exists"
+              echo "Directory $ROOT already exists"
             fi
 
             # Enable site
