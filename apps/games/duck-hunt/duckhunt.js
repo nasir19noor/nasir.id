@@ -4,8 +4,8 @@ let duckImageNames = ["assets/duck-left.gif", "assets/duck-right.gif"];
 let duckWidth = 96;
 let duckHeight = 93;
 
-let gameWidth = window.screen.width;
-let gameHeight = window.screen.height*3/4;
+let gameWidth = window.innerWidth;
+let gameHeight = window.innerHeight;
 
 window.onload = function() {
     addDucks();   
