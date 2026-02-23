@@ -37,3 +37,5 @@ function addDucks() {
 function randomPosition(limit) {
     return Math.floor(Math.random()*limit);
 }
+
+
