@@ -22,5 +22,14 @@ function addDucks() {
         duckImage.draggable = false;
         duckImage.style.position = "absolute";
         document.body.appendChild(duckImage);
+
+        let duck = {
+            image: duckImage,
+            x: 100,
+            y:50        
+        }
+
+        duck.image.style.left = String(duck.x) + "px";
+        duck.image.style.top = String(duck.y) + "px";
     }  
 }    
