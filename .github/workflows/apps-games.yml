@@ -1,0 +1,34 @@
+name: 'Deploy games.nasir.id'
+
+on:
+  push:
+    paths:
+      - 'apps/games/**'
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy-games:
+    runs-on: [self-hosted, nasir-contabo]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Deploy files to /var/www/html/games.nasir.id
+      env:
+        SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+      run: |
+        DEPLOY_DIR="/var/www/html/games.nasir.id"
+
+        echo "Creating directory $DEPLOY_DIR if not exists..."
+        echo "$SSH_PASSWORD" | sudo -S mkdir -p "$DEPLOY_DIR"
+
+        echo "Copying files..."
+        echo "$SSH_PASSWORD" | sudo -S cp -r apps/games/. "$DEPLOY_DIR/"
+
+        echo "Setting permissions..."
+        echo "$SSH_PASSWORD" | sudo -S chown -R www-data:www-data "$DEPLOY_DIR"
+
+        echo "Deployed successfully to $DEPLOY_DIR"
