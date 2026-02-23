@@ -4,15 +4,15 @@ let duckImageNames = ["assets/duck-left.gif", "assets/duck-right.gif"];
 let duckWidth = 96;
 let duckHeight = 93;
 
-let gameWidth = window.innerWidth;
-let gameHeight = window.innerHeight;
-
 window.onload = function() {
-    addDucks();   
-}    
+    addDucks();
+}
 
 function addDucks() {
-    ducks = [];  
+    let gameWidth = window.innerWidth;
+    let gameHeight = window.innerHeight;
+
+    ducks = [];
     for (let i = 0; i < duckCount; i++) {
         let duckImageName = duckImageNames[Math.floor(Math.random()*2)];
         let duckImage = document.createElement("img");
@@ -20,7 +20,7 @@ function addDucks() {
         duckImage.width = duckWidth;
         duckImage.height = duckHeight;
         duckImage.draggable = false;
-        duckImage.style.position = "absolute";
+        duckImage.style.position = "fixed";
         document.body.appendChild(duckImage);
 
         let duck = {
