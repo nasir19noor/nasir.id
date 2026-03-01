@@ -96,6 +96,17 @@ resource "cloudflare_record" "db_nasir_id" {
 }
 
 
+resource "cloudflare_record" "docmost_nasir_id" {
+  zone_id = data.cloudflare_zones.nasir_id.zones[0].id
+  name    = "docmost.nasir.id"
+  content = "207.180.248.214"
+  type    = "A"
+  proxied = false
+  ttl     = 3600
+}
+
+
+
 
 
 
