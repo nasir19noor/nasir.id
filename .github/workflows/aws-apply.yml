@@ -77,7 +77,7 @@ jobs:
     name: Terraform Apply
     needs: detect-changed-dirs
     if: ${{ needs.detect-changed-dirs.outputs.dirs != '[]' }}
-    runs-on: [self-hosted, contabo]
+    runs-on: [self-hosted, nasir-contabo]
     strategy:
       matrix:
         directory: ${{ fromJSON(needs.detect-changed-dirs.outputs.dirs) }}
