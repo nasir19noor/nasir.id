@@ -34,4 +34,9 @@ module "s3_website" {
   bucket = "website.nasir.id"
 }
 
+module "s3_itung" {
+  source = "git::https://github.com/nasir19noor/terraform.git//aws/modules/s3"
+  bucket = "assets.itung.nasir.id"
+}
+
 
