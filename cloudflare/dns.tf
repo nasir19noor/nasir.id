@@ -86,6 +86,15 @@ resource "cloudflare_record" "api_kong_nasir_id" {
   ttl     = 1
 }
 
+resource "cloudflare_record" "db_nasir_id" {
+  zone_id = data.cloudflare_zones.nasir_id.zones[0].id
+  name    = "db.nasir.id"
+  content = "207.180.248.214"
+  type    = "A"
+  proxied = true
+  ttl     = 1
+}
+
 
 
 
