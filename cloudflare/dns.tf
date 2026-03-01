@@ -106,6 +106,34 @@ resource "cloudflare_record" "docmost_nasir_id" {
 }
 
 
+resource "cloudflare_record" "aws_ses_1" {
+  zone_id = data.cloudflare_zones.nasir_id.zones[0].id
+  name    = "dyxwxuzrhzufu24ra44yonuelepkfqyk._domainkey.nasir.id"
+  content = "dyxwxuzrhzufu24ra44yonuelepkfqyk.dkim.amazonses.com"
+  type    = "CNAME"
+  proxied = false
+  ttl     = 3600
+}
+
+resource "cloudflare_record" "aws_ses_2" {
+  zone_id = data.cloudflare_zones.nasir_id.zones[0].id
+  name    = "5m5ctlqtrdnw5zhmtrgfztwhufsqv5gm._domainkey.nasir.id"
+  content = "5m5ctlqtrdnw5zhmtrgfztwhufsqv5gm.dkim.amazonses.com"
+  type    = "CNAME"
+  proxied = false
+  ttl     = 3600
+}
+
+resource "cloudflare_record" "aws_ses_3" {
+  zone_id = data.cloudflare_zones.nasir_id.zones[0].id
+  name    = "7fp2h2muhkifmdosjiycooxrfm7iivev._domainkey.nasir.id"
+  content = "7fp2h2muhkifmdosjiycooxrfm7iivev.dkim.amazonses.com"
+  type    = "CNAME"
+  proxied = false
+  ttl     = 3600
+}
+
+
 
 
 
