@@ -91,8 +91,8 @@ resource "cloudflare_record" "db_nasir_id" {
   name    = "db.nasir.id"
   content = "207.180.248.214"
   type    = "A"
-  proxied = true
-  ttl     = 1
+  proxied = false
+  ttl     = 3600
 }
 
 
