@@ -93,9 +93,9 @@ jobs:
         run: |
           pwd
           ls -la
-          state_bucket=$(yq e '.aws.global.state_bucket' config.yaml)
+          state_bucket=$(yq '.aws.global.state_bucket' config.yaml)
           sed -i "s/^bucket = .*/bucket = \"${state_bucket}\"/" backend.conf
-          region=$(yq e '.aws.global.region' config.yaml)
+          region=$(yq '.aws.global.region' config.yaml)
           sed -i "s/^region = .*/region = \"${region}\"/" backend.conf 
           sleep 100
           cat backend.conf                
