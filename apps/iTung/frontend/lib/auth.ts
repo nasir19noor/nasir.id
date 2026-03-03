@@ -26,21 +26,21 @@ export function useAuth(requireAuth = true) {
 
   const logout = useCallback(() => {
     removeToken()
-    router.push('/')
+    router.push('/login')
   }, [router])
 
   useEffect(() => {
     const token = getToken()
     if (!token) {
       setLoading(false)
-      if (requireAuth) router.push('/')
+      if (requireAuth) router.push('/login')
       return
     }
     getMe()
       .then(setUser)
       .catch(() => {
         removeToken()
-        if (requireAuth) router.push('/')
+        if (requireAuth) router.push('/login')
       })
       .finally(() => setLoading(false))
   }, [router, requireAuth])

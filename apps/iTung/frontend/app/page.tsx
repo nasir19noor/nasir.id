@@ -1,138 +1,169 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google'
-import { login, googleLogin } from '@/lib/api'
-import { setToken, getToken } from '@/lib/auth'
+import { getToken } from '@/lib/auth'
 
-const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? ''
-
-export default function LoginPage() {
+export default function LandingPage() {
   const router = useRouter()
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     if (getToken()) router.replace('/dashboard')
   }, [router])
 
-  async function handleSubmit(e: { preventDefault(): void }) {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
-    try {
-      const res = await login(username, password)
-      setToken(res.access_token)
-      router.push('/dashboard')
-    } catch (err: unknown) {
-      const status = (err as { response?: { status?: number } })?.response?.status
-      if (status === 401) {
-        setError('Username atau password salah.')
-      } else if (!status) {
-        setError('Tidak dapat terhubung ke server. Coba lagi.')
-      } else {
-        setError(`Gagal login (error ${status}). Coba lagi.`)
-      }
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  async function handleGoogleSuccess(credentialResponse: { credential?: string }) {
-    if (!credentialResponse.credential) return
-    setError('')
-    try {
-      const res = await googleLogin(credentialResponse.credential)
-      if (res.needs_username) {
-        sessionStorage.setItem('google_id_token', credentialResponse.credential)
-        sessionStorage.setItem('google_email', res.google_email ?? '')
-        sessionStorage.setItem('google_name', res.google_name ?? '')
-        router.push('/register/google')
-      } else if (res.access_token) {
-        setToken(res.access_token)
-        router.push('/dashboard')
-      }
-    } catch {
-      setError('Gagal masuk dengan Google. Coba lagi.')
-    }
-  }
-
   return (
-    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-emerald-100 px-4">
-        <div className="w-full max-w-sm bg-white rounded-2xl shadow-lg p-8">
-          <div className="text-center mb-8">
-            <span className="text-5xl">🧮</span>
-            <h1 className="text-2xl font-bold text-primary-700 mt-2">iTung</h1>
-            <p className="text-sm text-gray-500 mt-1">Belajar matematika jadi seru!</p>
+    <div className="min-h-screen bg-white">
+
+      {/* Navbar */}
+      <header className="sticky top-0 z-10 bg-white/90 backdrop-blur border-b border-gray-100">
+        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">🧮</span>
+            <span className="text-lg font-bold text-primary-700">iTung</span>
           </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-                placeholder="Masukkan username"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                placeholder="Masukkan password"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-              />
-            </div>
-
-            {error && <p className="text-sm text-red-600">{error}</p>}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-primary-600 hover:bg-primary-700 text-white font-semibold py-2.5 rounded-lg transition-colors disabled:opacity-60"
+          <div className="flex items-center gap-3">
+            <Link
+              href="/login"
+              className="text-sm font-semibold text-primary-600 hover:text-primary-700 px-4 py-2 rounded-lg hover:bg-primary-50 transition-colors"
             >
-              {loading ? 'Memuat...' : 'Masuk'}
-            </button>
-          </form>
-
-          <div className="flex items-center gap-3 my-5">
-            <div className="flex-1 h-px bg-gray-200" />
-            <span className="text-xs text-gray-400">atau</span>
-            <div className="flex-1 h-px bg-gray-200" />
-          </div>
-
-          <div className="flex justify-center">
-            {GOOGLE_CLIENT_ID ? (
-              <GoogleLogin
-                onSuccess={handleGoogleSuccess}
-                onError={() => setError('Gagal masuk dengan Google. Coba lagi.')}
-                text="signin_with"
-                shape="rectangular"
-              />
-            ) : (
-              <p className="text-xs text-red-400">Google login tidak dikonfigurasi (NEXT_PUBLIC_GOOGLE_CLIENT_ID kosong)</p>
-            )}
-          </div>
-
-          <p className="text-center text-sm text-gray-500 mt-6">
-            Belum punya akun?{' '}
-            <Link href="/register" className="text-primary-600 font-semibold hover:underline">
-              Daftar sekarang
+              Masuk
             </Link>
-          </p>
+            <Link
+              href="/register"
+              className="text-sm font-semibold text-white bg-primary-600 hover:bg-primary-700 px-4 py-2 rounded-lg transition-colors"
+            >
+              Daftar Gratis
+            </Link>
+          </div>
         </div>
-      </div>
-    </GoogleOAuthProvider>
+      </header>
+
+      {/* Hero */}
+      <section className="bg-gradient-to-br from-primary-50 via-white to-emerald-50 px-4 py-20 text-center">
+        <div className="max-w-2xl mx-auto">
+          <div className="text-6xl mb-4">🧮</div>
+          <h1 className="text-4xl font-extrabold text-gray-900 leading-tight mb-4">
+            Belajar Matematika<br />
+            <span className="text-primary-600">Seru & Adaptif</span>
+          </h1>
+          <p className="text-lg text-gray-600 mb-8">
+            iTung menyesuaikan soal matematika dengan usia dan kemampuanmu secara otomatis.
+            Semakin sering berlatih, soal semakin menantang!
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link
+              href="/register"
+              className="bg-primary-600 hover:bg-primary-700 text-white font-bold px-8 py-3 rounded-xl text-base transition-colors shadow-md"
+            >
+              Mulai Belajar Gratis
+            </Link>
+            <Link
+              href="/login"
+              className="border-2 border-primary-600 text-primary-600 hover:bg-primary-50 font-bold px-8 py-3 rounded-xl text-base transition-colors"
+            >
+              Sudah Punya Akun? Masuk
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section className="max-w-5xl mx-auto px-4 py-16">
+        <h2 className="text-2xl font-bold text-center text-gray-800 mb-10">Kenapa iTung?</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[
+            {
+              icon: '🎯',
+              title: 'Adaptif & Personal',
+              desc: 'Tingkat kesulitan menyesuaikan performamu secara otomatis — tidak terlalu mudah, tidak terlalu susah.',
+            },
+            {
+              icon: '🎂',
+              title: 'Sesuai Usia',
+              desc: 'Soal disesuaikan dengan usia: mulai dari SD kelas 1 hingga SMA. Cukup masukkan tanggal lahirmu.',
+            },
+            {
+              icon: '🤖',
+              title: 'AI-Powered',
+              desc: 'Soal dibuat oleh AI sehingga selalu segar dan bervariasi. Tidak akan bosan mengerjakan soal yang sama.',
+            },
+            {
+              icon: '📊',
+              title: 'Pantau Progres',
+              desc: 'Lihat statistik belajarmu: akurasi, soal dikerjakan, dan tingkat kesulitan saat ini.',
+            },
+          ].map((f) => (
+            <div key={f.title} className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow text-center">
+              <div className="text-4xl mb-3">{f.icon}</div>
+              <h3 className="font-bold text-gray-800 mb-2">{f.title}</h3>
+              <p className="text-sm text-gray-500 leading-relaxed">{f.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Difficulty levels */}
+      <section className="bg-gray-50 px-4 py-16">
+        <div className="max-w-3xl mx-auto text-center">
+          <h2 className="text-2xl font-bold text-gray-800 mb-3">5 Tingkat Kesulitan</h2>
+          <p className="text-gray-500 mb-8">Dari yang paling mudah hingga paling menantang — sistem akan menempatkanmu di level yang tepat.</p>
+          <div className="flex flex-wrap justify-center gap-3">
+            {[
+              { label: 'Sangat Mudah', color: 'bg-sky-100 text-sky-700', age: '≤ 7 tahun' },
+              { label: 'Mudah', color: 'bg-green-100 text-green-700', age: '8–9 tahun' },
+              { label: 'Sedang', color: 'bg-yellow-100 text-yellow-700', age: '10–11 tahun' },
+              { label: 'Sulit', color: 'bg-orange-100 text-orange-700', age: '12–14 tahun' },
+              { label: 'Sangat Sulit', color: 'bg-red-100 text-red-700', age: '≥ 15 tahun' },
+            ].map((d) => (
+              <div key={d.label} className={`${d.color} rounded-xl px-5 py-3 text-sm font-semibold`}>
+                {d.label}
+                <div className="text-xs font-normal mt-0.5 opacity-70">{d.age}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section className="max-w-3xl mx-auto px-4 py-16">
+        <h2 className="text-2xl font-bold text-center text-gray-800 mb-10">Cara Kerja</h2>
+        <div className="space-y-6">
+          {[
+            { step: '1', title: 'Daftar & Isi Tanggal Lahir', desc: 'Buat akun gratis. Masukkan tanggal lahirmu agar sistem bisa menentukan level awal yang sesuai.' },
+            { step: '2', title: 'Mulai Latihan', desc: 'Pilih mode Soal AI atau Bank Soal. Sistem langsung membuatkan soal sesuai level dan usiamu.' },
+            { step: '3', title: 'Sistem Belajar Bersamamu', desc: 'Setiap jawaban dianalisis. Benar terus? Soal makin susah. Banyak salah? Soal menyesuaikan lagi.' },
+          ].map((s) => (
+            <div key={s.step} className="flex gap-4 items-start">
+              <div className="shrink-0 w-10 h-10 rounded-full bg-primary-600 text-white font-bold flex items-center justify-center text-lg">
+                {s.step}
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-800">{s.title}</h3>
+                <p className="text-sm text-gray-500 mt-1">{s.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Bottom CTA */}
+      <section className="bg-gradient-to-br from-primary-600 to-emerald-600 px-4 py-16 text-center text-white">
+        <h2 className="text-3xl font-extrabold mb-3">Siap Mulai Belajar?</h2>
+        <p className="text-primary-100 mb-8 text-lg">Gratis selamanya. Tidak perlu kartu kredit.</p>
+        <Link
+          href="/register"
+          className="bg-white text-primary-700 font-bold px-10 py-3 rounded-xl text-base hover:bg-primary-50 transition-colors shadow-lg inline-block"
+        >
+          Daftar Sekarang — Gratis!
+        </Link>
+      </section>
+
+      {/* Footer */}
+      <footer className="text-center text-xs text-gray-400 py-6 border-t border-gray-100">
+        © {new Date().getFullYear()} iTung — Aplikasi latihan matematika adaptif
+      </footer>
+
+    </div>
   )
 }
