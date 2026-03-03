@@ -43,7 +43,7 @@ def normalize_phone(p: str) -> str:
 class UserRegister(BaseModel):
     username: str
     email: EmailStr
-    full_name: Optional[str] = None
+    full_name: str
     password: str
     phone_number: str
     otp_code: str
@@ -82,6 +82,7 @@ class UserUpdate(BaseModel):
 class GoogleCallbackRequest(BaseModel):
     id_token: str
     username: Optional[str] = None
+    full_name: Optional[str] = None
     birth_date: Optional[date] = None
     phone_number: Optional[str] = None
     otp_code: Optional[str] = None
@@ -264,7 +265,7 @@ def google_login(data: GoogleCallbackRequest, db: Session = Depends(get_db)):
     user = User(
         username=data.username,
         email=email,
-        full_name=name or None,
+        full_name=data.full_name or name or None,
         hashed_password=None,
         google_id=google_id,
         birth_date=data.birth_date,

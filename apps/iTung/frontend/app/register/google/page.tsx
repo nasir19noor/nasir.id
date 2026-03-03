@@ -16,6 +16,7 @@ export default function GoogleUsernamePage() {
   const [otpSent, setOtpSent] = useState(false)
   const [sendingOtp, setSendingOtp] = useState(false)
   const [otpError, setOtpError] = useState('')
+  const [fullName, setFullName] = useState('')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [idToken, setIdToken] = useState('')
@@ -33,6 +34,7 @@ export default function GoogleUsernamePage() {
     setIdToken(token)
     setEmail(googleEmail)
     setName(googleName)
+    setFullName(googleName)
   }, [router])
 
   async function handleSendOtp() {
@@ -57,7 +59,7 @@ export default function GoogleUsernamePage() {
     setLoading(true)
     try {
       const birthDateISO = `${birthYear}-${birthMonth}-${birthDay}`
-      const res = await googleLogin(idToken, username.trim(), birthDateISO, phone.trim(), otp.trim())
+      const res = await googleLogin(idToken, username.trim(), birthDateISO, phone.trim(), otp.trim(), fullName.trim())
       if (res.access_token) {
         sessionStorage.removeItem('google_id_token')
         sessionStorage.removeItem('google_email')
@@ -99,6 +101,20 @@ export default function GoogleUsernamePage() {
               required
               minLength={3}
               placeholder="Minimal 3 karakter"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Nama Lengkap <span className="text-red-400">*</span>
+            </label>
+            <input
+              type="text"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              required
+              placeholder="Masukkan nama lengkap"
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
@@ -194,7 +210,7 @@ export default function GoogleUsernamePage() {
 
           <button
             type="submit"
-            disabled={loading || !username.trim() || !birthDay || !birthMonth || !birthYear || !otpSent || otp.length < 6}
+            disabled={loading || !username.trim() || !fullName.trim() || !birthDay || !birthMonth || !birthYear || !otpSent || otp.length < 6}
             className="w-full bg-primary-600 hover:bg-primary-700 text-white font-semibold py-2.5 rounded-lg transition-colors disabled:opacity-60"
           >
             {loading ? 'Membuat akun...' : 'Mulai Belajar'}

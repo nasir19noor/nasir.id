@@ -100,7 +100,7 @@ export default function RegisterPage() {
           {[
             { key: 'username',  label: 'Username',    type: 'text',     placeholder: 'Minimal 3 karakter',  required: true },
             { key: 'email',     label: 'Email',        type: 'email',    placeholder: 'email@contoh.com',    required: true },
-            { key: 'full_name', label: 'Nama Lengkap', type: 'text',     placeholder: 'Opsional',            required: false },
+            { key: 'full_name', label: 'Nama Lengkap', type: 'text',     placeholder: 'Masukkan nama lengkap', required: true },
             { key: 'password',  label: 'Password',     type: 'password', placeholder: 'Minimal 6 karakter',  required: true },
           ].map(({ key, label, type, placeholder, required }) => (
             <div key={key}>
@@ -210,7 +210,7 @@ export default function RegisterPage() {
 
           <button
             type="submit"
-            disabled={loading || !otpSent || form.otp.length < 6 || !birthDay || !birthMonth || !birthYear}
+            disabled={loading || !form.full_name.trim() || !otpSent || form.otp.length < 6 || !birthDay || !birthMonth || !birthYear}
             className="w-full bg-primary-600 hover:bg-primary-700 text-white font-semibold py-2.5 rounded-lg transition-colors disabled:opacity-60"
           >
             {loading ? 'Mendaftar...' : 'Daftar'}
