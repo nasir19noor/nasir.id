@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, type ChangeEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
-import { updateMe, deleteMe, getApiKeys, updateApiKey, deleteApiKey, type ApiKeysResponse } from '@/lib/api'
+import { updateMe, deleteMe, getApiKeys, updateApiKey, deleteApiKey, uploadAvatar, type ApiKeysResponse } from '@/lib/api'
 import { removeToken } from '@/lib/auth'
 import Navbar from '@/components/Navbar'
 
@@ -18,6 +18,11 @@ export default function ProfilePage() {
   const [saveMsg, setSaveMsg] = useState('')
   const [saveError, setSaveError] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
+
+  // Avatar state
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [avatarUploading, setAvatarUploading] = useState(false)
+  const [avatarMsg, setAvatarMsg] = useState('')
 
   // API key state
   const [apiKeys, setApiKeys] = useState<ApiKeysResponse | null>(null)
@@ -57,6 +62,23 @@ export default function ProfilePage() {
       setSaveError('Gagal menyimpan. Coba lagi.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleAvatarUpload(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setAvatarUploading(true)
+    setAvatarMsg('Mengunggah & membuat kartun... (10–30 detik)')
+    try {
+      const result = await uploadAvatar(file)
+      setUser({ ...user!, avatar_url: result.avatar_url, cartoon_url: result.cartoon_url })
+      setAvatarMsg(result.cartoon_url ? 'Foto & kartun berhasil diperbarui!' : 'Foto berhasil diunggah.')
+    } catch {
+      setAvatarMsg('Gagal mengunggah foto. Coba lagi.')
+    } finally {
+      setAvatarUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }
 
@@ -128,8 +150,34 @@ export default function ProfilePage() {
         {/* Profile card */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
           <div className="flex items-center gap-4 mb-6">
-            <div className="w-14 h-14 rounded-full bg-primary-100 flex items-center justify-center text-2xl font-bold text-primary-700">
-              {(user?.full_name ?? user?.username ?? '?')[0].toUpperCase()}
+            {/* Avatar with upload button */}
+            <div className="relative group">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarUpload}
+              />
+              {user?.cartoon_url || user?.avatar_url ? (
+                <img
+                  src={user.cartoon_url ?? user.avatar_url!}
+                  alt="avatar"
+                  className="w-16 h-16 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-primary-100 flex items-center justify-center text-2xl font-bold text-primary-700">
+                  {(user?.full_name ?? user?.username ?? '?')[0].toUpperCase()}
+                </div>
+              )}
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={avatarUploading}
+                className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
+                title="Ganti foto"
+              >
+                <span className="text-white text-xs">{avatarUploading ? '...' : '📷'}</span>
+              </button>
             </div>
             <div>
               <p className="font-bold text-gray-800">{user?.full_name ?? user?.username}</p>
@@ -137,6 +185,11 @@ export default function ProfilePage() {
               <span className={`text-xs px-2 py-0.5 rounded-full font-medium mt-1 inline-block ${user?.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                 {user?.is_active ? 'Aktif' : 'Nonaktif'}
               </span>
+              {avatarMsg && (
+                <p className={`text-xs mt-1 ${avatarMsg.includes('Gagal') ? 'text-red-500' : 'text-green-600'}`}>
+                  {avatarMsg}
+                </p>
+              )}
             </div>
           </div>
 

@@ -25,6 +25,8 @@ export interface User {
   is_active: boolean
   is_admin: boolean
   ai_access: boolean
+  avatar_url: string | null
+  cartoon_url: string | null
 }
 
 export interface LoginResponse {
@@ -174,6 +176,15 @@ export async function updateApiKey(provider: 'claude' | 'gemini', key: string): 
 
 export async function deleteApiKey(provider: 'claude' | 'gemini'): Promise<void> {
   await api.delete(`/api/users/me/api-keys/${provider}`)
+}
+
+export async function uploadAvatar(file: File): Promise<{ avatar_url: string; cartoon_url: string | null }> {
+  const form = new FormData()
+  form.append('file', file)
+  const res = await api.post<{ avatar_url: string; cartoon_url: string | null }>('/api/users/me/avatar', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return res.data
 }
 
 // ─── Quiz endpoints ────────────────────────────────────────────────────────────
