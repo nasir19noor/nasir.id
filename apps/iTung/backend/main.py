@@ -95,9 +95,13 @@ seed_admin()
 app = FastAPI(title='iTung API', version='1.0.0')
 
 
-# Allow both NExt.js (port 3000) and Flutter (any origin via proxy)
 app.add_middleware(CORSMiddleware,
-                   allow_origins=["http://localhost:5000", "http://localhost:3000", "http://localhost:3001"],
+                   allow_origins=[
+                       "https://itung.nasir.id",
+                       "http://localhost:5000",
+                       "http://localhost:3000",
+                       "http://localhost:3001",
+                   ],
                    allow_methods=["*"],
                    allow_headers=["*"],
                    allow_credentials=True)
