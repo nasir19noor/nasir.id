@@ -1,13 +1,12 @@
 """
-Handles profile photo upload to S3 and local cartoon effect generation.
+Handles profile photo upload to S3 and cartoon generation via HuggingFace Inference API.
 S3 paths:
   avatars/{user_id}/original.{ext}  — uploaded photo
   avatars/{user_id}/cartoon.png     — cartoon-style version
 """
-import io, os
+import io, os, base64
 import boto3
-import numpy as np
-from PIL import Image, ImageFilter, ImageEnhance
+import requests as http_requests
 
 _s3 = None
 
@@ -25,6 +24,9 @@ def _get_s3():
 BUCKET   = os.getenv('S3_BUCKET_NAME')
 CDN_BASE = os.getenv('S3_CDN_BASE', '')
 
+HF_MODEL = "timbrooks/instruct-pix2pix"
+HF_API_URL = f"https://api-inference.huggingface.co/models/{HF_MODEL}"
+
 
 def _s3_url(key: str) -> str:
     base = CDN_BASE.rstrip('/') or f"https://{BUCKET}.s3.amazonaws.com"
@@ -41,54 +43,38 @@ def upload_original(file_bytes: bytes, user_id: int, content_type: str) -> str:
     return _s3_url(key)
 
 
-def _apply_cartoon_effect(image_bytes: bytes) -> bytes:
-    """Apply a cartoon-style effect using Pillow + numpy (no external API)."""
-    img = Image.open(io.BytesIO(image_bytes)).convert('RGB')
-
-    # Resize if too large to keep processing fast
-    max_size = 800
-    if max(img.size) > max_size:
-        img.thumbnail((max_size, max_size), Image.LANCZOS)
-
-    # Boost saturation and contrast for vivid cartoon look
-    img = ImageEnhance.Color(img).enhance(2.0)
-    img = ImageEnhance.Contrast(img).enhance(1.3)
-
-    # Smooth the image to reduce detail (flat cartoon areas)
-    smoothed = img
-    for _ in range(6):
-        smoothed = smoothed.filter(ImageFilter.SMOOTH)
-
-    # Quantize to a limited palette (flat cartoon colors)
-    quantized = smoothed.quantize(colors=20).convert('RGB')
-
-    # Detect edges on the original grayscale image
-    gray = img.convert('L')
-    edges = gray.filter(ImageFilter.FIND_EDGES)
-
-    # Threshold edges to get clean black lines
-    edge_arr = np.array(edges)
-    edge_mask = edge_arr > 25  # pixels above threshold are edges
-
-    # Apply dark outlines onto cartoon colors
-    result = np.array(quantized)
-    result[edge_mask] = (result[edge_mask] * 0.2).astype(np.uint8)
-
-    out = io.BytesIO()
-    Image.fromarray(result).save(out, format='PNG')
-    return out.getvalue()
-
-
 def generate_cartoon(file_bytes: bytes, user_id: int) -> str | None:
-    """Generate a cartoon version locally and upload to S3."""
+    """Generate a cartoon version via HuggingFace Inference API and upload to S3."""
+    token = os.getenv('HF_TOKEN')
+    if not token:
+        print("[avatar_service] HF_TOKEN not set, skipping cartoon generation")
+        return None
     try:
-        cartoon_bytes = _apply_cartoon_effect(file_bytes)
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "inputs": base64.b64encode(file_bytes).decode(),
+            "parameters": {
+                "prompt": "turn into a cute cartoon character, colorful, animated, flat illustration style",
+                "negative_prompt": "ugly, blurry, distorted, realistic, photo",
+                "num_inference_steps": 20,
+                "image_guidance_scale": 1.5,
+                "guidance_scale": 7,
+            },
+        }
+        resp = http_requests.post(HF_API_URL, headers=headers, json=payload, timeout=120)
+        resp.raise_for_status()
+
+        cartoon_bytes = resp.content
         key = f"avatars/{user_id}/cartoon.png"
         _get_s3().upload_fileobj(
             io.BytesIO(cartoon_bytes), BUCKET, key,
             ExtraArgs={'ContentType': 'image/png'},
         )
         return _s3_url(key)
+
     except Exception as e:
         print(f"[avatar_service] Cartoon generation failed: {e}")
         return None
