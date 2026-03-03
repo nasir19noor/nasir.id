@@ -1,5 +1,5 @@
 # routers/users.py
-from datetime import timedelta, datetime, timezone
+from datetime import timedelta, datetime, timezone, date
 from typing import Optional, Literal
 import os, random, requests
 
@@ -56,6 +56,7 @@ class UserResponse(BaseModel):
     is_active: bool
     is_admin: bool
     ai_access: bool
+    birth_date: Optional[date] = None
     avatar_url: Optional[str] = None
     cartoon_url: Optional[str] = None
 
@@ -72,6 +73,7 @@ class TokenResponse(BaseModel):
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     email: Optional[EmailStr] = None
+    birth_date: Optional[date] = None
 
 
 class GoogleCallbackRequest(BaseModel):
@@ -267,6 +269,8 @@ def update_me(
         if existing:
             raise HTTPException(status_code=400, detail="Email already in use")
         user.email = data.email
+    if data.birth_date is not None:
+        user.birth_date = data.birth_date
 
     db.commit()
     db.refresh(user)

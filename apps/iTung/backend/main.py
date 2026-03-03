@@ -32,6 +32,7 @@ def run_migrations():
         ("users",         "gemini_api_key", "TEXT"),
         ("users",         "avatar_url",     "VARCHAR"),
         ("users",         "cartoon_url",    "VARCHAR"),
+        ("users",         "birth_date",     "DATE"),
     ]
     with engine.connect() as conn:
         for table, column, col_type in migrations:

@@ -10,7 +10,8 @@ from database import get_db
 from models import Question, UserAnswer, QuizSession, QuestionBank, User
 from auth import decode_token, decrypt_key
 from constants import TOPICS
-from routers.adaptive import analyse_performance, generate_adaptive_question
+from routers.adaptive import (analyse_performance, generate_adaptive_question,
+                               calculate_age, get_base_difficulty, DIFFICULTY_LEVELS)
 
 router   = APIRouter()
 security = HTTPBearer()
@@ -99,12 +100,11 @@ def _save_to_bank(q: dict, topic: str, db: Session) -> QuestionBank:
 
 def _next_bank_question(session_id: int, topic: str, difficulty: str,
                          db: Session) -> Optional[QuestionBank]:
-    """Try preferred difficulty, then fall back to others."""
-    fallback_order = ['easy', 'medium', 'hard']
+    """Try preferred difficulty, then fall back outward through all 5 levels."""
     bq = _fetch_bank_question(session_id, topic, difficulty, db)
     if bq:
         return bq
-    for d in fallback_order:
+    for d in DIFFICULTY_LEVELS:
         if d != difficulty:
             bq = _fetch_bank_question(session_id, topic, d, db)
             if bq:
@@ -125,6 +125,10 @@ def create_session(req: CreateSessionRequest,
     token_data = decode_token(creds.credentials)
     user_id    = token_data.user_id
 
+    db_user = db.query(User).filter(User.id == user_id).first()
+    age = calculate_age(db_user.birth_date) if db_user and db_user.birth_date else None
+    base_difficulty = get_base_difficulty(age)
+
     session = QuizSession(
         user_id=user_id, topic=req.topic,
         total_questions=req.total_questions,
@@ -133,10 +137,9 @@ def create_session(req: CreateSessionRequest,
     )
     db.add(session); db.commit(); db.refresh(session)
 
-    performance = analyse_performance(user_id, session.id, db)
+    performance = analyse_performance(user_id, session.id, db, age=age)
 
     if req.use_ai:
-        db_user = db.query(User).filter(User.id == user_id).first()
         user_claude = decrypt_key(db_user.claude_api_key) if db_user and db_user.claude_api_key else None
         user_gemini = decrypt_key(db_user.gemini_api_key) if db_user and db_user.gemini_api_key else None
         if not user_claude and not user_gemini and (not db_user or not db_user.ai_access):
@@ -146,7 +149,8 @@ def create_session(req: CreateSessionRequest,
             q = generate_adaptive_question(req.topic, performance,
                                            include_image=req.include_images,
                                            claude_api_key=user_claude,
-                                           gemini_api_key=user_gemini)
+                                           gemini_api_key=user_gemini,
+                                           age=age)
         except _anthropic.OverloadedError:
             raise HTTPException(status_code=503,
                                 detail="Server AI sedang sibuk. Coba lagi dalam beberapa saat.")
@@ -163,7 +167,7 @@ def create_session(req: CreateSessionRequest,
             image_url=q.get('image_url'), source='ai', order_number=1,
         )
     else:
-        bq = _next_bank_question(session.id, req.topic, 'easy', db)
+        bq = _next_bank_question(session.id, req.topic, base_difficulty, db)
         if not bq:
             raise HTTPException(status_code=404,
                                 detail="No questions available in bank for this topic")
@@ -194,6 +198,9 @@ async def submit_answer(req: SubmitAnswerRequest,
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
+    db_user = db.query(User).filter(User.id == user_id).first()
+    age = calculate_age(db_user.birth_date) if db_user and db_user.birth_date else None
+
     is_correct = req.user_answer.upper() == question.correct_answer.upper()
 
     db.add(UserAnswer(
@@ -206,7 +213,7 @@ async def submit_answer(req: SubmitAnswerRequest,
         session.score += 1
     db.commit()
 
-    performance    = analyse_performance(user_id, req.session_id, db)
+    performance    = analyse_performance(user_id, req.session_id, db, age=age)
     answered_count = db.query(UserAnswer).filter(
         UserAnswer.session_id == req.session_id).count()
 
@@ -214,14 +221,14 @@ async def submit_answer(req: SubmitAnswerRequest,
     if answered_count < session.total_questions:
         order = answered_count + 1
         if session.use_ai:
-            db_user = db.query(User).filter(User.id == user_id).first()
             user_claude = decrypt_key(db_user.claude_api_key) if db_user and db_user.claude_api_key else None
             user_gemini = decrypt_key(db_user.gemini_api_key) if db_user and db_user.gemini_api_key else None
             try:
                 q = generate_adaptive_question(question.topic, performance,
                                                include_image=session.include_images,
                                                claude_api_key=user_claude,
-                                               gemini_api_key=user_gemini)
+                                               gemini_api_key=user_gemini,
+                                               age=age)
             except _anthropic.OverloadedError:
                 raise HTTPException(status_code=503,
                                     detail="Server AI sedang sibuk. Coba lagi dalam beberapa saat.")

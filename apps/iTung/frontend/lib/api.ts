@@ -17,6 +17,16 @@ api.interceptors.request.use((config) => {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+export type Difficulty = 'sangat_mudah' | 'mudah' | 'sedang' | 'sulit' | 'sangat_sulit'
+
+export const DIFFICULTY_LABELS: Record<Difficulty, string> = {
+  sangat_mudah: 'Sangat Mudah',
+  mudah: 'Mudah',
+  sedang: 'Sedang',
+  sulit: 'Sulit',
+  sangat_sulit: 'Sangat Sulit',
+}
+
 export interface User {
   id: number
   username: string
@@ -25,6 +35,7 @@ export interface User {
   is_active: boolean
   is_admin: boolean
   ai_access: boolean
+  birth_date: string | null   // ISO date: "YYYY-MM-DD"
   avatar_url: string | null
   cartoon_url: string | null
 }
@@ -39,7 +50,7 @@ export interface Question {
   id: number
   question: string
   choices: string[]
-  difficulty: 'easy' | 'medium' | 'hard'
+  difficulty: Difficulty
   image_url: string | null
   number: number
 }
@@ -50,7 +61,7 @@ export interface Performance {
   accuracy: number
   weak_topics: string[]
   strong_topics: string[]
-  next_difficulty: 'easy' | 'medium' | 'hard'
+  next_difficulty: Difficulty
   recent_history: { topic: string; correct: boolean; difficulty: string }[]
 }
 
@@ -148,7 +159,7 @@ export async function getMe(): Promise<User> {
   return res.data
 }
 
-export async function updateMe(data: { full_name?: string; email?: string }): Promise<User> {
+export async function updateMe(data: { full_name?: string; email?: string; birth_date?: string }): Promise<User> {
   const res = await api.put<User>('/api/users/me', data)
   return res.data
 }

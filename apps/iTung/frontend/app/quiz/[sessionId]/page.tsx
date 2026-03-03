@@ -246,8 +246,10 @@ export default function ActiveQuizPage() {
               <p className="text-xs text-gray-400 mt-2">
                 Akurasi sesi: {Math.round(performance.accuracy * 100)}% · Kesulitan berikutnya:{' '}
                 <span className="font-medium">{
-                  performance.next_difficulty === 'easy' ? 'Mudah' :
-                  performance.next_difficulty === 'medium' ? 'Sedang' : 'Sulit'
+                  ({ sangat_mudah: 'Sangat Mudah', mudah: 'Mudah', sedang: 'Sedang',
+                     sulit: 'Sulit', sangat_sulit: 'Sangat Sulit',
+                     easy: 'Mudah', medium: 'Sedang', hard: 'Sulit'
+                  } as Record<string, string>)[performance.next_difficulty] ?? performance.next_difficulty
                 }</span>
               </p>
             )}

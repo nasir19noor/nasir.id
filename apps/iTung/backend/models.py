@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, JSON, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Date, Text, JSON, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -20,6 +20,7 @@ class User(Base):
     phone_number    = Column(String, nullable=True, unique=True, index=True)
     claude_api_key  = Column(Text, nullable=True)    # Fernet-encrypted
     gemini_api_key  = Column(Text, nullable=True)    # Fernet-encrypted
+    birth_date      = Column(Date, nullable=True)
     avatar_url      = Column(String, nullable=True)
     cartoon_url     = Column(String, nullable=True)
     created_at      = Column(DateTime(timezone=True), server_default=func.now())

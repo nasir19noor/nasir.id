@@ -7,12 +7,24 @@ import { updateMe, deleteMe, getApiKeys, updateApiKey, deleteApiKey, uploadAvata
 import { removeToken } from '@/lib/auth'
 import Navbar from '@/components/Navbar'
 
+function calcAge(birthDate: string): number {
+  const today = new Date()
+  const bd = new Date(birthDate)
+  let age = today.getFullYear() - bd.getFullYear()
+  if (today.getMonth() < bd.getMonth() ||
+      (today.getMonth() === bd.getMonth() && today.getDate() < bd.getDate())) {
+    age--
+  }
+  return age
+}
+
 export default function ProfilePage() {
   const router = useRouter()
   const { user, loading, setUser } = useAuth()
 
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
+  const [birthDate, setBirthDate] = useState('')
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState('')
@@ -41,6 +53,7 @@ export default function ProfilePage() {
   function startEdit() {
     setFullName(user?.full_name ?? '')
     setEmail(user?.email ?? '')
+    setBirthDate(user?.birth_date ?? '')
     setEditing(true)
     setSaveMsg('')
     setSaveError('')
@@ -54,6 +67,7 @@ export default function ProfilePage() {
       const updated = await updateMe({
         full_name: fullName || undefined,
         email: email || undefined,
+        birth_date: birthDate || undefined,
       })
       setUser(updated)
       setEditing(false)
@@ -133,6 +147,8 @@ export default function ProfilePage() {
     )
   }
 
+  const age = user?.birth_date ? calcAge(user.birth_date) : null
+
   const providers: { id: 'claude' | 'gemini'; label: string; hint: string }[] = [
     { id: 'claude', label: 'Claude (Anthropic)', hint: 'sk-ant-...' },
     { id: 'gemini', label: 'Gemini (Google)', hint: 'AIza...' },
@@ -182,6 +198,9 @@ export default function ProfilePage() {
             <div>
               <p className="font-bold text-gray-800">{user?.full_name ?? user?.username}</p>
               <p className="text-sm text-gray-500">{user?.email}</p>
+              {age !== null && (
+                <p className="text-sm text-gray-500">{age} tahun</p>
+              )}
               <span className={`text-xs px-2 py-0.5 rounded-full font-medium mt-1 inline-block ${user?.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                 {user?.is_active ? 'Aktif' : 'Nonaktif'}
               </span>
@@ -198,6 +217,15 @@ export default function ProfilePage() {
               <Row label="Username" value={user?.username ?? '-'} />
               <Row label="Email" value={user?.email ?? '-'} />
               <Row label="Nama Lengkap" value={user?.full_name ?? '-'} />
+              <Row
+                label="Tanggal Lahir"
+                value={user?.birth_date
+                  ? new Date(user.birth_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+                  : '-'}
+              />
+              {age !== null && (
+                <Row label="Usia" value={`${age} tahun`} />
+              )}
               {saveMsg && <p className="text-sm text-green-600">{saveMsg}</p>}
               <button
                 onClick={startEdit}
@@ -225,6 +253,17 @@ export default function ProfilePage() {
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tanggal Lahir</label>
+                <input
+                  type="date"
+                  value={birthDate}
+                  onChange={(e) => setBirthDate(e.target.value)}
+                  max={new Date().toISOString().split('T')[0]}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+                <p className="text-xs text-gray-400 mt-1">Digunakan untuk menyesuaikan tingkat kesulitan soal.</p>
               </div>
               {saveError && <p className="text-sm text-red-600">{saveError}</p>}
               <div className="flex gap-3">
