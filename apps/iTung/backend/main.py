@@ -98,6 +98,7 @@ app = FastAPI(title='iTung API', version='1.0.0')
 app.add_middleware(CORSMiddleware,
                    allow_origins=[
                        "https://itung.nasir.id",
+                       "http://207.180.248.214",
                        "http://localhost:5000",
                        "http://localhost:3000",
                        "http://localhost:3001",
