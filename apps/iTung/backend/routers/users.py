@@ -81,6 +81,8 @@ class GoogleCallbackRequest(BaseModel):
     id_token: str
     username: Optional[str] = None
     birth_date: Optional[date] = None
+    phone_number: Optional[str] = None
+    otp_code: Optional[str] = None
 
 
 class ApiKeyUpdate(BaseModel):
@@ -230,6 +232,22 @@ def google_login(data: GoogleCallbackRequest, db: Session = Depends(get_db)):
     if db.query(User).filter(User.username == data.username).first():
         raise HTTPException(status_code=400, detail="Username already taken")
 
+    # Validate phone + OTP
+    if not data.phone_number or not data.otp_code:
+        raise HTTPException(status_code=400, detail="Nomor WhatsApp dan kode OTP wajib diisi")
+
+    phone = normalize_phone(data.phone_number)
+    if db.query(User).filter(User.phone_number == phone).first():
+        raise HTTPException(status_code=400, detail="Nomor HP sudah terdaftar")
+
+    otp = db.query(OtpCode).filter(
+        OtpCode.phone == phone,
+        OtpCode.code == data.otp_code,
+        OtpCode.expires_at > datetime.now(timezone.utc),
+    ).first()
+    if not otp:
+        raise HTTPException(status_code=400, detail="Kode OTP tidak valid atau sudah kedaluwarsa")
+
     user = User(
         username=data.username,
         email=email,
@@ -237,8 +255,11 @@ def google_login(data: GoogleCallbackRequest, db: Session = Depends(get_db)):
         hashed_password=None,
         google_id=google_id,
         birth_date=data.birth_date,
+        phone_number=phone,
     )
-    db.add(user); db.commit(); db.refresh(user)
+    db.add(user); db.commit()
+    db.delete(otp); db.commit()
+    db.refresh(user)
     token = create_access_token({"sub": str(user.id), "username": user.username})
     return {"access_token": token, "token_type": "bearer", "user": user}
 
