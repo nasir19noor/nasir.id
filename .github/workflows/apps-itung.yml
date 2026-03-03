@@ -38,7 +38,7 @@ jobs:
         echo "$SSH_PASSWORD" | sudo -S docker build -t itung-backend:latest .
 
         echo "Running backend container..."
-        echo "$SSH_PASSWORD" | sudo -S docker run -d -p 9000:9000 --env-file .env \
+        echo "$SSH_PASSWORD" | sudo -S docker run -d --network host --env-file .env \
           -e GOOGLE_CLIENT_ID=943652190384-emo9evfro4d5n6rpabn1artu2brmtm9m.apps.googleusercontent.com \
           -e FONNTE_TOKEN=${FONNTE_TOKEN:-} \
           --name itung-backend itung-backend:latest
