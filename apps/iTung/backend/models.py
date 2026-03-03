@@ -20,6 +20,8 @@ class User(Base):
     phone_number    = Column(String, nullable=True, unique=True, index=True)
     claude_api_key  = Column(Text, nullable=True)    # Fernet-encrypted
     gemini_api_key  = Column(Text, nullable=True)    # Fernet-encrypted
+    avatar_url      = Column(String, nullable=True)
+    cartoon_url     = Column(String, nullable=True)
     created_at      = Column(DateTime(timezone=True), server_default=func.now())
     updated_at      = Column(DateTime(timezone=True), onupdate=func.now())
     sessions        = relationship('QuizSession', back_populates="user")

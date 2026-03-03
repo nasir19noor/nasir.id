@@ -30,6 +30,8 @@ def run_migrations():
         ("users",         "phone_number",   "VARCHAR"),
         ("users",         "claude_api_key", "TEXT"),
         ("users",         "gemini_api_key", "TEXT"),
+        ("users",         "avatar_url",     "VARCHAR"),
+        ("users",         "cartoon_url",    "VARCHAR"),
     ]
     with engine.connect() as conn:
         for table, column, col_type in migrations:

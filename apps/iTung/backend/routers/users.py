@@ -3,7 +3,7 @@ from datetime import timedelta, datetime, timezone
 from typing import Optional, Literal
 import os, random, requests
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
@@ -12,6 +12,7 @@ from google.auth.transport import requests as google_requests
 
 from database import get_db
 from models import User, OtpCode
+from services import avatar_service
 from auth import (
     hash_password,
     verify_password,
@@ -55,6 +56,8 @@ class UserResponse(BaseModel):
     is_active: bool
     is_admin: bool
     ai_access: bool
+    avatar_url: Optional[str] = None
+    cartoon_url: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -348,3 +351,36 @@ def delete_api_key(
     else:
         user.gemini_api_key = None
     db.commit()
+
+
+# ─── Avatar Endpoints ─────────────────────────────────────────────
+
+@router.post("/me/avatar")
+async def upload_avatar(
+    file: UploadFile = File(...),
+    current_user: TokenData = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Upload a profile photo and generate an AI cartoon version."""
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File must be an image")
+
+    user = db.query(User).filter(User.id == current_user.user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    file_bytes = await file.read()
+
+    # Upload original to S3
+    original_url = avatar_service.upload_original(file_bytes, user.id, file.content_type)
+    user.avatar_url = original_url
+    db.commit()
+
+    # Generate cartoon (takes 10–30s)
+    cartoon_url = avatar_service.generate_cartoon(original_url, user.id)
+    if cartoon_url:
+        user.cartoon_url = cartoon_url
+        db.commit()
+
+    db.refresh(user)
+    return {"avatar_url": user.avatar_url, "cartoon_url": user.cartoon_url}
