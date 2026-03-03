@@ -25,7 +25,9 @@ from auth import (
 )
 
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
-FONNTE_TOKEN     = os.getenv("FONNTE_TOKEN")
+WAHA_URL         = os.getenv("WAHA_URL", "").rstrip("/")
+WAHA_API_KEY     = os.getenv("WAHA_API_KEY", "")
+WAHA_SESSION     = os.getenv("WAHA_SESSION", "default")
 
 
 def normalize_phone(p: str) -> str:
@@ -99,32 +101,36 @@ router = APIRouter(tags=["Users"])
 
 @router.post("/send-otp", status_code=200)
 def send_otp(data: SendOtpRequest, db: Session = Depends(get_db)):
-    """Generate and send a WhatsApp OTP via Fonnte."""
-    if not FONNTE_TOKEN:
+    """Generate and send a WhatsApp OTP via WAHA."""
+    if not WAHA_URL:
         raise HTTPException(status_code=500, detail="WhatsApp OTP tidak dikonfigurasi")
     phone = normalize_phone(data.phone)
-    # Delete any existing OTPs for this phone
     db.query(OtpCode).filter(OtpCode.phone == phone).delete()
     code = f"{random.randint(0, 999999):06d}"
     expires = datetime.now(timezone.utc) + timedelta(minutes=5)
     db.add(OtpCode(phone=phone, code=code, expires_at=expires))
     db.commit()
     try:
+        headers = {"Content-Type": "application/json"}
+        if WAHA_API_KEY:
+            headers["X-Api-Key"] = WAHA_API_KEY
         resp = requests.post(
-            "https://api.fonnte.com/send",
-            headers={"Authorization": FONNTE_TOKEN},
-            data={"target": phone, "message": f"Kode OTP iTung Anda: *{code}*\nBerlaku 5 menit. Jangan bagikan ke siapapun."},
-            timeout=10,
+            f"{WAHA_URL}/api/sendText",
+            headers=headers,
+            json={
+                "session": WAHA_SESSION,
+                "chatId": f"{phone}@c.us",
+                "text": f"Kode OTP iTung Anda: *{code}*\nBerlaku 5 menit. Jangan bagikan ke siapapun.",
+            },
+            timeout=15,
         )
-        result = resp.json()
-        print(f"[Fonnte] status={resp.status_code} body={result}")
-        if not resp.ok or not result.get("status"):
-            detail = result.get("reason") or result.get("message") or "Gagal mengirim OTP"
-            raise HTTPException(status_code=502, detail=f"Fonnte: {detail}")
+        print(f"[WAHA] status={resp.status_code} body={resp.text[:200]}")
+        if not resp.ok:
+            raise HTTPException(status_code=502, detail=f"WAHA: {resp.text[:200]}")
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Gagal mengirim OTP. Coba lagi. ({e})")
+        raise HTTPException(status_code=502, detail=f"Gagal mengirim OTP. ({e})")
     return {"message": "OTP telah dikirim ke WhatsApp Anda"}
 
 
