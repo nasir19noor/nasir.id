@@ -16,4 +16,3 @@ google-auth
 cryptography
 google-generativeai
 requests
-replicate

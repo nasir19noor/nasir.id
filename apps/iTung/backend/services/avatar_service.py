@@ -1,12 +1,13 @@
 """
-Handles profile photo upload to S3 and AI cartoon generation via Replicate.
+Handles profile photo upload to S3 and local cartoon effect generation.
 S3 paths:
   avatars/{user_id}/original.{ext}  — uploaded photo
-  avatars/{user_id}/cartoon.png     — AI-generated cartoon
+  avatars/{user_id}/cartoon.png     — cartoon-style version
 """
 import io, os
 import boto3
-import requests as http_requests
+import numpy as np
+from PIL import Image, ImageFilter, ImageEnhance
 
 _s3 = None
 
@@ -40,39 +41,54 @@ def upload_original(file_bytes: bytes, user_id: int, content_type: str) -> str:
     return _s3_url(key)
 
 
-def generate_cartoon(original_url: str, user_id: int) -> str | None:
-    token = os.getenv('REPLICATE_API_TOKEN')
-    if not token:
-        print("[avatar_service] REPLICATE_API_TOKEN not set, skipping cartoon generation")
-        return None
+def _apply_cartoon_effect(image_bytes: bytes) -> bytes:
+    """Apply a cartoon-style effect using Pillow + numpy (no external API)."""
+    img = Image.open(io.BytesIO(image_bytes)).convert('RGB')
+
+    # Resize if too large to keep processing fast
+    max_size = 800
+    if max(img.size) > max_size:
+        img.thumbnail((max_size, max_size), Image.LANCZOS)
+
+    # Boost saturation and contrast for vivid cartoon look
+    img = ImageEnhance.Color(img).enhance(2.0)
+    img = ImageEnhance.Contrast(img).enhance(1.3)
+
+    # Smooth the image to reduce detail (flat cartoon areas)
+    smoothed = img
+    for _ in range(6):
+        smoothed = smoothed.filter(ImageFilter.SMOOTH)
+
+    # Quantize to a limited palette (flat cartoon colors)
+    quantized = smoothed.quantize(colors=20).convert('RGB')
+
+    # Detect edges on the original grayscale image
+    gray = img.convert('L')
+    edges = gray.filter(ImageFilter.FIND_EDGES)
+
+    # Threshold edges to get clean black lines
+    edge_arr = np.array(edges)
+    edge_mask = edge_arr > 25  # pixels above threshold are edges
+
+    # Apply dark outlines onto cartoon colors
+    result = np.array(quantized)
+    result[edge_mask] = (result[edge_mask] * 0.2).astype(np.uint8)
+
+    out = io.BytesIO()
+    Image.fromarray(result).save(out, format='PNG')
+    return out.getvalue()
+
+
+def generate_cartoon(file_bytes: bytes, user_id: int) -> str | None:
+    """Generate a cartoon version locally and upload to S3."""
     try:
-        import replicate
-        client = replicate.Client(api_token=token)
-        output = client.run(
-            "fofr/face-to-many",
-            input={
-                "image": original_url,
-                "style": "Cartoon",
-                "prompt": "cartoon character, cute, colorful, math student",
-                "negative_prompt": "ugly, blurry, distorted",
-                "num_outputs": 1,
-            }
-        )
-        if not output:
-            return None
-
-        # Download the cartoon image and re-upload to our S3
-        img_url = str(output[0])
-        resp = http_requests.get(img_url, timeout=60)
-        resp.raise_for_status()
-
+        cartoon_bytes = _apply_cartoon_effect(file_bytes)
         key = f"avatars/{user_id}/cartoon.png"
         _get_s3().upload_fileobj(
-            io.BytesIO(resp.content), BUCKET, key,
+            io.BytesIO(cartoon_bytes), BUCKET, key,
             ExtraArgs={'ContentType': 'image/png'},
         )
         return _s3_url(key)
-
     except Exception as e:
         print(f"[avatar_service] Cartoon generation failed: {e}")
         return None

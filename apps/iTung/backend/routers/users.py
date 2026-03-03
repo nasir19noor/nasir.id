@@ -376,8 +376,8 @@ async def upload_avatar(
     user.avatar_url = original_url
     db.commit()
 
-    # Generate cartoon (takes 10–30s)
-    cartoon_url = avatar_service.generate_cartoon(original_url, user.id)
+    # Generate cartoon locally using Pillow
+    cartoon_url = avatar_service.generate_cartoon(file_bytes, user.id)
     if cartoon_url:
         user.cartoon_url = cartoon_url
         db.commit()
