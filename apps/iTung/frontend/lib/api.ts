@@ -1,0 +1,236 @@
+import axios from 'axios'
+import Cookies from 'js-cookie'
+
+const TOKEN_KEY = 'itung_token'
+
+const api = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9000',
+})
+
+api.interceptors.request.use((config) => {
+  const token = Cookies.get(TOKEN_KEY)
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export interface User {
+  id: number
+  username: string
+  email: string
+  full_name: string | null
+  is_active: boolean
+  is_admin: boolean
+  ai_access: boolean
+}
+
+export interface LoginResponse {
+  access_token: string
+  token_type: string
+  user: User
+}
+
+export interface Question {
+  id: number
+  question: string
+  choices: string[]
+  difficulty: 'easy' | 'medium' | 'hard'
+  image_url: string | null
+  number: number
+}
+
+export interface Performance {
+  total: number
+  correct: number
+  accuracy: number
+  weak_topics: string[]
+  strong_topics: string[]
+  next_difficulty: 'easy' | 'medium' | 'hard'
+  recent_history: { topic: string; correct: boolean; difficulty: string }[]
+}
+
+export interface CreateSessionResponse {
+  session_id: number
+  topic: string
+  total_questions: number
+  use_ai: boolean
+  first_question: Question
+}
+
+export interface SubmitAnswerResponse {
+  is_correct: boolean
+  explanation: string
+  session_score: number
+  next_question: Question | null
+  performance: Performance
+}
+
+export interface Session {
+  id: number
+  topic: string
+  total_questions: number
+  score: number
+  completed: boolean
+  use_ai: boolean
+}
+
+export interface TopicStat {
+  topic: string
+  questions: number
+  correct: number
+  accuracy: number
+  skill_level: 'pemula' | 'berkembang' | 'mahir' | 'ahli'
+}
+
+export interface RecentSession {
+  session_id: number
+  topic: string
+  score: number
+  total: number
+  created_at: string | null
+}
+
+export interface UserStats {
+  total_sessions: number
+  total_questions: number
+  overall_accuracy: number
+  topics: TopicStat[]
+  recent_sessions: RecentSession[]
+}
+
+// ─── API key types ────────────────────────────────────────────────────────────
+
+export interface ApiKeyInfo {
+  has_key: boolean
+  preview: string | null
+}
+
+export interface ApiKeysResponse {
+  claude: ApiKeyInfo
+  gemini: ApiKeyInfo
+}
+
+// ─── Auth endpoints ────────────────────────────────────────────────────────────
+
+export async function login(username: string, password: string): Promise<LoginResponse> {
+  const form = new URLSearchParams()
+  form.append('username', username)
+  form.append('password', password)
+  const res = await api.post<LoginResponse>('/api/users/login', form, {
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  })
+  return res.data
+}
+
+export async function sendOtp(phone: string): Promise<void> {
+  await api.post('/api/users/send-otp', { phone })
+}
+
+export async function register(data: {
+  username: string
+  email: string
+  full_name?: string
+  password: string
+  phone_number: string
+  otp_code: string
+}): Promise<User> {
+  const res = await api.post<User>('/api/users/register', data)
+  return res.data
+}
+
+export async function getMe(): Promise<User> {
+  const res = await api.get<User>('/api/users/me')
+  return res.data
+}
+
+export async function updateMe(data: { full_name?: string; email?: string }): Promise<User> {
+  const res = await api.put<User>('/api/users/me', data)
+  return res.data
+}
+
+export async function deleteMe(): Promise<void> {
+  await api.delete('/api/users/me')
+}
+
+export async function googleLogin(
+  idToken: string,
+  username?: string
+): Promise<{ needs_username?: boolean; google_email?: string; google_name?: string; access_token?: string; token_type?: string; user?: User }> {
+  const res = await api.post('/api/users/google-login', { id_token: idToken, username })
+  return res.data
+}
+
+export async function getApiKeys(): Promise<ApiKeysResponse> {
+  const res = await api.get<ApiKeysResponse>('/api/users/me/api-keys')
+  return res.data
+}
+
+export async function updateApiKey(provider: 'claude' | 'gemini', key: string): Promise<void> {
+  await api.put(`/api/users/me/api-keys/${provider}`, { key })
+}
+
+export async function deleteApiKey(provider: 'claude' | 'gemini'): Promise<void> {
+  await api.delete(`/api/users/me/api-keys/${provider}`)
+}
+
+// ─── Quiz endpoints ────────────────────────────────────────────────────────────
+
+export async function getTopics(): Promise<string[]> {
+  const res = await api.get<{ topics: string[] }>('/api/quiz/topics')
+  return res.data.topics
+}
+
+export async function createSession(data: {
+  topic: string
+  total_questions: number
+  use_ai: boolean
+  include_images: boolean
+  client: string
+}): Promise<CreateSessionResponse> {
+  const res = await api.post<CreateSessionResponse>('/api/quiz/sessions', data)
+  return res.data
+}
+
+export async function submitAnswer(data: {
+  question_id: number
+  session_id: number
+  user_answer: string
+  time_seconds?: number
+}): Promise<SubmitAnswerResponse> {
+  const res = await api.post<SubmitAnswerResponse>('/api/quiz/submit-answer', data)
+  return res.data
+}
+
+export async function getSession(sessionId: number): Promise<Session> {
+  const res = await api.get<Session>(`/api/quiz/sessions/${sessionId}`)
+  return res.data
+}
+
+export async function getUserStats(): Promise<UserStats> {
+  const res = await api.get<UserStats>('/api/quiz/stats')
+  return res.data
+}
+
+// ─── Admin endpoints ──────────────────────────────────────────────────────────
+
+export async function adminGetUsers(): Promise<User[]> {
+  const res = await api.get<User[]>('/api/admin/users')
+  return res.data
+}
+
+export async function adminUpdateUser(
+  userId: number,
+  data: { is_active?: boolean; is_admin?: boolean; ai_access?: boolean }
+): Promise<User> {
+  const res = await api.patch<User>(`/api/admin/users/${userId}`, data)
+  return res.data
+}
+
+export async function adminDeleteUser(userId: number): Promise<void> {
+  await api.delete(`/api/admin/users/${userId}`)
+}
+
+export default api
