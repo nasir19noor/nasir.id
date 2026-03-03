@@ -147,8 +147,8 @@ resource "cloudflare_record" "itung_nasir_id" {
   name    = "itung.nasir.id"
   content = "207.180.248.214"
   type    = "A"
-  proxied = true
-  ttl     = 1
+  proxied = false
+  ttl     = 3600
 }
 
 resource "cloudflare_record" "api_itung_nasir_id" {
@@ -156,9 +156,19 @@ resource "cloudflare_record" "api_itung_nasir_id" {
   name    = "api.itung.nasir.id"
   content = "207.180.248.214"
   type    = "A"
-  proxied = true
-  ttl     = 1
+  proxied = false
+  ttl     = 3600
 }
+
+resource "cloudflare_record" "waha_nasir_id" {
+  zone_id = data.cloudflare_zones.nasir_id.zones[0].id
+  name    = "waha.nasir.id"
+  content = "207.180.248.214"
+  type    = "A"
+  proxied = false
+  ttl     = 3600
+}
+
 
 
 
