@@ -99,6 +99,7 @@ app.add_middleware(CORSMiddleware,
                    allow_origins=[
                        "https://itung.nasir.id",
                        "http://207.180.248.214",
+                       "http://118.99.110.211",
                        "http://localhost:5000",
                        "http://localhost:3000",
                        "http://localhost:3001",
