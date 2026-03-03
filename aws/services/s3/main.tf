@@ -39,5 +39,10 @@ module "s3_itung" {
   bucket = "assets.itung.nasir.id"
 }
 
+module "s3_waha" {
+  source = "git::https://github.com/nasir19noor/terraform.git//aws/modules/s3"
+  bucket = "waha.nasir.id"
+}
+
 
 
