@@ -110,14 +110,21 @@ def send_otp(data: SendOtpRequest, db: Session = Depends(get_db)):
     db.add(OtpCode(phone=phone, code=code, expires_at=expires))
     db.commit()
     try:
-        requests.post(
+        resp = requests.post(
             "https://api.fonnte.com/send",
             headers={"Authorization": FONNTE_TOKEN},
             data={"target": phone, "message": f"Kode OTP iTung Anda: *{code}*\nBerlaku 5 menit. Jangan bagikan ke siapapun."},
             timeout=10,
         )
-    except Exception:
-        raise HTTPException(status_code=502, detail="Gagal mengirim OTP. Coba lagi.")
+        result = resp.json()
+        print(f"[Fonnte] status={resp.status_code} body={result}")
+        if not resp.ok or not result.get("status"):
+            detail = result.get("reason") or result.get("message") or "Gagal mengirim OTP"
+            raise HTTPException(status_code=502, detail=f"Fonnte: {detail}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Gagal mengirim OTP. Coba lagi. ({e})")
     return {"message": "OTP telah dikirim ke WhatsApp Anda"}
 
 

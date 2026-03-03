@@ -1,3 +1,4 @@
+from datetime import date
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPBearer
 from pydantic import BaseModel
@@ -29,6 +30,8 @@ class UserAdminView(BaseModel):
     username: str
     email: str
     full_name: Optional[str]
+    phone_number: Optional[str]
+    birth_date: Optional[date]
     is_active: bool
     is_admin: bool
     ai_access: bool

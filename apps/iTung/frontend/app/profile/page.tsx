@@ -217,6 +217,7 @@ export default function ProfilePage() {
               <Row label="Username" value={user?.username ?? '-'} />
               <Row label="Email" value={user?.email ?? '-'} />
               <Row label="Nama Lengkap" value={user?.full_name ?? '-'} />
+              <Row label="WhatsApp" value={user?.phone_number ?? '-'} />
               <Row
                 label="Tanggal Lahir"
                 value={user?.birth_date
