@@ -221,7 +221,7 @@ export default function ProfilePage() {
               <Row
                 label="Tanggal Lahir"
                 value={user?.birth_date
-                  ? new Date(user.birth_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+                  ? (() => { const d = new Date(user.birth_date!); return `${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}/${d.getUTCFullYear()}` })()
                   : '-'}
               />
               {age !== null && (
