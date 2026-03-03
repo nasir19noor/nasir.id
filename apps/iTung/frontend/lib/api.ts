@@ -149,6 +149,7 @@ export async function register(data: {
   password: string
   phone_number: string
   otp_code: string
+  birth_date: string
 }): Promise<User> {
   const res = await api.post<User>('/api/users/register', data)
   return res.data
@@ -170,9 +171,10 @@ export async function deleteMe(): Promise<void> {
 
 export async function googleLogin(
   idToken: string,
-  username?: string
+  username?: string,
+  birthDate?: string,
 ): Promise<{ needs_username?: boolean; google_email?: string; google_name?: string; access_token?: string; token_type?: string; user?: User }> {
-  const res = await api.post('/api/users/google-login', { id_token: idToken, username })
+  const res = await api.post('/api/users/google-login', { id_token: idToken, username, birth_date: birthDate })
   return res.data
 }
 

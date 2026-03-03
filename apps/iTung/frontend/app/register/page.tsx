@@ -8,7 +8,7 @@ import { register, sendOtp } from '@/lib/api'
 export default function RegisterPage() {
   const router = useRouter()
   const [form, setForm] = useState({
-    username: '', email: '', full_name: '', password: '', phone: '', otp: '',
+    username: '', email: '', full_name: '', password: '', phone: '', otp: '', birth_date: '',
   })
   const [otpSent, setOtpSent] = useState(false)
   const [sendingOtp, setSendingOtp] = useState(false)
@@ -48,6 +48,7 @@ export default function RegisterPage() {
         password: form.password,
         phone_number: form.phone.trim(),
         otp_code: form.otp.trim(),
+        birth_date: form.birth_date,
       })
       router.push('/?registered=1')
     } catch (err: unknown) {
@@ -89,6 +90,22 @@ export default function RegisterPage() {
               />
             </div>
           ))}
+
+          {/* Birth date */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Tanggal Lahir <span className="text-red-400">*</span>
+            </label>
+            <input
+              type="date"
+              value={form.birth_date}
+              onChange={(e) => set('birth_date', e.target.value)}
+              required
+              max={new Date().toISOString().split('T')[0]}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+            <p className="text-xs text-gray-400 mt-1">Digunakan untuk menyesuaikan tingkat kesulitan soal.</p>
+          </div>
 
           {/* Phone + OTP section */}
           <div>

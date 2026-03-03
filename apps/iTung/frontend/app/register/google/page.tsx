@@ -8,6 +8,7 @@ import { setToken } from '@/lib/auth'
 export default function GoogleUsernamePage() {
   const router = useRouter()
   const [username, setUsername] = useState('')
+  const [birthDate, setBirthDate] = useState('')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [idToken, setIdToken] = useState('')
@@ -32,7 +33,7 @@ export default function GoogleUsernamePage() {
     setError('')
     setLoading(true)
     try {
-      const res = await googleLogin(idToken, username.trim())
+      const res = await googleLogin(idToken, username.trim(), birthDate)
       if (res.access_token) {
         sessionStorage.removeItem('google_id_token')
         sessionStorage.removeItem('google_email')
@@ -78,11 +79,26 @@ export default function GoogleUsernamePage() {
             />
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Tanggal Lahir <span className="text-red-400">*</span>
+            </label>
+            <input
+              type="date"
+              value={birthDate}
+              onChange={(e) => setBirthDate(e.target.value)}
+              required
+              max={new Date().toISOString().split('T')[0]}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+            <p className="text-xs text-gray-400 mt-1">Digunakan untuk menyesuaikan tingkat kesulitan soal.</p>
+          </div>
+
           {error && <p className="text-sm text-red-600">{error}</p>}
 
           <button
             type="submit"
-            disabled={loading || !username.trim()}
+            disabled={loading || !username.trim() || !birthDate}
             className="w-full bg-primary-600 hover:bg-primary-700 text-white font-semibold py-2.5 rounded-lg transition-colors disabled:opacity-60"
           >
             {loading ? 'Membuat akun...' : 'Mulai Belajar'}

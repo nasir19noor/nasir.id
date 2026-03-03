@@ -45,6 +45,7 @@ class UserRegister(BaseModel):
     password: str
     phone_number: str
     otp_code: str
+    birth_date: date
 
 
 class UserResponse(BaseModel):
@@ -79,6 +80,7 @@ class UserUpdate(BaseModel):
 class GoogleCallbackRequest(BaseModel):
     id_token: str
     username: Optional[str] = None
+    birth_date: Optional[date] = None
 
 
 class ApiKeyUpdate(BaseModel):
@@ -144,6 +146,7 @@ def register(data: UserRegister, db: Session = Depends(get_db)):
         full_name=data.full_name,
         phone_number=phone,
         hashed_password=hash_password(data.password),
+        birth_date=data.birth_date,
     )
     db.add(user)
     db.commit()
@@ -233,6 +236,7 @@ def google_login(data: GoogleCallbackRequest, db: Session = Depends(get_db)):
         full_name=name or None,
         hashed_password=None,
         google_id=google_id,
+        birth_date=data.birth_date,
     )
     db.add(user); db.commit(); db.refresh(user)
     token = create_access_token({"sub": str(user.id), "username": user.username})
