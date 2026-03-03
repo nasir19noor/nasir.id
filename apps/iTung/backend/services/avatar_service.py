@@ -35,7 +35,7 @@ def upload_original(file_bytes: bytes, user_id: int, content_type: str) -> str:
     key = f"avatars/{user_id}/original.{ext}"
     _get_s3().upload_fileobj(
         io.BytesIO(file_bytes), BUCKET, key,
-        ExtraArgs={'ContentType': content_type, 'ACL': 'public-read'},
+        ExtraArgs={'ContentType': content_type},
     )
     return _s3_url(key)
 
@@ -69,7 +69,7 @@ def generate_cartoon(original_url: str, user_id: int) -> str | None:
         key = f"avatars/{user_id}/cartoon.png"
         _get_s3().upload_fileobj(
             io.BytesIO(resp.content), BUCKET, key,
-            ExtraArgs={'ContentType': 'image/png', 'ACL': 'public-read'},
+            ExtraArgs={'ContentType': 'image/png'},
         )
         return _s3_url(key)
 
