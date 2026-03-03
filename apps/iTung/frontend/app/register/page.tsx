@@ -3,7 +3,11 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { register, sendOtp } from '@/lib/api'
+import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google'
+import { register, sendOtp, googleLogin } from '@/lib/api'
+import { setToken } from '@/lib/auth'
+
+const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? ''
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -38,6 +42,25 @@ export default function RegisterPage() {
     }
   }
 
+  async function handleGoogleSuccess(credentialResponse: { credential?: string }) {
+    if (!credentialResponse.credential) return
+    setError('')
+    try {
+      const res = await googleLogin(credentialResponse.credential)
+      if (res.needs_username) {
+        sessionStorage.setItem('google_id_token', credentialResponse.credential)
+        sessionStorage.setItem('google_email', res.google_email ?? '')
+        sessionStorage.setItem('google_name', res.google_name ?? '')
+        router.push('/register/google')
+      } else if (res.access_token) {
+        setToken(res.access_token)
+        router.push('/dashboard')
+      }
+    } catch {
+      setError('Gagal masuk dengan Google. Coba lagi.')
+    }
+  }
+
   async function handleSubmit(e: { preventDefault(): void }) {
     e.preventDefault()
     if (!otpSent) { setError('Verifikasi nomor WhatsApp terlebih dahulu.'); return }
@@ -63,6 +86,7 @@ export default function RegisterPage() {
   }
 
   return (
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-emerald-100 px-4 py-8">
       <div className="w-full max-w-sm bg-white rounded-2xl shadow-lg p-8">
         <div className="text-center mb-7">
@@ -193,13 +217,33 @@ export default function RegisterPage() {
           </button>
         </form>
 
+        <div className="flex items-center gap-3 my-5">
+          <div className="flex-1 h-px bg-gray-200" />
+          <span className="text-xs text-gray-400">atau daftar dengan</span>
+          <div className="flex-1 h-px bg-gray-200" />
+        </div>
+
+        <div className="flex justify-center">
+          {GOOGLE_CLIENT_ID ? (
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={() => setError('Gagal masuk dengan Google. Coba lagi.')}
+              text="signup_with"
+              shape="rectangular"
+            />
+          ) : (
+            <p className="text-xs text-red-400">Google login tidak dikonfigurasi</p>
+          )}
+        </div>
+
         <p className="text-center text-sm text-gray-500 mt-6">
           Sudah punya akun?{' '}
-          <Link href="/" className="text-primary-600 font-semibold hover:underline">
+          <Link href="/login" className="text-primary-600 font-semibold hover:underline">
             Masuk di sini
           </Link>
         </p>
       </div>
     </div>
+    </GoogleOAuthProvider>
   )
 }
