@@ -24,7 +24,9 @@ export default function ProfilePage() {
 
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
-  const [birthDate, setBirthDate] = useState('')
+  const [birthDay, setBirthDay] = useState('')
+  const [birthMonth, setBirthMonth] = useState('')
+  const [birthYear, setBirthYear] = useState('')
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState('')
@@ -53,7 +55,14 @@ export default function ProfilePage() {
   function startEdit() {
     setFullName(user?.full_name ?? '')
     setEmail(user?.email ?? '')
-    setBirthDate(user?.birth_date ?? '')
+    if (user?.birth_date) {
+      const [y, m, d] = user.birth_date.split('-')
+      setBirthYear(y ?? '')
+      setBirthMonth(m ?? '')
+      setBirthDay(d ?? '')
+    } else {
+      setBirthYear(''); setBirthMonth(''); setBirthDay('')
+    }
     setEditing(true)
     setSaveMsg('')
     setSaveError('')
@@ -67,7 +76,7 @@ export default function ProfilePage() {
       const updated = await updateMe({
         full_name: fullName || undefined,
         email: email || undefined,
-        birth_date: birthDate || undefined,
+        birth_date: (birthYear && birthMonth && birthDay) ? `${birthYear}-${birthMonth}-${birthDay}` : undefined,
       })
       setUser(updated)
       setEditing(false)
@@ -257,13 +266,38 @@ export default function ProfilePage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Tanggal Lahir</label>
-                <input
-                  type="date"
-                  value={birthDate}
-                  onChange={(e) => setBirthDate(e.target.value)}
-                  max={new Date().toISOString().split('T')[0]}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                />
+                <div className="flex gap-2">
+                  <select
+                    value={birthDay}
+                    onChange={(e) => setBirthDay(e.target.value)}
+                    className="w-20 border border-gray-300 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value="">Tgl</option>
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                      <option key={d} value={String(d).padStart(2, '0')}>{String(d).padStart(2, '0')}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={birthMonth}
+                    onChange={(e) => setBirthMonth(e.target.value)}
+                    className="flex-1 border border-gray-300 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value="">Bulan</option>
+                    {['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'].map((m, i) => (
+                      <option key={i} value={String(i + 1).padStart(2, '0')}>{m}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={birthYear}
+                    onChange={(e) => setBirthYear(e.target.value)}
+                    className="w-24 border border-gray-300 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value="">Tahun</option>
+                    {Array.from({ length: 80 }, (_, i) => new Date().getFullYear() - i).map((y) => (
+                      <option key={y} value={String(y)}>{y}</option>
+                    ))}
+                  </select>
+                </div>
                 <p className="text-xs text-gray-400 mt-1">Digunakan untuk menyesuaikan tingkat kesulitan soal.</p>
               </div>
               {saveError && <p className="text-sm text-red-600">{saveError}</p>}

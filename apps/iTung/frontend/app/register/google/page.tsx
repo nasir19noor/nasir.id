@@ -8,7 +8,9 @@ import { setToken } from '@/lib/auth'
 export default function GoogleUsernamePage() {
   const router = useRouter()
   const [username, setUsername] = useState('')
-  const [birthDate, setBirthDate] = useState('')
+  const [birthDay, setBirthDay] = useState('')
+  const [birthMonth, setBirthMonth] = useState('')
+  const [birthYear, setBirthYear] = useState('')
   const [phone, setPhone] = useState('')
   const [otp, setOtp] = useState('')
   const [otpSent, setOtpSent] = useState(false)
@@ -54,7 +56,8 @@ export default function GoogleUsernamePage() {
     setError('')
     setLoading(true)
     try {
-      const res = await googleLogin(idToken, username.trim(), birthDate, phone.trim(), otp.trim())
+      const birthDateISO = `${birthYear}-${birthMonth}-${birthDay}`
+      const res = await googleLogin(idToken, username.trim(), birthDateISO, phone.trim(), otp.trim())
       if (res.access_token) {
         sessionStorage.removeItem('google_id_token')
         sessionStorage.removeItem('google_email')
@@ -104,14 +107,41 @@ export default function GoogleUsernamePage() {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Tanggal Lahir <span className="text-red-400">*</span>
             </label>
-            <input
-              type="date"
-              value={birthDate}
-              onChange={(e) => setBirthDate(e.target.value)}
-              required
-              max={new Date().toISOString().split('T')[0]}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-            />
+            <div className="flex gap-2">
+              <select
+                value={birthDay}
+                onChange={(e) => setBirthDay(e.target.value)}
+                required
+                className="w-20 border border-gray-300 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              >
+                <option value="">Tgl</option>
+                {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                  <option key={d} value={String(d).padStart(2, '0')}>{String(d).padStart(2, '0')}</option>
+                ))}
+              </select>
+              <select
+                value={birthMonth}
+                onChange={(e) => setBirthMonth(e.target.value)}
+                required
+                className="flex-1 border border-gray-300 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              >
+                <option value="">Bulan</option>
+                {['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'].map((m, i) => (
+                  <option key={i} value={String(i + 1).padStart(2, '0')}>{m}</option>
+                ))}
+              </select>
+              <select
+                value={birthYear}
+                onChange={(e) => setBirthYear(e.target.value)}
+                required
+                className="w-24 border border-gray-300 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              >
+                <option value="">Tahun</option>
+                {Array.from({ length: 80 }, (_, i) => new Date().getFullYear() - i).map((y) => (
+                  <option key={y} value={String(y)}>{y}</option>
+                ))}
+              </select>
+            </div>
             <p className="text-xs text-gray-400 mt-1">Digunakan untuk menyesuaikan tingkat kesulitan soal.</p>
           </div>
 
@@ -164,7 +194,7 @@ export default function GoogleUsernamePage() {
 
           <button
             type="submit"
-            disabled={loading || !username.trim() || !birthDate || !otpSent || otp.length < 6}
+            disabled={loading || !username.trim() || !birthDay || !birthMonth || !birthYear || !otpSent || otp.length < 6}
             className="w-full bg-primary-600 hover:bg-primary-700 text-white font-semibold py-2.5 rounded-lg transition-colors disabled:opacity-60"
           >
             {loading ? 'Membuat akun...' : 'Mulai Belajar'}
