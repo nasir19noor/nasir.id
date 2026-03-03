@@ -6,6 +6,17 @@ import { useAuth } from '@/lib/auth'
 import { adminGetUsers, adminUpdateUser, adminDeleteUser, User } from '@/lib/api'
 import Navbar from '@/components/Navbar'
 
+function calcAge(birthDate: string): number {
+  const today = new Date()
+  const bd = new Date(birthDate)
+  let age = today.getFullYear() - bd.getFullYear()
+  if (today.getMonth() < bd.getMonth() ||
+      (today.getMonth() === bd.getMonth() && today.getDate() < bd.getDate())) {
+    age--
+  }
+  return age
+}
+
 function Toggle({
   checked, onChange, label,
 }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
@@ -151,6 +162,9 @@ export default function AdminPage() {
                         <p className="font-medium text-gray-800">{u.full_name ?? u.username}</p>
                         {u.full_name && (
                           <p className="text-xs text-gray-400">@{u.username}</p>
+                        )}
+                        {u.birth_date && (
+                          <p className="text-xs text-blue-500">{calcAge(u.birth_date)} tahun</p>
                         )}
                       </td>
                       <td className="px-4 py-3 text-gray-600">{u.email}</td>
