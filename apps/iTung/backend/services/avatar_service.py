@@ -49,7 +49,7 @@ def generate_cartoon(original_url: str, user_id: int) -> str | None:
         import replicate
         client = replicate.Client(api_token=token)
         output = client.run(
-            "fofr/face-to-many:a07f252abbbd832009640b27f063ea52d87d7a23a185abfa80e6cad91957f273",
+            "fofr/face-to-many",
             input={
                 "image": original_url,
                 "style": "Cartoon",
