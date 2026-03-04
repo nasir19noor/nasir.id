@@ -213,9 +213,12 @@ export async function uploadAvatar(file: File): Promise<{ avatar_url: string; ca
 
 // ─── Quiz endpoints ────────────────────────────────────────────────────────────
 
-export async function getTopics(): Promise<string[]> {
-  const res = await api.get<{ topics: string[] }>('/api/quiz/topics')
-  return res.data.topics
+export type Grade = 'Dasar' | 'Menengah' | 'Atas'
+export type TopicsByGrade = Record<Grade, string[]>
+
+export async function getTopics(): Promise<{ topics: string[]; topics_by_grade: TopicsByGrade }> {
+  const res = await api.get<{ topics: string[]; topics_by_grade: TopicsByGrade }>('/api/quiz/topics')
+  return res.data
 }
 
 export async function createSession(data: {

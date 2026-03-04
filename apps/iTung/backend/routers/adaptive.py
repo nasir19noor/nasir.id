@@ -3,7 +3,7 @@ from datetime import date
 from typing import Optional
 from sqlalchemy.orm import Session
 from models import UserAnswer
-from constants import VISUAL_TOPICS
+from constants import VISUAL_TOPICS, STORY_TOPICS, SYMBOLIC_TOPICS
 
 _system_claude = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
@@ -134,7 +134,9 @@ def generate_adaptive_question(topic: str, performance: dict,
     weak         = performance.get('weak_topics', [])
     difficulty   = performance.get('next_difficulty', get_base_difficulty(age))
     history      = performance.get('recent_history', [])
-    needs_image  = include_image and topic in VISUAL_TOPICS
+    needs_image    = include_image and topic in VISUAL_TOPICS
+    needs_story    = topic in STORY_TOPICS
+    needs_symbolic = topic in SYMBOLIC_TOPICS
 
     # Map internal key to human-readable label for the prompt
     difficulty_labels = {
@@ -161,6 +163,9 @@ def generate_adaptive_question(topic: str, performance: dict,
     - Choose the type that best matches the question."""
         image_schema = '\n        "image": {"type": "...", "params": {...}},'
 
+    story_hint    = "\n    - Sajikan sebagai soal cerita kontekstual (gunakan situasi nyata, bukan abstrak)." if needs_story else ""
+    symbolic_hint = "\n    - Fokus pada manipulasi aljabar/ekspresi simbolik; sertakan langkah penyelesaian singkat di penjelasan." if needs_symbolic else ""
+
     prompt = f"""
     Kamu adalah guru matematika. Buat SATU soal matematika dalam Bahasa Indonesia.
 
@@ -175,7 +180,7 @@ def generate_adaptive_question(topic: str, performance: dict,
     - Topik   : {topic}
     - Tingkat kesulitan HARUS: {difficulty_label}
     - Sesuaikan kompleksitas angka dan kalimat dengan usia/tingkat siswa di atas
-    - Tulis soal, pilihan, dan penjelasan dalam Bahasa Indonesia{image_instruction}
+    - Tulis soal, pilihan, dan penjelasan dalam Bahasa Indonesia{story_hint}{symbolic_hint}{image_instruction}
 
     Balas HANYA dengan JSON ini (tanpa teks lain):
     {{{image_schema}

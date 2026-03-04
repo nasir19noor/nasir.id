@@ -3,27 +3,109 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
-import { getTopics, createSession, getApiKeys } from '@/lib/api'
+import { getTopics, createSession, getApiKeys, TopicsByGrade, Grade } from '@/lib/api'
 import Navbar from '@/components/Navbar'
 
+const GRADES: Grade[] = ['Dasar', 'Menengah', 'Atas']
+
 const topicEmoji: Record<string, string> = {
-  penjumlahan:                '➕',
-  pengurangan:                '➖',
-  perkalian:                  '✖️',
-  pembagian:                  '➗',
-  ukuran:                     '📐',
-  waktu:                      '⏰',
-  berat:                      '⚖️',
-  panjang:                    '📏',
-  'perhitungan bangun datar': '🔷',
-  'garis bilangan':           '📊',
-  'nilai uang':               '💰',
-  satuan:                     '🔢',
-  'bilangan pecahan':         '½',
-  'perhitungan besaran sudut':'📐',
-  KPK:                        '🔁',
-  FPB:                        '🔀',
-  'bilangan bulat':           '🔢',
+  'mengenal bilangan':                    '🔢',
+  'penjumlahan dasar':                    '➕',
+  'pengurangan dasar':                    '➖',
+  'penjumlahan dan pengurangan dasar':    '🔄',
+  'pengenalan perkalian':                 '✖️',
+  'pengenalan pembagian':                 '➗',
+  'perkalian':                            '✖️',
+  'pembagian':                            '➗',
+  'perkalian dan pembagian':              '🧮',
+  'operasi hitung campuran':              '🧮',
+  'bilangan bulat':                       '🔵',
+  'bilangan romawi':                      '🏛️',
+  'bilangan pecahan':                     '½',
+  'bilangan desimal':                     '🔟',
+  'persen':                               '💯',
+  'KPK':                                  '🔁',
+  'FPB':                                  '🔀',
+  'faktor dan kelipatan':                 '🔢',
+  'rasio dan proporsi':                   '⚖️',
+  'nilai uang':                           '💰',
+  'garis bilangan':                       '📊',
+  'koordinat kartesius sederhana':        '📍',
+  'skala dan denah':                      '🗺️',
+  'pengenalan waktu':                     '🕐',
+  'pengukuran waktu':                     '⏱️',
+  'pengukuran panjang':                   '📏',
+  'pengukuran berat':                     '⚖️',
+  'satuan':                               '📐',
+  'mengenal bangun datar':                '🔷',
+  'keliling bangun datar':                '🔷',
+  'luas persegi dan persegi panjang':     '⬜',
+  'luas bangun datar':                    '🔷',
+  'luas lingkaran':                       '⭕',
+  'keliling lingkaran':                   '⭕',
+  'sudut dan jenis sudut':                '📐',
+  'volume kubus dan balok':               '📦',
+  'volume prisma dan tabung':             '🧊',
+  'sifat bangun ruang':                   '🎲',
+  'mean median modus':                    '📊',
+  'bilangan bulat lanjutan':              '🔢',
+  'bilangan berpangkat':                  '📈',
+  'bentuk akar':                          '√',
+  'himpunan':                             '⊂',
+  'aljabar dasar':                        '🔤',
+  'persamaan linear satu variabel':       '➡️',
+  'sistem persamaan linear dua variabel': '⚖️',
+  'persamaan kuadrat':                    '📐',
+  'fungsi kuadrat':                       '📈',
+  'relasi dan fungsi':                    '↔️',
+  'persamaan garis lurus':                '📏',
+  'perbandingan senilai':                 '⚖️',
+  'perbandingan berbalik nilai':          '🔄',
+  'aritmatika sosial':                    '💼',
+  'teorema pythagoras':                   '📐',
+  'garis dan sudut':                      '📐',
+  'segitiga':                             '🔺',
+  'segiempat':                            '⬜',
+  'lingkaran':                            '⭕',
+  'kesebangunan dan kekongruenan':        '🔷',
+  'bangun ruang sisi datar':              '📦',
+  'bangun ruang sisi lengkung':           '⚽',
+  'transformasi geometri':               '🔄',
+  'statistika':                           '📊',
+  'peluang':                              '🎲',
+  'eksponen dan logaritma':               '📈',
+  'sistem persamaan linear':              '⚖️',
+  'pertidaksamaan linear':                '🔢',
+  'fungsi':                               '📈',
+  'komposisi fungsi':                     '🔗',
+  'invers fungsi':                        '🔄',
+  'trigonometri dasar':                   '📐',
+  'aturan sinus dan kosinus':             '📐',
+  'polinomial':                           '🔢',
+  'limit fungsi':                         '∞',
+  'turunan fungsi':                       '📉',
+  'aplikasi turunan':                     '🔬',
+  'integral tak tentu':                   '∫',
+  'integral tentu':                       '∫',
+  'aplikasi integral':                    '🔬',
+  'matriks':                              '🔢',
+  'determinan matriks':                   '🔢',
+  'transformasi matriks':                 '🔄',
+  'vektor 2D':                            '➡️',
+  'vektor 3D':                            '🎯',
+  'barisan aritmatika':                   '📊',
+  'deret aritmatika':                     '∑',
+  'barisan geometri':                     '📈',
+  'deret geometri':                       '📈',
+  'permutasi':                            '🔀',
+  'kombinasi':                            '🎲',
+  'peluang lanjutan':                     '🎲',
+  'peluang distribusi binomial':          '📊',
+  'geometri dimensi dua':                 '🔷',
+  'geometri dimensi tiga':                '🧊',
+  'geometri analitik lingkaran':          '⭕',
+  'program linear':                       '📈',
+  'statistika inferensial':               '📊',
 }
 
 function QuizSetupForm() {
@@ -31,7 +113,8 @@ function QuizSetupForm() {
   const searchParams = useSearchParams()
   const { loading, user } = useAuth()
 
-  const [topics, setTopics] = useState<string[]>([])
+  const [topicsByGrade, setTopicsByGrade] = useState<TopicsByGrade>({ Dasar: [], Menengah: [], Atas: [] })
+  const [activeGrade, setActiveGrade] = useState<Grade>('Dasar')
   const [topic, setTopic] = useState(searchParams.get('topic') ?? '')
   const [hasClaudeKey, setHasClaudeKey] = useState(false)
   const [hasGeminiKey, setHasGeminiKey] = useState(false)
@@ -46,7 +129,16 @@ function QuizSetupForm() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    getTopics().then(setTopics).catch(() => {})
+    getTopics().then(({ topics_by_grade }) => {
+      setTopicsByGrade(topics_by_grade)
+      // auto-select grade tab if a topic was pre-selected via URL
+      const pre = searchParams.get('topic')
+      if (pre) {
+        const matched = (Object.entries(topics_by_grade) as [Grade, string[]][])
+          .find(([, list]) => list.includes(pre))
+        if (matched) setActiveGrade(matched[0])
+      }
+    }).catch(() => {})
     getApiKeys().then((keys) => {
       setHasClaudeKey(keys.claude.has_key)
       setHasGeminiKey(keys.gemini.has_key)
@@ -96,12 +188,28 @@ function QuizSetupForm() {
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Topik
-              {topic && (
-                <span className="ml-2 text-primary-600 font-normal">— {topic}</span>
-              )}
+              {topic && <span className="ml-2 text-primary-600 font-normal">— {topic}</span>}
             </label>
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-64 overflow-y-auto pr-1">
-              {topics.map((t) => (
+
+            {/* Grade tabs */}
+            <div className="flex gap-1 mb-2 bg-gray-100 p-1 rounded-xl">
+              {GRADES.map((g) => (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => setActiveGrade(g)}
+                  className={`flex-1 py-1 rounded-lg text-xs font-semibold transition-all ${
+                    activeGrade === g ? 'bg-white text-primary-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  {g}
+                  <span className="ml-1 font-normal opacity-60">{topicsByGrade[g]?.length ?? 0}</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-52 overflow-y-auto pr-1">
+              {(topicsByGrade[activeGrade] ?? []).map((t) => (
                 <button
                   key={t}
                   type="button"

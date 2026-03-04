@@ -4,18 +4,26 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth'
-import { getTopics } from '@/lib/api'
+import { getTopics, TopicsByGrade, Grade } from '@/lib/api'
 import TopicCard from '@/components/TopicCard'
 import Navbar from '@/components/Navbar'
+
+const GRADES: Grade[] = ['Dasar', 'Menengah', 'Atas']
+const GRADE_LABEL: Record<Grade, string> = {
+  Dasar:    '🏫 SD  (Dasar)',
+  Menengah: '🏫 SMP (Menengah)',
+  Atas:     '🏫 SMA (Atas)',
+}
 
 export default function DashboardPage() {
   const router = useRouter()
   const { user, loading } = useAuth()
-  const [topics, setTopics] = useState<string[]>([])
+  const [topicsByGrade, setTopicsByGrade] = useState<TopicsByGrade>({ Dasar: [], Menengah: [], Atas: [] })
+  const [activeGrade, setActiveGrade] = useState<Grade>('Dasar')
   const [search, setSearch] = useState('')
 
   useEffect(() => {
-    getTopics().then(setTopics).catch(() => {})
+    getTopics().then(({ topics_by_grade }) => setTopicsByGrade(topics_by_grade)).catch(() => {})
   }, [])
 
   if (loading) {
@@ -26,7 +34,7 @@ export default function DashboardPage() {
     )
   }
 
-  const filtered = topics.filter((t) =>
+  const filtered = (topicsByGrade[activeGrade] ?? []).filter((t) =>
     t.toLowerCase().includes(search.toLowerCase())
   )
 
@@ -45,7 +53,7 @@ export default function DashboardPage() {
 
         {/* Topic grid */}
         <section>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-3">
             <h3 className="text-lg font-bold text-gray-800">Pilih Topik</h3>
             <input
               type="text"
@@ -54,6 +62,24 @@ export default function DashboardPage() {
               placeholder="Cari topik..."
               className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 w-40"
             />
+          </div>
+
+          {/* Grade tabs */}
+          <div className="flex gap-1 mb-4 bg-gray-100 p-1 rounded-xl w-fit">
+            {GRADES.map((g) => (
+              <button
+                key={g}
+                onClick={() => { setActiveGrade(g); setSearch('') }}
+                className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                  activeGrade === g ? 'bg-white text-primary-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                {g}
+                <span className="ml-1.5 text-xs font-normal opacity-60">
+                  {topicsByGrade[g]?.length ?? 0}
+                </span>
+              </button>
+            ))}
           </div>
 
           {filtered.length === 0 ? (

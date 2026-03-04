@@ -1,8 +1,10 @@
 TOPICS = [
     "penjumlahan",
     "pengurangan",
+    "penjumlahan dan pengurangan",
     "perkalian",
     "pembagian",
+    "perkalian dan pembagian",
     "ukuran",
     "waktu",
     "berat",
@@ -24,4 +26,5 @@ VISUAL_TOPICS = {
     "perhitungan bangun datar",
     "perhitungan besaran sudut",
     "bilangan pecahan",
+    "waktu"
 }

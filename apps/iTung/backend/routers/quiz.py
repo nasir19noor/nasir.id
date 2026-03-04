@@ -9,7 +9,7 @@ from typing import Optional
 from database import get_db
 from models import Question, UserAnswer, QuizSession, QuestionBank, User
 from auth import decode_token, decrypt_key
-from constants import TOPICS
+from constants import TOPICS, TOPICS_BY_GRADE
 from routers.adaptive import (analyse_performance, generate_adaptive_question,
                                calculate_age, get_base_difficulty, DIFFICULTY_LEVELS)
 
@@ -275,7 +275,7 @@ async def submit_answer(req: SubmitAnswerRequest,
 
 @router.get("/topics")
 def list_topics():
-    return {'topics': TOPICS}
+    return {'topics': TOPICS, 'topics_by_grade': TOPICS_BY_GRADE}
 
 
 @router.get("/stats")

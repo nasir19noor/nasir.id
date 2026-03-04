@@ -9,53 +9,53 @@ Base.metadata.create_all(bind=engine)
 
 QUESTIONS = [
     # ── penjumlahan ──────────────────────────────────────────────────────────
-    {"topic": "penjumlahan", "difficulty": "sangat_mudah",
+    {"topic": "penjumlahan dasar", "difficulty": "sangat_mudah",
      "question_text": "Berapakah hasil dari 3 + 5?",
      "choices": ["A. 6", "B. 7", "C. 8", "D. 9"],
      "correct_answer": "C", "explanation": "3 + 5 = 8"},
 
-    {"topic": "penjumlahan", "difficulty": "mudah",
+    {"topic": "penjumlahan dasar", "difficulty": "mudah",
      "question_text": "Berapakah hasil dari 345 + 278?",
      "choices": ["A. 613", "B. 623", "C. 633", "D. 643"],
      "correct_answer": "B", "explanation": "345 + 278 = 623"},
 
-    {"topic": "penjumlahan", "difficulty": "sedang",
+    {"topic": "penjumlahan dasar", "difficulty": "sedang",
      "question_text": "Pak Budi membeli 1.250 kg beras dan 875 kg jagung. Berapa total beratnya?",
      "choices": ["A. 2.025 kg", "B. 2.125 kg", "C. 2.225 kg", "D. 2.325 kg"],
      "correct_answer": "B", "explanation": "1.250 + 875 = 2.125 kg"},
 
-    {"topic": "penjumlahan", "difficulty": "sulit",
+    {"topic": "penjumlahan dasar", "difficulty": "sulit",
      "question_text": "Hasil dari 4.567 + 3.894 + 2.109 adalah...",
      "choices": ["A. 10.470", "B. 10.570", "C. 10.670", "D. 10.770"],
      "correct_answer": "B", "explanation": "4.567 + 3.894 = 8.461, lalu 8.461 + 2.109 = 10.570"},
 
-    {"topic": "penjumlahan", "difficulty": "sangat_sulit",
+    {"topic": "penjumlahan dasar", "difficulty": "sangat_sulit",
      "question_text": "Hasil dari 98.756 + 43.897 + 12.348 adalah...",
      "choices": ["A. 154.901", "B. 155.001", "C. 155.101", "D. 156.001"],
      "correct_answer": "B", "explanation": "98.756 + 43.897 = 142.653, lalu 142.653 + 12.348 = 155.001"},
 
     # ── pengurangan ──────────────────────────────────────────────────────────
-    {"topic": "pengurangan", "difficulty": "sangat_mudah",
+    {"topic": "pengurangan dasar", "difficulty": "sangat_mudah",
      "question_text": "Berapakah hasil dari 9 − 4?",
      "choices": ["A. 3", "B. 4", "C. 5", "D. 6"],
      "correct_answer": "C", "explanation": "9 − 4 = 5"},
 
-    {"topic": "pengurangan", "difficulty": "mudah",
+    {"topic": "pengurangan dasar", "difficulty": "mudah",
      "question_text": "Berapakah hasil dari 500 − 237?",
      "choices": ["A. 253", "B. 263", "C. 273", "D. 283"],
      "correct_answer": "B", "explanation": "500 − 237 = 263"},
 
-    {"topic": "pengurangan", "difficulty": "sedang",
+    {"topic": "pengurangan dasar", "difficulty": "sedang",
      "question_text": "Ibu memiliki 2.000 butir manik-manik. Setelah dipakai 847 butir, berapa sisa manik-manik?",
      "choices": ["A. 1.053", "B. 1.153", "C. 1.253", "D. 1.353"],
      "correct_answer": "B", "explanation": "2.000 − 847 = 1.153"},
 
-    {"topic": "pengurangan", "difficulty": "sulit",
+    {"topic": "pengurangan dasar", "difficulty": "sulit",
      "question_text": "Sebuah gudang berisi 10.000 karung beras. Setelah dijual 3.754 karung dan rusak 1.208 karung, berapa sisa karung?",
      "choices": ["A. 4.938", "B. 5.038", "C. 5.138", "D. 5.238"],
      "correct_answer": "B", "explanation": "10.000 − 3.754 − 1.208 = 5.038"},
 
-    {"topic": "pengurangan", "difficulty": "sangat_sulit",
+    {"topic": "pengurangan dasar", "difficulty": "sangat_sulit",
      "question_text": "Hasil dari 1.000.000 − 456.789 − 234.567 adalah...",
      "choices": ["A. 308.544", "B. 308.644", "C. 309.544", "D. 309.644"],
      "correct_answer": "B", "explanation": "1.000.000 − 456.789 = 543.211, lalu 543.211 − 234.567 = 308.644"},
@@ -113,131 +113,131 @@ QUESTIONS = [
      "correct_answer": "C", "explanation": "98.436 ÷ 132 = 746"},
 
     # ── ukuran ───────────────────────────────────────────────────────────────
-    {"topic": "ukuran", "difficulty": "sangat_mudah",
+    {"topic": "pengukuran panjang", "difficulty": "sangat_mudah",
      "question_text": "Berapakah 1 meter sama dengan berapa sentimeter?",
      "choices": ["A. 10 cm", "B. 100 cm", "C. 1.000 cm", "D. 10.000 cm"],
      "correct_answer": "B", "explanation": "1 meter = 100 sentimeter"},
 
-    {"topic": "ukuran", "difficulty": "mudah",
+    {"topic": "pengukuran panjang", "difficulty": "mudah",
      "question_text": "Sebuah meja panjangnya 150 cm. Berapa meter panjang meja itu?",
      "choices": ["A. 0,15 m", "B. 1,5 m", "C. 15 m", "D. 150 m"],
      "correct_answer": "B", "explanation": "150 cm ÷ 100 = 1,5 m"},
 
-    {"topic": "ukuran", "difficulty": "sedang",
+    {"topic": "pengukuran panjang", "difficulty": "sedang",
      "question_text": "Jarak kota A ke kota B adalah 3,75 km. Jarak kota B ke kota C adalah 2.500 m. Berapa total jarak dalam meter?",
      "choices": ["A. 5.750 m", "B. 6.250 m", "C. 6.750 m", "D. 7.250 m"],
      "correct_answer": "B", "explanation": "3,75 km = 3.750 m. 3.750 + 2.500 = 6.250 m"},
 
-    {"topic": "ukuran", "difficulty": "sulit",
+    {"topic": "pengukuran panjang", "difficulty": "sulit",
      "question_text": "Sebuah kolam renang berukuran 25 m × 12,5 m × 1,8 m. Berapa liter volume air kolam tersebut?",
      "choices": ["A. 562.500 liter", "B. 563.500 liter", "C. 564.000 liter", "D. 565.000 liter"],
      "correct_answer": "A", "explanation": "Volume = 25 × 12,5 × 1,8 = 562,5 m³ = 562.500 liter"},
 
-    {"topic": "ukuran", "difficulty": "sangat_sulit",
+    {"topic": "pengukuran panjang", "difficulty": "sangat_sulit",
      "question_text": "Sebuah benda bergerak dengan kecepatan 72 km/jam. Berapa meter per detik kecepatannya?",
      "choices": ["A. 18 m/s", "B. 20 m/s", "C. 22 m/s", "D. 24 m/s"],
      "correct_answer": "B", "explanation": "72 km/jam = 72.000 m / 3.600 s = 20 m/s"},
 
     # ── waktu ────────────────────────────────────────────────────────────────
-    {"topic": "waktu", "difficulty": "sangat_mudah",
+    {"topic": "pengukuran waktu", "difficulty": "sangat_mudah",
      "question_text": "1 jam sama dengan berapa menit?",
      "choices": ["A. 30 menit", "B. 60 menit", "C. 90 menit", "D. 120 menit"],
      "correct_answer": "B", "explanation": "1 jam = 60 menit"},
 
-    {"topic": "waktu", "difficulty": "mudah",
+    {"topic": "pengukuran waktu", "difficulty": "mudah",
      "question_text": "Rini belajar dari pukul 07.30 sampai 09.15. Berapa lama Rini belajar?",
      "choices": ["A. 1 jam 15 menit", "B. 1 jam 30 menit", "C. 1 jam 45 menit", "D. 2 jam"],
      "correct_answer": "C", "explanation": "Dari 07.30 ke 09.15 = 1 jam 45 menit"},
 
-    {"topic": "waktu", "difficulty": "sedang",
+    {"topic": "pengukuran waktu", "difficulty": "sedang",
      "question_text": "Sebuah perjalanan dimulai pukul 06.45 dan berakhir pukul 14.20. Berapa lama perjalanan tersebut?",
      "choices": ["A. 7 jam 25 menit", "B. 7 jam 35 menit", "C. 8 jam 25 menit", "D. 8 jam 35 menit"],
      "correct_answer": "B", "explanation": "Dari 06.45 ke 14.20 = 7 jam 35 menit"},
 
-    {"topic": "waktu", "difficulty": "sulit",
+    {"topic": "pengukuran waktu", "difficulty": "sulit",
      "question_text": "Andi berangkat dari kota A pukul 08.20 dan tiba di kota B pukul 13.05. Jika ia beristirahat 45 menit, berapa lama waktu perjalanan murninya?",
      "choices": ["A. 3 jam 55 menit", "B. 4 jam 0 menit", "C. 4 jam 5 menit", "D. 4 jam 30 menit"],
      "correct_answer": "B", "explanation": "Total waktu = 4 jam 45 menit. Waktu perjalanan murni = 4 jam 45 menit − 45 menit = 4 jam 0 menit"},
 
-    {"topic": "waktu", "difficulty": "sangat_sulit",
+    {"topic": "pengukuran waktu", "difficulty": "sangat_sulit",
      "question_text": "Sebuah proyek dimulai 15 Januari 2024 dan harus selesai dalam 100 hari. Tanggal berapa proyek itu harus selesai?",
      "choices": ["A. 23 April 2024", "B. 24 April 2024", "C. 25 April 2024", "D. 26 April 2024"],
      "correct_answer": "B", "explanation": "15 Jan + 100 hari: Jan sisa 16 hari, Feb 29 hari (2024 kabisat), Mar 31 hari, Apr 24 hari = 16+29+31+24=100. Selesai 24 April 2024"},
 
     # ── berat ────────────────────────────────────────────────────────────────
-    {"topic": "berat", "difficulty": "sangat_mudah",
+    {"topic": "pengukuran berat", "difficulty": "sangat_mudah",
      "question_text": "1 kg sama dengan berapa gram?",
      "choices": ["A. 10 gram", "B. 100 gram", "C. 1.000 gram", "D. 10.000 gram"],
      "correct_answer": "C", "explanation": "1 kg = 1.000 gram"},
 
-    {"topic": "berat", "difficulty": "mudah",
+    {"topic": "pengukuran berat", "difficulty": "mudah",
      "question_text": "Ibu membeli 2,5 kg gula. Berapa gram berat gula itu?",
      "choices": ["A. 250 gram", "B. 2.500 gram", "C. 25.000 gram", "D. 250.000 gram"],
      "correct_answer": "B", "explanation": "2,5 kg × 1.000 = 2.500 gram"},
 
-    {"topic": "berat", "difficulty": "sedang",
+    {"topic": "pengukuran berat", "difficulty": "sedang",
      "question_text": "Sebuah truk mengangkut 3 ton 450 kg beras. Berapa kg berat muatan itu?",
      "choices": ["A. 3.045 kg", "B. 3.405 kg", "C. 3.450 kg", "D. 3.504 kg"],
      "correct_answer": "C", "explanation": "3 ton = 3.000 kg. 3.000 + 450 = 3.450 kg"},
 
-    {"topic": "berat", "difficulty": "sulit",
+    {"topic": "pengukuran berat", "difficulty": "sulit",
      "question_text": "Sebuah peti berisi 48 kaleng susu. Berat setiap kaleng 750 gram. Jika berat peti kosong 2,4 kg, berapa kg berat peti berisi penuh?",
      "choices": ["A. 36 kg", "B. 38 kg", "C. 38,4 kg", "D. 40,4 kg"],
      "correct_answer": "C", "explanation": "Berat susu = 48 × 750 g = 36.000 g = 36 kg. Total = 36 + 2,4 = 38,4 kg"},
 
-    {"topic": "berat", "difficulty": "sangat_sulit",
+    {"topic": "pengukuran berat", "difficulty": "sangat_sulit",
      "question_text": "Sebuah kapal mengangkut 12 peti barang. 5 peti beratnya masing-masing 1,25 ton dan 7 peti beratnya masing-masing 850 kg. Berapa total muatan dalam kg?",
      "choices": ["A. 11.950 kg", "B. 12.200 kg", "C. 12.350 kg", "D. 12.450 kg"],
      "correct_answer": "B", "explanation": "5 × 1.250 kg = 6.250 kg. 7 × 850 kg = 5.950 kg. Total = 6.250 + 5.950 = 12.200 kg"},
 
     # ── panjang ──────────────────────────────────────────────────────────────
-    {"topic": "panjang", "difficulty": "sangat_mudah",
+    {"topic": "pengukuran panjang", "difficulty": "sangat_mudah",
      "question_text": "1 km sama dengan berapa meter?",
      "choices": ["A. 10 m", "B. 100 m", "C. 1.000 m", "D. 10.000 m"],
      "correct_answer": "C", "explanation": "1 km = 1.000 meter"},
 
-    {"topic": "panjang", "difficulty": "mudah",
+    {"topic": "pengukuran panjang", "difficulty": "mudah",
      "question_text": "Sebuah lintasan lari panjangnya 400 m. Andi berlari sebanyak 5 putaran. Berapa km jarak yang ditempuh Andi?",
      "choices": ["A. 0,2 km", "B. 1 km", "C. 2 km", "D. 20 km"],
      "correct_answer": "C", "explanation": "5 × 400 m = 2.000 m = 2 km"},
 
-    {"topic": "panjang", "difficulty": "sedang",
+    {"topic": "pengukuran panjang", "difficulty": "sedang",
      "question_text": "Panjang pita Ani 4,8 m. Pita itu dipotong menjadi 6 bagian sama panjang. Berapa cm panjang setiap potongan?",
      "choices": ["A. 60 cm", "B. 70 cm", "C. 80 cm", "D. 90 cm"],
      "correct_answer": "C", "explanation": "4,8 m = 480 cm. 480 ÷ 6 = 80 cm"},
 
-    {"topic": "panjang", "difficulty": "sulit",
+    {"topic": "pengukuran panjang", "difficulty": "sulit",
      "question_text": "Jarak sebenarnya antara dua kota adalah 240 km. Pada peta berskala 1:4.000.000, berapa cm jarak kedua kota itu di peta?",
      "choices": ["A. 4 cm", "B. 5 cm", "C. 6 cm", "D. 8 cm"],
      "correct_answer": "C", "explanation": "240 km = 24.000.000 cm. Jarak peta = 24.000.000 ÷ 4.000.000 = 6 cm"},
 
-    {"topic": "panjang", "difficulty": "sangat_sulit",
+    {"topic": "pengukuran panjang", "difficulty": "sangat_sulit",
      "question_text": "Sebuah tali dipotong menjadi 3 bagian dengan perbandingan 2:3:5. Jika bagian terpanjang 35 m, berapa panjang tali semula?",
      "choices": ["A. 60 m", "B. 65 m", "C. 70 m", "D. 75 m"],
      "correct_answer": "C", "explanation": "Bagian terpanjang (5 bagian) = 35 m, sehingga 1 bagian = 7 m. Total = (2+3+5) × 7 = 70 m"},
 
     # ── perhitungan bangun datar ──────────────────────────────────────────────
-    {"topic": "perhitungan bangun datar", "difficulty": "sangat_mudah",
+    {"topic": "luas bangun datar", "difficulty": "sangat_mudah",
      "question_text": "Persegi memiliki sisi 6 cm. Berapakah kelilingnya?",
      "choices": ["A. 18 cm", "B. 24 cm", "C. 30 cm", "D. 36 cm"],
      "correct_answer": "B", "explanation": "Keliling persegi = 4 × sisi = 4 × 6 = 24 cm"},
 
-    {"topic": "perhitungan bangun datar", "difficulty": "mudah",
+    {"topic": "luas bangun datar", "difficulty": "mudah",
      "question_text": "Persegi panjang memiliki panjang 12 cm dan lebar 8 cm. Berapakah luasnya?",
      "choices": ["A. 40 cm²", "B. 80 cm²", "C. 96 cm²", "D. 120 cm²"],
      "correct_answer": "C", "explanation": "Luas = panjang × lebar = 12 × 8 = 96 cm²"},
 
-    {"topic": "perhitungan bangun datar", "difficulty": "sedang",
+    {"topic": "luas bangun datar", "difficulty": "sedang",
      "question_text": "Sebuah lingkaran memiliki jari-jari 7 cm. Berapakah luasnya? (π = 22/7)",
      "choices": ["A. 44 cm²", "B. 88 cm²", "C. 154 cm²", "D. 308 cm²"],
      "correct_answer": "C", "explanation": "Luas = π × r² = 22/7 × 7 × 7 = 22 × 7 = 154 cm²"},
 
-    {"topic": "perhitungan bangun datar", "difficulty": "sulit",
+    {"topic": "luas bangun datar", "difficulty": "sulit",
      "question_text": "Sebuah trapesium memiliki sisi sejajar 8 cm dan 14 cm, serta tinggi 6 cm. Berapakah luasnya?",
      "choices": ["A. 60 cm²", "B. 64 cm²", "C. 66 cm²", "D. 72 cm²"],
      "correct_answer": "C", "explanation": "Luas trapesium = ½ × (a + b) × t = ½ × (8 + 14) × 6 = ½ × 22 × 6 = 66 cm²"},
 
-    {"topic": "perhitungan bangun datar", "difficulty": "sangat_sulit",
+    {"topic": "luas bangun datar", "difficulty": "sangat_sulit",
      "question_text": "Sebuah layang-layang memiliki diagonal 24 cm dan 18 cm. Di dalamnya terdapat lingkaran dengan jari-jari 4 cm. Berapa luas daerah layang-layang di luar lingkaran? (π = 3,14)",
      "choices": ["A. 141,76 cm²", "B. 155,76 cm²", "C. 165,76 cm²", "D. 171,76 cm²"],
      "correct_answer": "C", "explanation": "Luas layang-layang = ½ × 24 × 18 = 216 cm². Luas lingkaran = 3,14 × 4² = 50,24 cm². Selisih = 216 − 50,24 = 165,76 cm²"},
@@ -348,27 +348,27 @@ QUESTIONS = [
      "correct_answer": "C", "explanation": "4⅓ ÷ ⅔ = 13/3 ÷ 2/3 = 13/3 × 3/2 = 13/2 = 6½ hari"},
 
     # ── perhitungan besaran sudut ──────────────────────────────────────────────
-    {"topic": "perhitungan besaran sudut", "difficulty": "sangat_mudah",
+    {"topic": "sudut dan jenis sudut", "difficulty": "sangat_mudah",
      "question_text": "Berapa derajat sudut siku-siku?",
      "choices": ["A. 45°", "B. 90°", "C. 120°", "D. 180°"],
      "correct_answer": "B", "explanation": "Sudut siku-siku besarnya 90°"},
 
-    {"topic": "perhitungan besaran sudut", "difficulty": "mudah",
+    {"topic": "sudut dan jenis sudut", "difficulty": "mudah",
      "question_text": "Jumlah sudut dalam segitiga adalah... derajat.",
      "choices": ["A. 90°", "B. 180°", "C. 270°", "D. 360°"],
      "correct_answer": "B", "explanation": "Jumlah sudut dalam segitiga = 180°"},
 
-    {"topic": "perhitungan besaran sudut", "difficulty": "sedang",
+    {"topic": "sudut dan jenis sudut", "difficulty": "sedang",
      "question_text": "Sebuah segitiga memiliki dua sudut yaitu 65° dan 75°. Berapa besar sudut ketiga?",
      "choices": ["A. 30°", "B. 40°", "C. 50°", "D. 60°"],
      "correct_answer": "B", "explanation": "Sudut ketiga = 180° − 65° − 75° = 40°"},
 
-    {"topic": "perhitungan besaran sudut", "difficulty": "sulit",
+    {"topic": "sudut dan jenis sudut", "difficulty": "sulit",
      "question_text": "Pada jarum jam pukul 03.00, berapa derajat sudut yang dibentuk jarum jam dan jarum menit?",
      "choices": ["A. 60°", "B. 75°", "C. 90°", "D. 120°"],
      "correct_answer": "C", "explanation": "Pukul 03.00, jarum jam di angka 3 (90° dari 12). Jarum menit di 12 (0°). Sudut = 90°"},
 
-    {"topic": "perhitungan besaran sudut", "difficulty": "sangat_sulit",
+    {"topic": "sudut dan jenis sudut", "difficulty": "sangat_sulit",
      "question_text": "Pada jarum jam pukul 03.40, berapa derajat sudut terkecil yang dibentuk jarum jam dan jarum menit?",
      "choices": ["A. 130°", "B. 135°", "C. 140°", "D. 145°"],
      "correct_answer": "A", "explanation": "Jarum jam pada 03.40: 90° + 40 × 0,5° = 110°. Jarum menit pada 40 menit: 240°. Sudut = |240° − 110°| = 130°"},
