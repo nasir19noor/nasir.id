@@ -46,7 +46,7 @@ module "s3_waha" {
 
 module "s3_nasir" {
   source = "git::https://github.com/nasir19noor/terraform.git//aws/modules/s3"
-  bucket = "nasir.id"
+  bucket = "www.nasir.id"
 }
 
 
