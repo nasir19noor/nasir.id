@@ -54,7 +54,6 @@ module "s3_nasir" {
   ignore_public_acls      = false
   restrict_public_buckets = false
 }
-}
 
 
 
