@@ -6,6 +6,26 @@ import { useAuth } from '@/lib/auth'
 import { getTopics, createSession, getApiKeys } from '@/lib/api'
 import Navbar from '@/components/Navbar'
 
+const topicEmoji: Record<string, string> = {
+  penjumlahan:                '➕',
+  pengurangan:                '➖',
+  perkalian:                  '✖️',
+  pembagian:                  '➗',
+  ukuran:                     '📐',
+  waktu:                      '⏰',
+  berat:                      '⚖️',
+  panjang:                    '📏',
+  'perhitungan bangun datar': '🔷',
+  'garis bilangan':           '📊',
+  'nilai uang':               '💰',
+  satuan:                     '🔢',
+  'bilangan pecahan':         '½',
+  'perhitungan besaran sudut':'📐',
+  KPK:                        '🔁',
+  FPB:                        '🔀',
+  'bilangan bulat':           '🔢',
+}
+
 function QuizSetupForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -74,17 +94,29 @@ function QuizSetupForm() {
 
           {/* Topic */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Topik</label>
-            <select
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-            >
-              <option value="">-- Pilih topik --</option>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Topik
+              {topic && (
+                <span className="ml-2 text-primary-600 font-normal">— {topic}</span>
+              )}
+            </label>
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-64 overflow-y-auto pr-1">
               {topics.map((t) => (
-                <option key={t} value={t}>{t}</option>
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setTopic(t)}
+                  className={`flex flex-col items-center gap-1 p-2 rounded-xl border-2 text-center transition-all text-xs font-semibold
+                    ${topic === t
+                      ? 'border-primary-500 bg-primary-50 text-primary-700'
+                      : 'border-gray-200 bg-white text-gray-700 hover:border-primary-300 hover:bg-primary-50'
+                    }`}
+                >
+                  <span className="text-lg">{topicEmoji[t] ?? '📚'}</span>
+                  <span className="leading-tight capitalize">{t}</span>
+                </button>
               ))}
-            </select>
+            </div>
           </div>
 
           {/* Total questions */}
