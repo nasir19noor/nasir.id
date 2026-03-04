@@ -53,6 +53,10 @@ module "s3_nasir" {
   block_public_policy     = false
   ignore_public_acls      = false
   restrict_public_buckets = false
+
+  # --- Enable Website and Public Access Features ---
+  enable_website_hosting    = true
+  enable_public_read_access = true
 }
 
 
