@@ -11,6 +11,24 @@ CREATE TABLE IF NOT EXISTS articles (
   published_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Comments table for articles and portfolio items
+CREATE TABLE IF NOT EXISTS comments (
+  id SERIAL PRIMARY KEY,
+  article_id INTEGER NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
+  name VARCHAR(100) NOT NULL,
+  email VARCHAR(255) NOT NULL,
+  website VARCHAR(255),
+  comment TEXT NOT NULL,
+  approved BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create indexes for comments
+CREATE INDEX IF NOT EXISTS idx_comments_article_id ON comments(article_id);
+CREATE INDEX IF NOT EXISTS idx_comments_approved ON comments(approved);
+CREATE INDEX IF NOT EXISTS idx_comments_created_at ON comments(created_at);
+
 -- Settings table for landing page configuration
 CREATE TABLE IF NOT EXISTS settings (
   id SERIAL PRIMARY KEY,

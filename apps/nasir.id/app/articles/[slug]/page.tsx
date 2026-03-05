@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import AnalyticsTracker from '@/components/AnalyticsTracker';
+import Comments from '@/components/Comments';
 import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
@@ -177,6 +178,9 @@ export default async function ArticleDetail({ params }: PageProps) {
           className="prose prose-lg max-w-none"
           dangerouslySetInnerHTML={{ __html: htmlContent }}
         />
+
+        {/* Comments Section */}
+        <Comments articleId={article.id} articleTitle={article.title} />
 
         <div className="mt-16 pt-8 border-t border-white/10">
           <Link
