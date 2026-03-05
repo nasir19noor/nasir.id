@@ -35,7 +35,7 @@ resource "cloudflare_record" "dkm" {
 resource "cloudflare_record" "blog" {
   zone_id = data.cloudflare_zones.nasir_id.zones[0].id
   name    = local.root
-  content = "216.106.184.20"
+  content = "207.180.248.214"
   type    = "A"
   proxied = true
   ttl     = 1
@@ -46,8 +46,8 @@ resource "cloudflare_record" "app" {
   name    = "app.nasir.id"
   content = "daf4f84c-936f-4e51-8583-031a7a50073b.cfargotunnel.com"
   type    = "CNAME"
-  proxied = true
-  ttl     = 1
+  proxied = false
+  ttl     = 3600
 }
 
 resource "cloudflare_record" "ssh" {
@@ -168,6 +168,7 @@ resource "cloudflare_record" "waha_nasir_id" {
   proxied = false
   ttl     = 3600
 }
+
 
 
 
