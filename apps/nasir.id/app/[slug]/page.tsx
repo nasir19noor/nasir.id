@@ -226,10 +226,6 @@ export default async function SlugPage({ params }: PageProps) {
                 src={featuredImage}
                 alt={item.title}
                 className="w-full h-full object-cover"
-                onError={(e) => {
-                  console.error('Failed to load featured image:', featuredImage);
-                  e.currentTarget.style.display = 'none';
-                }}
               />
             </div>
           </div>
