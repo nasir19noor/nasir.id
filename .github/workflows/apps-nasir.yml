@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy-itung:
+  deploy-nasir:
     runs-on: [self-hosted, nasir-contabo]
 
     steps:
@@ -19,7 +19,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Deploy backend
+    - name: Deploy nasir.id
       env:
         SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
       working-directory: apps/nasir.id
