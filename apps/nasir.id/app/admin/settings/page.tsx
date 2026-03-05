@@ -62,44 +62,86 @@ export default function SettingsPage() {
         const file = e.target.files?.[0];
         if (!file) return;
 
+        console.log('🔄 [ADMIN] Starting image upload:', file.name, file.size, 'bytes');
+        
         setUploading(true);
         setError('');
+        setSuccess('');
 
+        // Store the current image URL as backup
+        const previousImage = settings.about_image;
+        console.log('💾 [ADMIN] Previous image URL:', previousImage);
+        
         // Create preview URL for immediate display
         const previewUrl = URL.createObjectURL(file);
-        const previousImage = settings.about_image;
+        console.log('👁️ [ADMIN] Created preview URL:', previewUrl);
         
-        // Optimistically update UI
-        setSettings({ ...settings, about_image: previewUrl });
+        // Optimistically update UI with preview
+        setSettings(prev => ({ ...prev, about_image: previewUrl }));
 
         try {
             const formData = new FormData();
             formData.append('file', file);
 
+            console.log('📤 [ADMIN] Sending upload request...');
             const res = await fetch('/api/upload', {
                 method: 'POST',
                 credentials: 'include',
                 body: formData,
             });
 
+            console.log('📥 [ADMIN] Upload response status:', res.status);
+
             if (!res.ok) {
-                throw new Error('Failed to upload image');
+                const errorText = await res.text();
+                console.error('❌ [ADMIN] Upload failed with status:', res.status, errorText);
+                throw new Error(`Upload failed: ${res.status} ${errorText}`);
             }
 
             const data = await res.json();
+            console.log('✅ [ADMIN] Upload successful, response:', data);
             
-            // Revoke preview URL and set actual S3 URL
+            if (!data.url) {
+                console.error('❌ [ADMIN] No URL in response:', data);
+                throw new Error('No URL returned from upload');
+            }
+
+            // Clean up preview URL
             URL.revokeObjectURL(previewUrl);
-            setSettings({ ...settings, about_image: data.url });
-            setSuccess('Image uploaded successfully!');
+            console.log('🧹 [ADMIN] Revoked preview URL');
+            
+            // Add cache busting parameter to ensure fresh image load
+            const cacheBustUrl = data.url + '?t=' + Date.now();
+            console.log('🔄 [ADMIN] Setting new image URL with cache bust:', cacheBustUrl);
+            
+            // Update with actual S3 URL
+            setSettings(prev => ({ ...prev, about_image: cacheBustUrl }));
+            setSuccess('Image uploaded successfully! 🎉');
+            
+            // Clear the file input to allow re-uploading the same file
+            e.target.value = '';
+            
         } catch (err) {
-            console.error('Upload error:', err);
-            setError('Failed to upload image');
-            // Revert to previous image on error
+            console.error('💥 [ADMIN] Upload error:', err);
+            
+            // Clean up preview URL
             URL.revokeObjectURL(previewUrl);
-            setSettings({ ...settings, about_image: previousImage });
+            console.log('🧹 [ADMIN] Revoked preview URL after error');
+            
+            // Revert to previous image
+            console.log('⏪ [ADMIN] Reverting to previous image:', previousImage);
+            setSettings(prev => ({ ...prev, about_image: previousImage }));
+            
+            // Set detailed error message
+            const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+            setError(`Failed to upload image: ${errorMessage}`);
+            
+            // Clear the file input
+            e.target.value = '';
+            
         } finally {
             setUploading(false);
+            console.log('🏁 [ADMIN] Upload process completed');
         }
     };
 
@@ -271,7 +313,10 @@ export default function SettingsPage() {
                                 className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm"
                             />
                             {uploading && (
-                                <p className="text-sm text-blue-600 mt-1">Uploading...</p>
+                                <div className="flex items-center gap-2 text-sm text-blue-600 mt-1">
+                                    <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+                                    Uploading image...
+                                </div>
                             )}
                             {settings.about_image && (
                                 <div className="mt-3">
@@ -279,7 +324,16 @@ export default function SettingsPage() {
                                         src={settings.about_image}
                                         alt="Profile"
                                         className="h-40 w-40 rounded-2xl object-cover border-4 border-pink-200"
+                                        onLoad={() => console.log('🖼️ [ADMIN] Image loaded successfully:', settings.about_image)}
+                                        onError={(e) => {
+                                            console.error('💥 [ADMIN] Image failed to load:', settings.about_image);
+                                            console.error('💥 [ADMIN] Image error event:', e);
+                                        }}
+                                        key={settings.about_image} // Force re-render when URL changes
                                     />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Current profile image
+                                    </p>
                                 </div>
                             )}
                         </div>
