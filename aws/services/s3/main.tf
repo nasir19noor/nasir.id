@@ -60,7 +60,8 @@ module "s3_nasir" {
 }
 
 resource "aws_s3_bucket_policy" "nasir_uploads_public_read" {
-  bucket = module.s3_nasir.s3_bucket_id
+  bucket     = module.s3_nasir.s3_bucket_id
+  depends_on = [module.s3_nasir]
 
   policy = jsonencode({
     Version = "2012-10-17"
