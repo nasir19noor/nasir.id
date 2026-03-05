@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import AnalyticsTracker from '@/components/AnalyticsTracker';
+import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,6 +12,104 @@ const md = new MarkdownIt();
 
 interface PageProps {
   params: Promise<{ slug: string }>;
+}
+
+// Generate metadata for article pages
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://nasir.id';
+
+  try {
+    const results = await sql`
+      SELECT id, title, summary, content, image_url, images, published_at 
+      FROM articles 
+      WHERE slug = ${slug} AND is_portfolio = FALSE
+      LIMIT 1
+    `;
+
+    if (!results || results.length === 0) {
+      return {
+        title: 'Article Not Found | Nasir.id',
+        description: 'The requested article could not be found.',
+      };
+    }
+
+    const article = results[0];
+    
+    // Get article image (first from images array, then image_url, then fallback)
+    let articleImage = `${baseUrl}/default-og-image.jpg`;
+    if (article.images && article.images.length > 0) {
+      articleImage = article.images[0];
+    } else if (article.image_url) {
+      articleImage = article.image_url;
+    }
+
+    // Create description from summary or first 160 chars of content
+    let description = article.summary || '';
+    if (!description && article.content) {
+      // Strip HTML tags and get first 160 characters
+      const plainText = article.content.replace(/<[^>]*>/g, '');
+      description = plainText.substring(0, 160).trim() + '...';
+    }
+
+    const title = `${article.title} | Nasir.id`;
+    const publishedDate = new Date(article.published_at).toISOString();
+
+    return {
+      title,
+      description,
+      keywords: ['Cloud Engineering', 'DevOps', 'AWS', 'Azure', 'GCP', 'Kubernetes', 'Docker', 'Terraform', 'Technical Article'],
+      authors: [{ name: 'Nasir Noor' }],
+      creator: 'Nasir Noor',
+      
+      // Open Graph tags
+      openGraph: {
+        title,
+        description,
+        url: `${baseUrl}/articles/${slug}`,
+        siteName: 'Nasir.id',
+        type: 'article',
+        locale: 'en_US',
+        publishedTime: publishedDate,
+        authors: ['Nasir Noor'],
+        section: 'Technology',
+        tags: ['Cloud Engineering', 'DevOps', 'Technology'],
+        images: [
+          {
+            url: articleImage,
+            width: 1200,
+            height: 630,
+            alt: article.title,
+            type: 'image/jpeg',
+          },
+        ],
+      },
+      
+      // Twitter Card tags
+      twitter: {
+        card: 'summary_large_image',
+        title,
+        description,
+        creator: '@nasir_noor', // Replace with actual Twitter handle
+        images: [articleImage],
+      },
+      
+      // Additional structured data
+      other: {
+        'article:published_time': publishedDate,
+        'article:author': 'Nasir Noor',
+        'article:section': 'Technology',
+        'og:image:width': '1200',
+        'og:image:height': '630',
+      },
+    };
+  } catch (error) {
+    console.error('Error generating article metadata:', error);
+    return {
+      title: 'Article | Nasir.id',
+      description: 'Read the latest technical articles about cloud engineering and DevOps.',
+    };
+  }
 }
 
 export default async function ArticleDetail({ params }: PageProps) {
