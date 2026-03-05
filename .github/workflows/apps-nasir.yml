@@ -26,7 +26,7 @@ jobs:
       run: |
         echo "Pulling .env from S3..."
         rm -f .env
-        aws s3 cp s3://www.itung.nasir.id/.env .env
+        aws s3 cp s3://www.nasir.id/.env .env
         echo "Stopping and removing existing backend container..."
         echo "$SSH_PASSWORD" | sudo -S docker stop nasir 2>/dev/null || true
         echo "$SSH_PASSWORD" | sudo -S docker rm nasir 2>/dev/null || true
