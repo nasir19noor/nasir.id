@@ -1,0 +1,53 @@
+import { NextResponse } from 'next/server';
+import sql from '@/lib/db';
+import { isAuthenticated } from '@/lib/auth';
+
+export async function GET() {
+    const authed = await isAuthenticated();
+    if (!authed) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    try {
+        const articles = await sql`
+      SELECT id, title, slug, summary, image_url, images, published_at, is_portfolio 
+      FROM articles 
+      ORDER BY published_at DESC
+    `;
+        return NextResponse.json(articles);
+    } catch (error) {
+        console.error('Error fetching articles:', error);
+        return NextResponse.json({ error: 'Failed to fetch articles' }, { status: 500 });
+    }
+}
+
+export async function POST(request: Request) {
+    const authed = await isAuthenticated();
+    if (!authed) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    try {
+        const { title, slug, summary, content, image_url, images, is_portfolio } = await request.json();
+
+        if (!title || !slug || !content) {
+            return NextResponse.json(
+                { error: 'Title, slug, and content are required' },
+                { status: 400 }
+            );
+        }
+
+        const imagesArray = Array.isArray(images) ? images : [];
+
+        const [article] = await sql`
+      INSERT INTO articles (title, slug, summary, content, image_url, images, is_portfolio, published_at)
+      VALUES (${title}, ${slug}, ${summary || ''}, ${content}, ${image_url || ''}, ${imagesArray}, ${is_portfolio || false}, NOW())
+      RETURNING id, title, slug, summary, image_url, images, is_portfolio, published_at
+    `;
+
+        return NextResponse.json(article, { status: 201 });
+    } catch (error) {
+        console.error('Error creating article:', error);
+        return NextResponse.json({ error: 'Failed to create article' }, { status: 500 });
+    }
+}

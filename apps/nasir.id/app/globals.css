@@ -1,0 +1,136 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Caveat:wght@400;500;600;700&display=swap');
+
+:root {
+  --background: #fefefe;
+  --foreground: #1a1a1a;
+  --accent: #ff6b9d;
+  --accent-light: #ffc2d4;
+  --secondary: #4facfe;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: linear-gradient(135deg, #fef5f8 0%, #f0f9ff 100%);
+  color: var(--foreground);
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #fef5f8;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #ff6b9d, #4facfe);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #ff5a8d, #3f9cee);
+}
+
+/* Playful animations */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+}
+
+@keyframes wiggle {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(3deg); }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-wiggle {
+  animation: wiggle 1s ease-in-out infinite;
+}
+
+/* Prose styles for article content */
+.prose {
+  color: #374151;
+}
+
+.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+  color: #1a1a1a;
+  font-weight: 700;
+}
+
+.prose a {
+  color: #ff6b9d;
+  text-decoration: underline;
+  text-decoration-color: #ffc2d4;
+  text-decoration-thickness: 2px;
+  transition: all 0.2s;
+}
+
+.prose a:hover {
+  color: #ff5a8d;
+  text-decoration-color: #ff6b9d;
+}
+
+.prose strong {
+  color: #1a1a1a;
+}
+
+.prose code {
+  color: #4facfe;
+  background: rgba(79, 172, 254, 0.1);
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.375rem;
+  font-size: 0.875em;
+}
+
+.prose pre {
+  background: #f8fafc;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.75rem;
+}
+
+.prose blockquote {
+  border-left-color: #ff6b9d;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.prose ul, .prose ol {
+  color: #374151;
+}
+
+.prose hr {
+  border-color: #ffc2d4;
+}
+
+.prose img {
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 30px rgba(255, 107, 157, 0.1);
+}
+
+.prose table th {
+  color: #1a1a1a;
+}
+
+.prose table td {
+  color: #374151;
+}

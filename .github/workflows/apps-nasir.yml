@@ -1,0 +1,50 @@
+name: 'Deploy nasir.id'
+
+on:
+  push:
+    paths:
+      - 'apps/nasir.id/**'
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy-itung:
+    runs-on: [self-hosted, nasir-contabo]
+
+    steps:
+    - name: Remove stale nested .git directories
+      run: find "$GITHUB_WORKSPACE" -mindepth 2 -name ".git" -exec rm -rf {} + 2>/dev/null || true
+
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Deploy backend
+      env:
+        SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+      working-directory: apps/iTung/backend
+      run: |
+        echo "Pulling .env from S3..."
+        rm -f .env
+        aws s3 cp s3://www.itung.nasir.id/.env .env
+        echo "Stopping and removing existing backend container..."
+        echo "$SSH_PASSWORD" | sudo -S docker stop nasir 2>/dev/null || true
+        echo "$SSH_PASSWORD" | sudo -S docker rm nasir 2>/dev/null || true
+        echo "$SSH_PASSWORD" | sudo -S docker rmi nasir:latest 2>/dev/null || true
+
+        echo "Building nasir image..."
+        echo "$SSH_PASSWORD" | sudo -S docker build -t nasir:latest .
+
+        echo "Running nasir container..."
+        echo "$SSH_PASSWORD" | sudo -S docker run -d --network host --env-file .env \
+          -e PORT="7000" \
+          -e DATABASE_URL \
+          -e ADMIN_PASSWORD \
+          -e AWS_REGION \
+          -e AWS_ACCESS_KEY_ID \
+          -e AWS_SECRET_ACCESS_KEY \
+          -e AWS_S3_BUCKET \
+          --env-file .env \
+          --name nasir nasir:latest
+
+        echo "Backend deployed successfully"
