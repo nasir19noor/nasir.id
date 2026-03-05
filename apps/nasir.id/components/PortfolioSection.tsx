@@ -65,7 +65,7 @@ export default function PortfolioSection() {
                 ) : (
                     <>
                         {/* Portfolio grid */}
-                        <div className="grid md:grid-cols-2 gap-8 mb-12">
+                        <div className="grid md:grid-cols-3 gap-6 mb-12">
                             {projects.map((project) => (
                                 <article
                                     key={project.id}
@@ -73,7 +73,7 @@ export default function PortfolioSection() {
                                 >
                                     {/* Image */}
                                     {project.image_url && (
-                                        <div className="aspect-[16/9] relative overflow-hidden bg-gradient-to-br from-purple-100 to-blue-100">
+                                        <div className="aspect-[16/10] relative overflow-hidden bg-gradient-to-br from-purple-100 to-blue-100">
                                             <Image
                                                 src={getThumbnailUrl(project.image_url)}
                                                 alt={project.project_title}
@@ -84,10 +84,10 @@ export default function PortfolioSection() {
                                     )}
 
                                     {/* Content */}
-                                    <div className="p-6">
-                                        <div className="flex items-center gap-4 text-sm text-gray-500 mb-3">
+                                    <div className="p-4">
+                                        <div className="flex items-center gap-4 text-xs text-gray-500 mb-2">
                                             <span className="flex items-center gap-1">
-                                                <Calendar size={14} />
+                                                <Calendar size={12} />
                                                 {new Date(project.published_at).toLocaleDateString('en-US', {
                                                     month: 'short',
                                                     day: 'numeric',
@@ -96,20 +96,20 @@ export default function PortfolioSection() {
                                             </span>
                                         </div>
 
-                                        <h3 className="text-xl font-semibold text-gray-900 mb-3 group-hover:text-purple-600 transition-colors">
+                                        <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-purple-600 transition-colors line-clamp-2">
                                             {project.project_title}
                                         </h3>
                                         {project.description && (
-                                            <p className="text-gray-600 mb-4">{getTextSummary(project.description)}</p>
+                                            <p className="text-gray-600 mb-3 text-sm line-clamp-3">{getTextSummary(project.description)}</p>
                                         )}
 
                                         <a
                                             href={`/${project.slug}`}
-                                            className="inline-flex items-center gap-2 text-purple-500 hover:text-purple-600 transition-colors group/link font-medium"
+                                            className="inline-flex items-center gap-2 text-purple-500 hover:text-purple-600 transition-colors group/link font-medium text-sm"
                                         >
                                             View Project
                                             <ArrowRight
-                                                size={16}
+                                                size={14}
                                                 className="group-hover/link:translate-x-1 transition-transform"
                                             />
                                         </a>

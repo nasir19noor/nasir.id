@@ -57,7 +57,7 @@ export default function BlogSection() {
                 ) : (
                     <>
                         {/* Articles grid */}
-                        <div className="grid md:grid-cols-2 gap-8 mb-12">
+                        <div className="grid md:grid-cols-3 gap-6 mb-12">
                             {articles.map((article) => (
                                 <article
                                     key={article.id}
@@ -65,7 +65,7 @@ export default function BlogSection() {
                                 >
                                     {/* Image */}
                                     {article.image_url && (
-                                        <div className="aspect-[16/9] relative overflow-hidden bg-gradient-to-br from-pink-100 to-blue-100">
+                                        <div className="aspect-[16/10] relative overflow-hidden bg-gradient-to-br from-pink-100 to-blue-100">
                                             <Image
                                                 src={getThumbnailUrl(article.image_url)}
                                                 alt={article.title}
@@ -76,10 +76,10 @@ export default function BlogSection() {
                                     )}
 
                                     {/* Content */}
-                                    <div className="p-6">
-                                        <div className="flex items-center gap-4 text-sm text-gray-500 mb-3">
+                                    <div className="p-4">
+                                        <div className="flex items-center gap-4 text-xs text-gray-500 mb-2">
                                             <span className="flex items-center gap-1">
-                                                <Calendar size={14} />
+                                                <Calendar size={12} />
                                                 {new Date(article.published_at).toLocaleDateString('en-US', {
                                                     month: 'short',
                                                     day: 'numeric',
@@ -88,20 +88,20 @@ export default function BlogSection() {
                                             </span>
                                         </div>
 
-                                        <h3 className="text-xl font-semibold text-gray-900 mb-3 group-hover:text-pink-600 transition-colors">
+                                        <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-pink-600 transition-colors line-clamp-2">
                                             {article.title}
                                         </h3>
                                         {article.summary && (
-                                            <p className="text-gray-600 mb-4">{article.summary}</p>
+                                            <p className="text-gray-600 mb-3 text-sm line-clamp-3">{article.summary}</p>
                                         )}
 
                                         <a
                                             href={`/${article.slug}`}
-                                            className="inline-flex items-center gap-2 text-pink-500 hover:text-pink-600 transition-colors group/link font-medium"
+                                            className="inline-flex items-center gap-2 text-pink-500 hover:text-pink-600 transition-colors group/link font-medium text-sm"
                                         >
                                             Read More
                                             <ArrowRight
-                                                size={16}
+                                                size={14}
                                                 className="group-hover/link:translate-x-1 transition-transform"
                                             />
                                         </a>
