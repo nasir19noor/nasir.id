@@ -318,7 +318,7 @@ export default function AdminCommentsPage() {
                 <p className="text-sm text-gray-600">
                   Comment on:{' '}
                   <a
-                    href={`/articles/${comment.article_slug}`}
+                    href={`/${comment.article_slug}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-blue-600 hover:text-blue-700 font-medium"

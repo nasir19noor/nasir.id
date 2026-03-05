@@ -104,7 +104,7 @@ export default function PortfolioSection() {
                                         )}
 
                                         <a
-                                            href={`/portfolio/${project.id}`}
+                                            href={`/${project.slug}`}
                                             className="inline-flex items-center gap-2 text-purple-500 hover:text-purple-600 transition-colors group/link font-medium"
                                         >
                                             View Project
@@ -121,10 +121,10 @@ export default function PortfolioSection() {
                         {/* View all link */}
                         <div className="text-center">
                             <a
-                                href="/portfolio"
+                                href="/#portfolio"
                                 className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-full hover:from-purple-600 hover:to-blue-600 transition-all shadow-lg hover:shadow-xl font-medium"
                             >
-                                View All Projects
+                                View More Projects
                                 <ArrowRight size={18} />
                             </a>
                         </div>

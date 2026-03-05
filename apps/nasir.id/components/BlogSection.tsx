@@ -96,7 +96,7 @@ export default function BlogSection() {
                                         )}
 
                                         <a
-                                            href={`/articles/${article.slug}`}
+                                            href={`/${article.slug}`}
                                             className="inline-flex items-center gap-2 text-pink-500 hover:text-pink-600 transition-colors group/link font-medium"
                                         >
                                             Read More
@@ -113,10 +113,10 @@ export default function BlogSection() {
                         {/* View all link */}
                         <div className="text-center">
                             <a
-                                href="/articles"
+                                href="/#articles"
                                 className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-full hover:from-pink-600 hover:to-purple-600 transition-all shadow-lg hover:shadow-xl font-medium"
                             >
-                                View All Articles
+                                View More Articles
                                 <ArrowRight size={18} />
                             </a>
                         </div>
