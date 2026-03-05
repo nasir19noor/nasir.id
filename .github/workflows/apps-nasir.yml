@@ -22,7 +22,7 @@ jobs:
     - name: Deploy backend
       env:
         SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
-      working-directory: apps/iTung/backend
+      working-directory: apps/nasir.id
       run: |
         echo "Pulling .env from S3..."
         rm -f .env
@@ -47,4 +47,4 @@ jobs:
           --env-file .env \
           --name nasir nasir:latest
 
-        echo "Backend deployed successfully"
+        echo "nasir.id deployed successfully"
