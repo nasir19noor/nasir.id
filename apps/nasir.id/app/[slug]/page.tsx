@@ -121,7 +121,7 @@ export default async function SlugPage({ params }: PageProps) {
   console.log(`🔍 [SLUG] Looking up content for slug: ${slug}`);
 
   const results = await sql`
-    SELECT id, title, content, published_at, is_portfolio, summary
+    SELECT id, title, content, published_at, is_portfolio, summary, image_url, images
     FROM articles 
     WHERE slug = ${slug}
     LIMIT 1
@@ -136,6 +136,14 @@ export default async function SlugPage({ params }: PageProps) {
   const isPortfolio = item.is_portfolio;
   
   console.log(`✅ [SLUG] Found ${isPortfolio ? 'portfolio project' : 'article'}: ${item.title}`);
+
+  // Get the featured image (first from images array, then image_url)
+  let featuredImage = null;
+  if (item.images && item.images.length > 0) {
+    featuredImage = item.images[0];
+  } else if (item.image_url) {
+    featuredImage = item.image_url;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-blue-50 to-purple-50">
@@ -198,12 +206,6 @@ export default async function SlugPage({ params }: PageProps) {
             {item.title}
           </h1>
           
-          {item.summary && (
-            <p className="text-xl text-gray-600 leading-relaxed mb-6">
-              {item.summary}
-            </p>
-          )}
-          
           <div className="flex items-center gap-2 text-gray-500">
             <Calendar size={16} />
             <span className="text-sm">
@@ -215,6 +217,23 @@ export default async function SlugPage({ params }: PageProps) {
             </span>
           </div>
         </header>
+
+        {/* Featured Image */}
+        {featuredImage && (
+          <div className="mb-12">
+            <div className="aspect-[16/9] relative overflow-hidden rounded-2xl border-2 border-pink-100 bg-gradient-to-br from-pink-100 to-blue-100">
+              <img
+                src={featuredImage}
+                alt={item.title}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  console.error('Failed to load featured image:', featuredImage);
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Content */}
         <article className="bg-white/80 backdrop-blur-sm rounded-2xl border-2 border-pink-100 p-8 md:p-12 mb-12">
