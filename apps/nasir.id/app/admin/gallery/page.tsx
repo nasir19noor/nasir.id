@@ -65,26 +65,23 @@ export default function AdminGalleryPage() {
         const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
         const uploadId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         
-        console.log(`📦 [CHUNKED] Starting chunked upload: ${file.name} (${totalChunks} chunks)`);
+        console.log(`📦 [CHUNKED] Starting chunked upload: ${file.name} (${totalChunks} chunks, ${(file.size / 1024 / 1024).toFixed(2)}MB)`);
         
-        for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
-            const start = chunkIndex * CHUNK_SIZE;
-            const end = Math.min(start + CHUNK_SIZE, file.size);
-            const chunk = file.slice(start, end);
-            
-            // Convert chunk to base64
-            const chunkBuffer = await chunk.arrayBuffer();
-            const chunkBase64 = Buffer.from(chunkBuffer).toString('base64');
-            
-            console.log(`📤 [CHUNKED] Uploading chunk ${chunkIndex + 1}/${totalChunks}`);
-            
-            const response = await fetch('/api/upload/chunked', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include',
-                body: JSON.stringify({
+        try {
+            for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+                const start = chunkIndex * CHUNK_SIZE;
+                const end = Math.min(start + CHUNK_SIZE, file.size);
+                const chunk = file.slice(start, end);
+                
+                console.log(`📤 [CHUNKED] Preparing chunk ${chunkIndex + 1}/${totalChunks} (${start}-${end}, ${chunk.size} bytes)`);
+                
+                // Convert chunk to base64
+                const chunkBuffer = await chunk.arrayBuffer();
+                const chunkBase64 = Buffer.from(chunkBuffer).toString('base64');
+                
+                console.log(`📤 [CHUNKED] Uploading chunk ${chunkIndex + 1}/${totalChunks} (${chunkBase64.length} base64 chars)`);
+                
+                const requestData = {
                     chunk: chunkBase64,
                     chunkIndex,
                     totalChunks,
@@ -92,26 +89,67 @@ export default function AdminGalleryPage() {
                     fileType: file.type,
                     fileSize: file.size,
                     uploadId
-                }),
-            });
-            
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ error: 'Chunk upload failed' }));
-                throw new Error(errorData.error || `Chunk ${chunkIndex + 1} upload failed`);
+                };
+                
+                console.log(`📤 [CHUNKED] Request data for chunk ${chunkIndex + 1}:`, {
+                    chunkIndex,
+                    totalChunks,
+                    fileName: file.name,
+                    fileType: file.type,
+                    fileSize: file.size,
+                    uploadId,
+                    chunkDataSize: chunkBase64.length
+                });
+                
+                const response = await fetch('/api/upload/chunked', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify(requestData),
+                });
+                
+                console.log(`📥 [CHUNKED] Response for chunk ${chunkIndex + 1}: ${response.status} ${response.statusText}`);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error(`❌ [CHUNKED] Chunk ${chunkIndex + 1} failed:`, {
+                        status: response.status,
+                        statusText: response.statusText,
+                        errorText
+                    });
+                    
+                    let errorData;
+                    try {
+                        errorData = JSON.parse(errorText);
+                    } catch {
+                        errorData = { error: errorText || `HTTP ${response.status}` };
+                    }
+                    
+                    throw new Error(errorData.error || `Chunk ${chunkIndex + 1} upload failed: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                console.log(`📊 [CHUNKED] Chunk ${chunkIndex + 1} result:`, result);
+                
+                if (result.complete) {
+                    console.log(`✅ [CHUNKED] Upload complete: ${file.name}`);
+                    return { url: result.url, sizes: result.sizes };
+                }
+                
+                // Update progress if needed
+                if (result.progress !== undefined) {
+                    console.log(`📊 [CHUNKED] Progress: ${result.progress.toFixed(1)}% (${result.receivedChunks}/${result.totalChunks})`);
+                }
             }
             
-            const result = await response.json();
+            throw new Error('Upload completed but no final result received');
             
-            if (result.complete) {
-                console.log(`✅ [CHUNKED] Upload complete: ${file.name}`);
-                return { url: result.url, sizes: result.sizes };
-            }
-            
-            // Update progress if needed
-            console.log(`📊 [CHUNKED] Progress: ${result.progress?.toFixed(1)}%`);
+        } catch (error) {
+            console.error('💥 [CHUNKED] Chunked upload failed:', error);
+            throw error;
         }
-        
-        throw new Error('Upload completed but no final result received');
     };
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -157,7 +195,29 @@ export default function AdminGalleryPage() {
                     // Use chunked upload for files larger than 1MB
                     if (file.size > 1024 * 1024) {
                         console.log(`📦 [GALLERY] Using chunked upload for large file: ${file.name}`);
-                        result = await uploadFileInChunks(file);
+                        try {
+                            result = await uploadFileInChunks(file);
+                        } catch (chunkError) {
+                            console.warn(`⚠️ [GALLERY] Chunked upload failed for ${file.name}, trying regular upload:`, chunkError);
+                            
+                            // Fallback to regular upload if chunked fails
+                            const formData = new FormData();
+                            formData.append('file', file);
+
+                            const res = await fetch('/api/upload', {
+                                method: 'POST',
+                                credentials: 'include',
+                                body: formData,
+                            });
+
+                            if (!res.ok) {
+                                const errorData = await res.json().catch(() => ({ error: 'Upload failed' }));
+                                throw new Error(`Both chunked and regular upload failed: ${errorData.error || `HTTP ${res.status}`}`);
+                            }
+
+                            result = await res.json();
+                            console.log(`✅ [GALLERY] Fallback regular upload successful for: ${file.name}`);
+                        }
                     } else {
                         console.log(`📤 [GALLERY] Using regular upload for small file: ${file.name}`);
                         // Use regular upload for small files
