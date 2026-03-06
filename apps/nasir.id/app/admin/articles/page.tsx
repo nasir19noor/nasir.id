@@ -374,12 +374,7 @@ export default function AdminArticlesPage() {
                                 <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">
                                     Type
                                 </th>
-                                <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">
-                                    Slug
-                                </th>
-                                <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">
-                                    URL
-                                </th>
+
                                 <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">
                                     Published
                                 </th>
@@ -395,14 +390,41 @@ export default function AdminArticlesPage() {
                                     className="border-b border-gray-50 hover:bg-gray-50 transition-colors"
                                 >
                                     <td className="px-6 py-4">
-                                        <span className="font-medium text-gray-900">
-                                            {article.title}
-                                        </span>
-                                        {article.summary && (
-                                            <p className="text-sm text-gray-400 mt-0.5 truncate max-w-xs">
-                                                {article.summary}
-                                            </p>
-                                        )}
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="flex-1">
+                                                <span className="font-medium text-gray-900">
+                                                    {article.title}
+                                                </span>
+                                                {article.summary && (
+                                                    <p className="text-sm text-gray-400 mt-0.5 truncate max-w-xs">
+                                                        {article.summary}
+                                                    </p>
+                                                )}
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <a
+                                                        href={`/${article.slug}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-xs text-green-600 hover:text-green-700 hover:underline font-medium flex items-center gap-1"
+                                                        title="Open in new tab"
+                                                    >
+                                                        nasir.id/{article.slug}
+                                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                                        </svg>
+                                                    </a>
+                                                    <button
+                                                        onClick={() => navigator.clipboard.writeText(`https://nasir.id/${article.slug}`)}
+                                                        className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-all"
+                                                        title="Copy URL"
+                                                    >
+                                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -413,36 +435,8 @@ export default function AdminArticlesPage() {
                                             {article.is_portfolio ? '📁 Portfolio' : '📝 Article'}
                                         </span>
                                     </td>
-                                    <td className="px-6 py-4">
-                                        <code className="text-sm text-blue-600 bg-blue-50 px-2 py-1 rounded">
-                                            {article.slug}
-                                        </code>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-2">
-                                            <a
-                                                href={`/${article.slug}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="text-sm text-green-600 hover:text-green-700 hover:underline font-medium flex items-center gap-1"
-                                                title="Open in new tab"
-                                            >
-                                                nasir.id/{article.slug}
-                                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                                </svg>
-                                            </a>
-                                            <button
-                                                onClick={() => navigator.clipboard.writeText(`https://nasir.id/${article.slug}`)}
-                                                className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-all"
-                                                title="Copy URL"
-                                            >
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                                </svg>
-                                            </button>
-                                        </div>
-                                    </td>
+
+
                                     <td className="px-6 py-4 text-sm text-gray-500">
                                         {new Date(article.published_at).toLocaleDateString(
                                             'en-US',
