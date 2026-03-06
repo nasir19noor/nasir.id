@@ -34,12 +34,8 @@ module "cloudfront_nasir" {
     allowed_methods        = ["GET", "HEAD"]
     cached_methods         = ["GET", "HEAD"]
 
-    forward_query_string = false
-    forward_cookies      = "none"
-
-    min_ttl     = 0
-    default_ttl = 3600
-    max_ttl     = 86400
+    use_forwarded_values = false
+    cache_policy_name    = "CachingOptimized"
   }
 
   viewer_certificate = {
