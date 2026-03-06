@@ -252,13 +252,15 @@ export default function AdminArticlesPage() {
         const start = textarea.selectionStart;
         const end = textarea.selectionEnd;
         const currentContent = form.content;
+        const scrollTop = textarea.scrollTop; // Preserve scroll position
         
         const newContent = currentContent.substring(0, start) + html + currentContent.substring(end);
         setForm({ ...form, content: newContent });
         
-        // Set cursor position after inserted HTML
+        // Set cursor position after inserted HTML and restore scroll
         setTimeout(() => {
             textarea.focus();
+            textarea.scrollTop = scrollTop; // Restore scroll position
             textarea.setSelectionRange(start + html.length, start + html.length);
         }, 0);
     };
@@ -271,6 +273,7 @@ export default function AdminArticlesPage() {
         const end = textarea.selectionEnd;
         const currentContent = form.content;
         const selectedText = currentContent.substring(start, end);
+        const scrollTop = textarea.scrollTop; // Preserve scroll position
         
         const content = selectedText || placeholder;
         const html = `<${tag}>${content}</${tag}>`;
@@ -278,9 +281,10 @@ export default function AdminArticlesPage() {
         const newContent = currentContent.substring(0, start) + html + currentContent.substring(end);
         setForm({ ...form, content: newContent });
         
-        // Select the content inside the tags
+        // Select the content inside the tags and restore scroll
         setTimeout(() => {
             textarea.focus();
+            textarea.scrollTop = scrollTop; // Restore scroll position
             const contentStart = start + tag.length + 2; // <tag>
             const contentEnd = contentStart + content.length;
             textarea.setSelectionRange(contentStart, contentEnd);
@@ -679,7 +683,10 @@ export default function AdminArticlesPage() {
                                                 <div className="flex gap-1 border-r border-gray-300 pr-2 mr-2">
                                                     <button
                                                         type="button"
-                                                        onClick={() => insertHtmlTag('strong', 'Bold text')}
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            insertHtmlTag('strong', 'Bold text');
+                                                        }}
                                                         className="px-3 py-1.5 text-xs font-bold bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
                                                         title="Bold"
                                                     >
@@ -687,7 +694,10 @@ export default function AdminArticlesPage() {
                                                     </button>
                                                     <button
                                                         type="button"
-                                                        onClick={() => insertHtmlTag('em', 'Italic text')}
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            insertHtmlTag('em', 'Italic text');
+                                                        }}
                                                         className="px-3 py-1.5 text-xs italic bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
                                                         title="Italic"
                                                     >
@@ -695,7 +705,10 @@ export default function AdminArticlesPage() {
                                                     </button>
                                                     <button
                                                         type="button"
-                                                        onClick={() => insertHtmlTag('u', 'Underlined text')}
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            insertHtmlTag('u', 'Underlined text');
+                                                        }}
                                                         className="px-3 py-1.5 text-xs underline bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
                                                         title="Underline"
                                                     >
@@ -703,7 +716,10 @@ export default function AdminArticlesPage() {
                                                     </button>
                                                     <button
                                                         type="button"
-                                                        onClick={() => insertHtmlTag('code', 'code')}
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            insertHtmlTag('code', 'code');
+                                                        }}
                                                         className="px-3 py-1.5 text-xs font-mono bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
                                                         title="Inline Code"
                                                     >
@@ -814,7 +830,10 @@ export default function AdminArticlesPage() {
                                                     </button>
                                                     <button
                                                         type="button"
-                                                        onClick={() => insertTable()}
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            insertTable();
+                                                        }}
                                                         className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
                                                         title="Insert Table"
                                                     >
@@ -826,7 +845,10 @@ export default function AdminArticlesPage() {
                                                 <div className="flex gap-1">
                                                     <button
                                                         type="button"
-                                                        onClick={() => insertCodeBlock()}
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            insertCodeBlock();
+                                                        }}
                                                         className="px-3 py-1.5 text-xs font-mono bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
                                                         title="Code Block"
                                                     >
@@ -834,7 +856,10 @@ export default function AdminArticlesPage() {
                                                     </button>
                                                     <button
                                                         type="button"
-                                                        onClick={() => insertHtmlTag('blockquote', 'Quote text')}
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            insertHtmlTag('blockquote', 'Quote text');
+                                                        }}
                                                         className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
                                                         title="Blockquote"
                                                     >
