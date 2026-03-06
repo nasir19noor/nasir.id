@@ -396,7 +396,7 @@ export default function AdminGalleryPage() {
                 <div className="mb-6 px-4 py-3 bg-blue-50 border border-blue-100 rounded-xl text-blue-600 text-sm">
                     <div className="flex items-center gap-2">
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                        <span>Uploading images... Large files (>1MB) use chunked upload for better reliability</span>
+                        <span>Uploading images... Large files (&gt;1MB) use chunked upload for better reliability</span>
                     </div>
                 </div>
             )}
