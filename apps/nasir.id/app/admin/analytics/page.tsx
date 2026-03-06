@@ -2,6 +2,75 @@
 
 import { useState, useEffect } from 'react';
 import { BarChart3, Users, Eye, Monitor, Smartphone, TrendingUp } from 'lucide-react';
+import VisitorMap from '@/components/VisitorMap';
+
+interface LocationSummaryProps {
+    days: number;
+    type: 'country' | 'city';
+}
+
+function LocationSummary({ days, type }: LocationSummaryProps) {
+    const [data, setData] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchLocationSummary = async () => {
+            try {
+                const res = await fetch(`/api/analytics/locations/summary?days=${days}&type=${type}`, {
+                    credentials: 'include',
+                });
+                if (res.ok) {
+                    const result = await res.json();
+                    setData(result.data || []);
+                }
+            } catch (error) {
+                console.error(`Error fetching ${type} summary:`, error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchLocationSummary();
+    }, [days, type]);
+
+    const title = type === 'country' ? '🌍 Top Countries' : '🏙️ Top Cities';
+    const emptyMessage = `No ${type} data available`;
+
+    return (
+        <div className="bg-white rounded-2xl border-2 border-indigo-100 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">{title}</h3>
+            {loading ? (
+                <div className="text-center py-8 text-gray-500">Loading...</div>
+            ) : data.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">{emptyMessage}</div>
+            ) : (
+                <div className="space-y-3">
+                    {data.slice(0, 8).map((item, index) => (
+                        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                                    {index + 1}
+                                </div>
+                                <div>
+                                    <p className="font-medium text-gray-900">
+                                        {type === 'city' ? `${item.city}, ${item.country}` : item.country}
+                                    </p>
+                                    <p className="text-sm text-gray-500">
+                                        {item.unique_visitors} unique visitors
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-lg font-bold text-indigo-600">{item.visit_count}</p>
+                                <p className="text-xs text-gray-500">visits</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
 
 interface VisitorStats {
     total_visits: number;
@@ -220,6 +289,18 @@ export default function AnalyticsPage() {
                     </div>
                 )}
             </div>
+
+            {/* Visitor Map */}
+            <VisitorMap days={days} />
+
+            {/* Location Summary */}
+            <div className="grid md:grid-cols-2 gap-6 mt-8 mb-8">
+                <LocationSummary days={days} type="country" />
+                <LocationSummary days={days} type="city" />
+            </div>
+
+            {/* Recent Visitor Locations */}
+            <RecentVisitorLocations days={days} />
 
             {/* Daily Summary */}
             <div className="bg-white rounded-2xl border-2 border-purple-100 p-6">
@@ -454,6 +535,75 @@ export default function AnalyticsPage() {
                 </>
                 )}
             </div>
+        </div>
+    );
+}
+function RecentVisitorLocations({ days }: { days: number }) {
+    const [recentVisitors, setRecentVisitors] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchRecentVisitors = async () => {
+            try {
+                const res = await fetch(`/api/analytics/locations/recent?days=${days}`, {
+                    credentials: 'include',
+                });
+                if (res.ok) {
+                    const result = await res.json();
+                    setRecentVisitors(result.visitors || []);
+                }
+            } catch (error) {
+                console.error('Error fetching recent visitors:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchRecentVisitors();
+    }, [days]);
+
+    return (
+        <div className="bg-white rounded-2xl border-2 border-emerald-100 p-6 mb-8">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                🌐 Recent Visitor Locations
+            </h3>
+            {loading ? (
+                <div className="text-center py-8 text-gray-500">Loading...</div>
+            ) : recentVisitors.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">No recent visitors with location data</div>
+            ) : (
+                <div className="grid gap-3">
+                    {recentVisitors.slice(0, 10).map((visitor, index) => (
+                        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                            <div className="flex items-center gap-3">
+                                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                                <div>
+                                    <p className="font-medium text-gray-900">
+                                        {visitor.city}, {visitor.country}
+                                    </p>
+                                    <p className="text-sm text-gray-500">
+                                        {visitor.os} • {visitor.device_type} • {visitor.browser}
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-sm text-gray-600">
+                                    {new Date(visitor.visited_at).toLocaleTimeString('en-US', {
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                    })}
+                                </p>
+                                <p className="text-xs text-gray-400">
+                                    {new Date(visitor.visited_at).toLocaleDateString('en-US', {
+                                        month: 'short',
+                                        day: 'numeric'
+                                    })}
+                                </p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }
