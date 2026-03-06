@@ -5,9 +5,8 @@ module "cloudfront_nasir" {
     aws = aws.us-east-1
   }
 
-  distribution_name = local.domain_name_nasir
-  domain_name       = local.domain_name_nasir
-  comment           = "CloudFront distribution for ${local.domain_name_nasir}"
+  aliases = [local.domain_name_nasir]
+  comment = "CloudFront distribution for ${local.domain_name_nasir}"
 
   # OAC — keeps www.nasir.id bucket private; only this distribution can access it
   create_origin_access_control = true
@@ -20,14 +19,13 @@ module "cloudfront_nasir" {
     }
   }
 
-  origins = [
-    {
+  # origin is a map; the key becomes the origin_id
+  origin = {
+    "S3-www-nasir" = {
       domain_name           = "www.nasir.id.s3.ap-southeast-1.amazonaws.com"
-      origin_id             = "S3-www-nasir"
-      origin_type           = "s3"
       origin_access_control = "nasir-www"
     }
-  ]
+  }
 
   default_cache_behavior = {
     target_origin_id       = "S3-www-nasir"
