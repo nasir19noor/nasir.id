@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Plus, Pencil, Trash2, X, Save, FileText } from 'lucide-react';
 
 interface Article {
@@ -25,7 +25,15 @@ interface FormData {
     is_portfolio: boolean;
 }
 
-const emptyForm: FormData = { title: '', slug: '', summary: '', content: '', image_url: '', images: [], is_portfolio: false };
+const emptyForm: FormData = { 
+    title: '', 
+    slug: '', 
+    summary: '', 
+    content: '', 
+    image_url: '', 
+    images: [], 
+    is_portfolio: false 
+};
 
 export default function AdminArticlesPage() {
     const [articles, setArticles] = useState<Article[]>([]);
@@ -108,7 +116,6 @@ export default function AdminArticlesPage() {
             setError('Failed to load article');
         }
     };
-
     const handleSave = async () => {
         if (!form.title || !form.slug || !form.content) {
             setError('Title, slug, and content are required');
@@ -175,7 +182,6 @@ export default function AdminArticlesPage() {
             setUploading(false);
         }
     };
-
     const handleMultipleImagesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
         if (!files || files.length === 0) return;
@@ -235,7 +241,6 @@ export default function AdminArticlesPage() {
             setError('Failed to delete article');
         }
     };
-
     // HTML Editor Functions
     const insertHtmlAtCursor = (html: string) => {
         const textarea = contentTextareaRef.current;
@@ -296,7 +301,6 @@ export default function AdminArticlesPage() {
         
         insertHtmlAtCursor(html);
     };
-
     const insertImage = () => {
         const url = prompt('Enter the image URL:');
         if (!url) return;
@@ -469,7 +473,6 @@ export default function AdminArticlesPage() {
                     </table>
                 </div>
             )}
-
             {/* Modal */}
             {showModal && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50">
@@ -489,317 +492,314 @@ export default function AdminArticlesPage() {
 
                         {/* Modal Body - Scrollable */}
                         <div className="flex-1 overflow-y-auto">
-                            <div className="p-6 space-y-6 max-w-6xl mx-auto">{/* Content will go here */}
-                        <div className="flex-1 overflow-y-auto p-6 space-y-5">
-                            {error && (
-                                <div className="px-4 py-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm">
-                                    {error}
-                                </div>
-                            )}
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                    Title
-                                </label>
-                                <input
-                                    type="text"
-                                    value={form.title}
-                                    onChange={(e) => {
-                                        const title = e.target.value;
-                                        setForm({
-                                            ...form,
-                                            title,
-                                            slug: editing ? form.slug : generateSlug(title),
-                                        });
-                                    }}
-                                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    placeholder="Article title"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                    Slug
-                                </label>
-                                <input
-                                    type="text"
-                                    value={form.slug}
-                                    onChange={(e) => setForm({ ...form, slug: e.target.value })}
-                                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
-                                    placeholder="article-url-slug"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                    Summary
-                                </label>
-                                <textarea
-                                    value={form.summary}
-                                    onChange={(e) =>
-                                        setForm({ ...form, summary: e.target.value })
-                                    }
-                                    rows={2}
-                                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                                    placeholder="Brief summary of the article"
-                                />
-                            </div>
-
-                            <div className="flex items-center gap-3 p-4 bg-purple-50 border border-purple-200 rounded-xl">
-                                <input
-                                    type="checkbox"
-                                    id="is_portfolio"
-                                    checked={form.is_portfolio}
-                                    onChange={(e) =>
-                                        setForm({ ...form, is_portfolio: e.target.checked })
-                                    }
-                                    className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
-                                />
-                                <label htmlFor="is_portfolio" className="text-sm font-medium text-gray-700 cursor-pointer">
-                                    📁 This is a portfolio project (will show in Portfolio section)
-                                </label>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                    Featured Image
-                                </label>
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={handleImageUpload}
-                                    disabled={uploading}
-                                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                                />
-                                {uploading && (
-                                    <p className="text-sm text-blue-600 mt-1">Uploading...</p>
-                                )}
-                                {form.image_url && (
-                                    <div className="mt-2">
-                                        <img
-                                            src={form.image_url}
-                                            alt="Preview"
-                                            className="h-32 rounded-lg object-cover"
-                                        />
+                            <div className="p-6 space-y-6 max-w-6xl mx-auto">
+                                {error && (
+                                    <div className="px-4 py-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm">
+                                        {error}
                                     </div>
                                 )}
-                            </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                    Additional Images (Multiple)
-                                </label>
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    multiple
-                                    onChange={handleMultipleImagesUpload}
-                                    disabled={uploading}
-                                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                                />
-                                {uploading && (
-                                    <p className="text-sm text-blue-600 mt-1">Uploading images...</p>
-                                )}
-                                {form.images.length > 0 && (
-                                    <div className="mt-2 grid grid-cols-4 gap-2">
-                                        {form.images.map((url, index) => (
-                                            <div key={index} className="relative group">
-                                                <img
-                                                    src={url}
-                                                    alt={`Image ${index + 1}`}
-                                                    className="h-20 w-full rounded-lg object-cover"
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => removeImage(index)}
-                                                    className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                                                >
-                                                    <X size={12} />
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                    Content (HTML)
-                                </label>
-                                
-                                {/* HTML Editor Toolbar */}
-                                <div className="border border-gray-200 rounded-t-xl bg-gray-50 p-3 flex flex-wrap gap-1">
-                                    {/* Text Formatting */}
-                                    <div className="flex gap-1 border-r border-gray-300 pr-2 mr-2">
-                                        <button
-                                            type="button"
-                                            onClick={() => insertHtmlTag('strong', 'Bold text')}
-                                            className="px-3 py-1.5 text-xs font-bold bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-                                            title="Bold"
-                                        >
-                                            <strong>B</strong>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => insertHtmlTag('em', 'Italic text')}
-                                            className="px-3 py-1.5 text-xs italic bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-                                            title="Italic"
-                                        >
-                                            <em>I</em>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => insertHtmlTag('u', 'Underlined text')}
-                                            className="px-3 py-1.5 text-xs underline bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-                                            title="Underline"
-                                        >
-                                            U
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => insertHtmlTag('code', 'code')}
-                                            className="px-3 py-1.5 text-xs font-mono bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-                                            title="Inline Code"
-                                        >
-                                            &lt;/&gt;
-                                        </button>
-                                    </div>
-
-                                    {/* Headings */}
-                                    <div className="flex gap-1 border-r border-gray-300 pr-2 mr-2">
-                                        <button
-                                            type="button"
-                                            onClick={() => insertHtmlTag('h1', 'Heading 1')}
-                                            className="px-3 py-1.5 text-xs font-bold bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-                                            title="Heading 1"
-                                        >
-                                            H1
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => insertHtmlTag('h2', 'Heading 2')}
-                                            className="px-3 py-1.5 text-xs font-bold bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-                                            title="Heading 2"
-                                        >
-                                            H2
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => insertHtmlTag('h3', 'Heading 3')}
-                                            className="px-3 py-1.5 text-xs font-bold bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-                                            title="Heading 3"
-                                        >
-                                            H3
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => insertHtmlTag('h4', 'Heading 4')}
-                                            className="px-3 py-1.5 text-xs font-bold bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-                                            title="Heading 4"
-                                        >
-                                            H4
-                                        </button>
-                                    </div>
-
-                                    {/* Paragraph & Line Break */}
-                                    <div className="flex gap-1 border-r border-gray-300 pr-2 mr-2">
-                                        <button
-                                            type="button"
-                                            onClick={() => insertHtmlTag('p', 'Paragraph text')}
-                                            className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-                                            title="Paragraph"
-                                        >
-                                            P
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => insertHtmlAtCursor('<br>')}
-                                            className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-                                            title="Line Break"
-                                        >
-                                            BR
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => insertHtmlAtCursor('<hr>')}
-                                            className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-                                            title="Horizontal Rule"
-                                        >
-                                            HR
-                                        </button>
-                                    </div>
-
-                                    {/* Lists */}
-                                    <div className="flex gap-1 border-r border-gray-300 pr-2 mr-2">
-                                        <button
-                                            type="button"
-                                            onClick={() => insertList('ul')}
-                                            className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-                                            title="Unordered List"
-                                        >
-                                            • List
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => insertList('ol')}
-                                            className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-                                            title="Ordered List"
-                                        >
-                                            1. List
-                                        </button>
-                                    </div>
-
-                                    {/* Links & Media */}
-                                    <div className="flex gap-1 border-r border-gray-300 pr-2 mr-2">
-                                        <button
-                                            type="button"
-                                            onClick={() => insertLink()}
-                                            className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-                                            title="Insert Link"
-                                        >
-                                            🔗 Link
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => insertImage()}
-                                            className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-                                            title="Insert Image"
-                                        >
-                                            🖼️ Image
-                                        </button>
-                                    </div>
-
-                                    {/* Code Block */}
-                                    <div className="flex gap-1">
-                                        <button
-                                            type="button"
-                                            onClick={() => insertCodeBlock()}
-                                            className="px-3 py-1.5 text-xs font-mono bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-                                            title="Code Block"
-                                        >
-                                            &lt;code/&gt;
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => insertHtmlTag('blockquote', 'Quote text')}
-                                            className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-                                            title="Blockquote"
-                                        >
-                                            " Quote
-                                        </button>
-                                    </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                        Title
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={form.title}
+                                        onChange={(e) => {
+                                            const title = e.target.value;
+                                            setForm({
+                                                ...form,
+                                                title,
+                                                slug: editing ? form.slug : generateSlug(title),
+                                            });
+                                        }}
+                                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        placeholder="Article title"
+                                    />
                                 </div>
 
-                                <textarea
-                                    ref={contentTextareaRef}
-                                    value={form.content}
-                                    onChange={(e) =>
-                                        setForm({ ...form, content: e.target.value })
-                                    }
-                                    rows={14}
-                                    className="w-full px-4 py-2.5 border border-gray-200 border-t-0 rounded-b-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm resize-none"
-                                    placeholder="<h1>Your HTML content here...</h1><p>Write your article content using HTML tags.</p>"
-                                />
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                        Slug
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={form.slug}
+                                        onChange={(e) => setForm({ ...form, slug: e.target.value })}
+                                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+                                        placeholder="article-url-slug"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                        Summary
+                                    </label>
+                                    <textarea
+                                        value={form.summary}
+                                        onChange={(e) =>
+                                            setForm({ ...form, summary: e.target.value })
+                                        }
+                                        rows={2}
+                                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                                        placeholder="Brief summary of the article"
+                                    />
+                                </div>
+
+                                <div className="flex items-center gap-3 p-4 bg-purple-50 border border-purple-200 rounded-xl">
+                                    <input
+                                        type="checkbox"
+                                        id="is_portfolio"
+                                        checked={form.is_portfolio}
+                                        onChange={(e) =>
+                                            setForm({ ...form, is_portfolio: e.target.checked })
+                                        }
+                                        className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                                    />
+                                    <label htmlFor="is_portfolio" className="text-sm font-medium text-gray-700 cursor-pointer">
+                                        📁 This is a portfolio project (will show in Portfolio section)
+                                    </label>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                        Featured Image
+                                    </label>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleImageUpload}
+                                        disabled={uploading}
+                                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                    />
+                                    {uploading && (
+                                        <p className="text-sm text-blue-600 mt-1">Uploading...</p>
+                                    )}
+                                    {form.image_url && (
+                                        <div className="mt-2">
+                                            <img
+                                                src={form.image_url}
+                                                alt="Preview"
+                                                className="h-32 rounded-lg object-cover"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                        Additional Images (Multiple)
+                                    </label>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        multiple
+                                        onChange={handleMultipleImagesUpload}
+                                        disabled={uploading}
+                                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                    />
+                                    {uploading && (
+                                        <p className="text-sm text-blue-600 mt-1">Uploading images...</p>
+                                    )}
+                                    {form.images.length > 0 && (
+                                        <div className="mt-2 grid grid-cols-4 gap-2">
+                                            {form.images.map((url, index) => (
+                                                <div key={index} className="relative group">
+                                                    <img
+                                                        src={url}
+                                                        alt={`Image ${index + 1}`}
+                                                        className="h-20 w-full rounded-lg object-cover"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeImage(index)}
+                                                        className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    >
+                                                        <X size={12} />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                        Content (HTML)
+                                    </label>
+                                    
+                                    {/* HTML Editor Toolbar */}
+                                    <div className="border border-gray-200 rounded-t-xl bg-gray-50 p-3 flex flex-wrap gap-1">
+                                        {/* Text Formatting */}
+                                        <div className="flex gap-1 border-r border-gray-300 pr-2 mr-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => insertHtmlTag('strong', 'Bold text')}
+                                                className="px-3 py-1.5 text-xs font-bold bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                                                title="Bold"
+                                            >
+                                                <strong>B</strong>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => insertHtmlTag('em', 'Italic text')}
+                                                className="px-3 py-1.5 text-xs italic bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                                                title="Italic"
+                                            >
+                                                <em>I</em>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => insertHtmlTag('u', 'Underlined text')}
+                                                className="px-3 py-1.5 text-xs underline bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                                                title="Underline"
+                                            >
+                                                U
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => insertHtmlTag('code', 'code')}
+                                                className="px-3 py-1.5 text-xs font-mono bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                                                title="Inline Code"
+                                            >
+                                                &lt;/&gt;
+                                            </button>
+                                        </div>
+
+                                        {/* Headings */}
+                                        <div className="flex gap-1 border-r border-gray-300 pr-2 mr-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => insertHtmlTag('h1', 'Heading 1')}
+                                                className="px-3 py-1.5 text-xs font-bold bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                                                title="Heading 1"
+                                            >
+                                                H1
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => insertHtmlTag('h2', 'Heading 2')}
+                                                className="px-3 py-1.5 text-xs font-bold bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                                                title="Heading 2"
+                                            >
+                                                H2
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => insertHtmlTag('h3', 'Heading 3')}
+                                                className="px-3 py-1.5 text-xs font-bold bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                                                title="Heading 3"
+                                            >
+                                                H3
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => insertHtmlTag('h4', 'Heading 4')}
+                                                className="px-3 py-1.5 text-xs font-bold bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                                                title="Heading 4"
+                                            >
+                                                H4
+                                            </button>
+                                        </div>
+                                        {/* Paragraph & Line Break */}
+                                        <div className="flex gap-1 border-r border-gray-300 pr-2 mr-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => insertHtmlTag('p', 'Paragraph text')}
+                                                className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                                                title="Paragraph"
+                                            >
+                                                P
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => insertHtmlAtCursor('<br>')}
+                                                className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                                                title="Line Break"
+                                            >
+                                                BR
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => insertHtmlAtCursor('<hr>')}
+                                                className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                                                title="Horizontal Rule"
+                                            >
+                                                HR
+                                            </button>
+                                        </div>
+
+                                        {/* Lists */}
+                                        <div className="flex gap-1 border-r border-gray-300 pr-2 mr-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => insertList('ul')}
+                                                className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                                                title="Unordered List"
+                                            >
+                                                • List
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => insertList('ol')}
+                                                className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                                                title="Ordered List"
+                                            >
+                                                1. List
+                                            </button>
+                                        </div>
+
+                                        {/* Links & Media */}
+                                        <div className="flex gap-1 border-r border-gray-300 pr-2 mr-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => insertLink()}
+                                                className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                                                title="Insert Link"
+                                            >
+                                                🔗 Link
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => insertImage()}
+                                                className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                                                title="Insert Image"
+                                            >
+                                                🖼️ Image
+                                            </button>
+                                        </div>
+
+                                        {/* Code Block */}
+                                        <div className="flex gap-1">
+                                            <button
+                                                type="button"
+                                                onClick={() => insertCodeBlock()}
+                                                className="px-3 py-1.5 text-xs font-mono bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                                                title="Code Block"
+                                            >
+                                                &lt;code/&gt;
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => insertHtmlTag('blockquote', 'Quote text')}
+                                                className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                                                title="Blockquote"
+                                            >
+                                                " Quote
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <textarea
+                                        ref={contentTextareaRef}
+                                        value={form.content}
+                                        onChange={(e) =>
+                                            setForm({ ...form, content: e.target.value })
+                                        }
+                                        rows={14}
+                                        className="w-full px-4 py-2.5 border border-gray-200 border-t-0 rounded-b-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm resize-none"
+                                        placeholder="<h1>Your HTML content here...</h1><p>Write your article content using HTML tags.</p>"
+                                    />
+                                </div>
                             </div>
                         </div>
 
