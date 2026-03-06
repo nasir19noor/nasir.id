@@ -178,6 +178,15 @@ resource "cloudflare_record" "assets_nasir_id_acm_validation" {
   ttl     = 3600
 }
 
+resource "cloudflare_record" "assets_nasir_id" {
+  zone_id = data.cloudflare_zones.nasir_id.zones[0].id
+  name    = "assets.nasir.id"
+  content = "d3bpttmdl941gy.cloudfront.net"
+  type    = "CNAME"
+  proxied = false
+  ttl     = 3600
+}
+
 
 
 
