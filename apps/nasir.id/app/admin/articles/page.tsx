@@ -314,9 +314,39 @@ export default function AdminArticlesPage() {
     const insertCodeBlock = () => {
         const language = prompt('Enter the programming language (optional):') || '';
         const langClass = language ? ` class="language-${language}"` : '';
-        const html = `<pre><code${langClass}>// Your code here\nconsole.log('Hello, World!');</code></pre>`;
+        const html = `\n\n<pre><code${langClass}>// Your code here\nconsole.log('Hello, World!');</code></pre>\n\n`;
         
         insertHtmlAtCursor(html);
+    };
+
+    const insertTable = () => {
+        const rows = prompt('Number of rows (default: 3):') || '3';
+        const cols = prompt('Number of columns (default: 3):') || '3';
+        
+        const numRows = parseInt(rows);
+        const numCols = parseInt(cols);
+        
+        let tableHtml = '\n\n<table class="w-full border-collapse border border-gray-300">\n';
+        
+        // Header row
+        tableHtml += '  <thead>\n    <tr>\n';
+        for (let j = 0; j < numCols; j++) {
+            tableHtml += `      <th class="border border-gray-300 px-4 py-2 bg-gray-100">Header ${j + 1}</th>\n`;
+        }
+        tableHtml += '    </tr>\n  </thead>\n';
+        
+        // Body rows
+        tableHtml += '  <tbody>\n';
+        for (let i = 0; i < numRows; i++) {
+            tableHtml += '    <tr>\n';
+            for (let j = 0; j < numCols; j++) {
+                tableHtml += `      <td class="border border-gray-300 px-4 py-2">Cell ${i + 1}-${j + 1}</td>\n`;
+            }
+            tableHtml += '    </tr>\n';
+        }
+        tableHtml += '  </tbody>\n</table>\n\n';
+        
+        insertHtmlAtCursor(tableHtml);
     };
 
     return (
@@ -740,6 +770,14 @@ export default function AdminArticlesPage() {
                                                 title="Insert Image"
                                             >
                                                 🖼️ Image
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => insertTable()}
+                                                className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                                                title="Insert Table"
+                                            >
+                                                📊 Table
                                             </button>
                                         </div>
 
