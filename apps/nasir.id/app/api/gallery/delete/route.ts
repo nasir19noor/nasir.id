@@ -43,10 +43,20 @@ export async function DELETE(request: NextRequest) {
         // Extract filename without extension and check for size suffixes
         const filenameParts = filename.split('.');
         const extension = filenameParts.pop();
-        const baseFilename = filenameParts.join('.');
-        console.log('📝 [DELETE] Filename parts:', { baseFilename, extension });
+        let baseFilename = filenameParts.join('.');
         
-        // List of possible image sizes to delete
+        // Remove existing size suffix if present to get the true base filename
+        const sizeSuffixes = ['-large', '-medium', '-thumb'];
+        for (const suffix of sizeSuffixes) {
+            if (baseFilename.endsWith(suffix)) {
+                baseFilename = baseFilename.slice(0, -suffix.length);
+                break;
+            }
+        }
+        
+        console.log('📝 [DELETE] Filename parts:', { originalFilename: filename, baseFilename, extension });
+        
+        // List of possible image sizes to delete (including original without suffix)
         const sizesToDelete = ['', '-large', '-medium', '-thumb'];
         const keysToDelete: string[] = [];
         
