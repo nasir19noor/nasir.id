@@ -11,11 +11,13 @@ import {
     Settings,
     BarChart3,
     MessageCircle,
+    Images,
 } from 'lucide-react';
 
 const navItems = [
     { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
     { label: 'Articles & Portfolio', href: '/admin/articles', icon: FileText },
+    { label: 'Gallery', href: '/admin/gallery', icon: Images },
     { label: 'Comments', href: '/admin/comments', icon: MessageCircle },
     { label: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
     { label: 'Settings', href: '/admin/settings', icon: Settings },
