@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import sql from '@/lib/db';
 import { isAuthenticated } from '@/lib/auth';
+import { convertToAssetsUrl } from '@/lib/image-utils';
 
 export async function GET() {
     try {
@@ -11,7 +12,14 @@ export async function GET() {
         
         const settingsObj: Record<string, string> = {};
         settings.forEach((setting) => {
-            settingsObj[setting.key as string] = setting.value as string;
+            let value = setting.value as string;
+            
+            // Convert image URLs to assets domain
+            if (setting.key === 'profile_image' || setting.key === 'hero_image') {
+                value = convertToAssetsUrl(value);
+            }
+            
+            settingsObj[setting.key as string] = value;
         });
         
         return NextResponse.json(settingsObj, {

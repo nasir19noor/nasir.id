@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import sql from '@/lib/db';
 import { isAuthenticated } from '@/lib/auth';
+import { processImageUrls } from '@/lib/image-utils';
 
 export async function GET() {
     const authed = await isAuthenticated();
@@ -14,7 +15,11 @@ export async function GET() {
       FROM articles 
       ORDER BY published_at DESC
     `;
-        return NextResponse.json(articles);
+        
+        // Process image URLs to use assets domain
+        const processedArticles = articles.map(processImageUrls);
+        
+        return NextResponse.json(processedArticles);
     } catch (error) {
         console.error('Error fetching articles:', error);
         return NextResponse.json({ error: 'Failed to fetch articles' }, { status: 500 });

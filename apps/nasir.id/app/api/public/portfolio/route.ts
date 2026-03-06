@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import sql from '@/lib/db';
+import { processImageUrls } from '@/lib/image-utils';
 
 export async function GET() {
     try {
@@ -9,7 +10,11 @@ export async function GET() {
             WHERE is_portfolio = TRUE
             ORDER BY published_at DESC
         `;
-        return NextResponse.json(projects);
+        
+        // Process image URLs to use assets domain
+        const processedProjects = projects.map(processImageUrls);
+        
+        return NextResponse.json(processedProjects);
     } catch (error) {
         console.error('Error fetching public portfolio:', error);
         return NextResponse.json({ error: 'Failed to fetch portfolio' }, { status: 500 });

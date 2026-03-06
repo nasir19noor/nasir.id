@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import sql from '@/lib/db';
+import { processImageUrls } from '@/lib/image-utils';
 
 export async function GET() {
     try {
@@ -10,7 +11,11 @@ export async function GET() {
             ORDER BY published_at DESC 
             LIMIT 4
         `;
-        return NextResponse.json(articles);
+        
+        // Process image URLs to use assets domain
+        const processedArticles = articles.map(processImageUrls);
+        
+        return NextResponse.json(processedArticles);
     } catch (error) {
         console.error('Error fetching public articles:', error);
         return NextResponse.json({ error: 'Failed to fetch articles' }, { status: 500 });

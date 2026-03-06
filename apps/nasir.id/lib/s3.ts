@@ -31,7 +31,6 @@ export async function uploadToS3(
   console.log(`🔄 [S3] Starting single file upload: ${fileName}`);
   
   const bucket = process.env.AWS_S3_BUCKET || '';
-  const region = process.env.AWS_REGION || 'us-east-1';
   
   if (!bucket) {
     console.error('❌ [S3] AWS_S3_BUCKET environment variable not set');
@@ -58,8 +57,9 @@ export async function uploadToS3(
   try {
     console.log(`☁️ [S3] Sending upload command to S3...`);
     await s3Client.send(command);
-    const url = `https://s3.${region}.amazonaws.com/${bucket}/${key}`;
-    console.log(`✅ [S3] Upload successful: ${url}`);
+    // Return assets domain URL instead of S3 URL
+    const url = `https://assets.nasir.id/${key}`;
+    console.log(`✅ [S3] Upload successful, returning assets URL: ${url}`);
     return url;
   } catch (error) {
     console.error('💥 [S3] Upload failed:', error);
@@ -75,7 +75,6 @@ export async function uploadImageWithSizes(
   console.log(`🖼️ [S3] Starting multi-size image upload: ${fileName} (${contentType})`);
   
   const bucket = process.env.AWS_S3_BUCKET || '';
-  const region = process.env.AWS_REGION || 'us-east-1';
   
   if (!bucket) {
     console.error('❌ [S3] AWS_S3_BUCKET environment variable not set');
@@ -113,7 +112,7 @@ export async function uploadImageWithSizes(
         Body: file,
         ContentType: contentType,
       }));
-      result.original = `https://s3.${region}.amazonaws.com/${bucket}/${key}`;
+      result.original = `https://assets.nasir.id/${key}`;
       console.log(`✅ [S3] Non-image upload successful: ${result.original}`);
       return result;
     } catch (error) {
@@ -140,7 +139,7 @@ export async function uploadImageWithSizes(
       Body: file,
       ContentType: contentType,
     }));
-    result.original = `https://s3.${region}.amazonaws.com/${bucket}/${originalKey}`;
+    result.original = `https://assets.nasir.id/${originalKey}`;
     console.log(`✅ [S3] Original uploaded: ${result.original}`);
 
     // Generate and upload resized versions only if original is large enough
@@ -159,7 +158,7 @@ export async function uploadImageWithSizes(
         Body: largeBuffer,
         ContentType: 'image/jpeg',
       }));
-      result.large = `https://s3.${region}.amazonaws.com/${bucket}/${largeKey}`;
+      result.large = `https://assets.nasir.id/${largeKey}`;
       console.log(`✅ [S3] Large version uploaded: ${result.large}`);
     } else {
       console.log(`⏭️ [S3] Skipping large version (original width ${originalWidth} <= 1920)`);
@@ -180,7 +179,7 @@ export async function uploadImageWithSizes(
         Body: mediumBuffer,
         ContentType: 'image/jpeg',
       }));
-      result.medium = `https://s3.${region}.amazonaws.com/${bucket}/${mediumKey}`;
+      result.medium = `https://assets.nasir.id/${mediumKey}`;
       console.log(`✅ [S3] Medium version uploaded: ${result.medium}`);
     } else {
       console.log(`⏭️ [S3] Skipping medium version (original width ${originalWidth} <= 1024)`);
@@ -201,7 +200,7 @@ export async function uploadImageWithSizes(
         Body: thumbnailBuffer,
         ContentType: 'image/jpeg',
       }));
-      result.thumbnail = `https://s3.${region}.amazonaws.com/${bucket}/${thumbnailKey}`;
+      result.thumbnail = `https://assets.nasir.id/${thumbnailKey}`;
       console.log(`✅ [S3] Thumbnail uploaded: ${result.thumbnail}`);
     } else {
       console.log(`⏭️ [S3] Skipping thumbnail (original width ${originalWidth} <= 400)`);

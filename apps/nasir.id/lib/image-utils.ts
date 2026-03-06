@@ -1,64 +1,136 @@
-// Utility functions for handling image URLs and sizes
+/**
+ * Utility functions for handling image URLs and migrations
+ */
 
+/**
+ * Convert S3 bucket URL to assets domain URL
+ * @param url - The original S3 URL or assets URL
+ * @returns The assets domain URL
+ */
+export function convertToAssetsUrl(url: string): string {
+  if (!url) return url;
+  
+  // If already an assets URL, return as is
+  if (url.startsWith('https://assets.nasir.id/')) {
+    return url;
+  }
+  
+  // Convert S3 URLs to assets URLs
+  const s3Patterns = [
+    /^https:\/\/s3\.([^.]+)\.amazonaws\.com\/([^/]+)\/(.+)$/,
+    /^https:\/\/([^.]+)\.s3\.([^.]+)\.amazonaws\.com\/(.+)$/,
+    /^https:\/\/([^.]+)\.s3\.amazonaws\.com\/(.+)$/
+  ];
+  
+  for (const pattern of s3Patterns) {
+    const match = url.match(pattern);
+    if (match) {
+      // Extract the key (path after bucket name)
+      const key = match[3] || match[2];
+      return `https://assets.nasir.id/${key}`;
+    }
+  }
+  
+  // If no pattern matches, return original URL
+  return url;
+}
+
+/**
+ * Get the appropriate image URL based on size preference
+ * @param imageUrls - Object containing different image sizes
+ * @param preferredSize - The preferred size ('thumbnail', 'medium', 'large', 'original')
+ * @returns The best available image URL
+ */
+export function getImageUrl(
+  imageUrls: {
+    original?: string;
+    large?: string;
+    medium?: string;
+    thumbnail?: string;
+  },
+  preferredSize: 'thumbnail' | 'medium' | 'large' | 'original' = 'medium'
+): string {
+  // Convert all URLs to assets domain
+  const convertedUrls = {
+    original: imageUrls.original ? convertToAssetsUrl(imageUrls.original) : '',
+    large: imageUrls.large ? convertToAssetsUrl(imageUrls.large) : '',
+    medium: imageUrls.medium ? convertToAssetsUrl(imageUrls.medium) : '',
+    thumbnail: imageUrls.thumbnail ? convertToAssetsUrl(imageUrls.thumbnail) : '',
+  };
+  
+  // Return preferred size if available, otherwise fallback
+  switch (preferredSize) {
+    case 'thumbnail':
+      return convertedUrls.thumbnail || convertedUrls.medium || convertedUrls.original || '';
+    case 'medium':
+      return convertedUrls.medium || convertedUrls.large || convertedUrls.original || '';
+    case 'large':
+      return convertedUrls.large || convertedUrls.original || convertedUrls.medium || '';
+    case 'original':
+      return convertedUrls.original || convertedUrls.large || convertedUrls.medium || '';
+    default:
+      return convertedUrls.medium || convertedUrls.original || '';
+  }
+}
+
+/**
+ * Process image URLs from database records
+ * @param record - Database record with image_url and/or images fields
+ * @returns Processed record with converted URLs
+ */
+export function processImageUrls<T extends { image_url?: string; images?: string[] }>(record: T): T {
+  const processed = { ...record };
+  
+  // Convert main image URL
+  if (processed.image_url) {
+    processed.image_url = convertToAssetsUrl(processed.image_url);
+  }
+  
+  // Convert images array URLs
+  if (processed.images && Array.isArray(processed.images)) {
+    processed.images = processed.images.map(convertToAssetsUrl);
+  }
+  
+  return processed;
+}
+
+/**
+ * Add cache busting parameter to image URL
+ * @param url - The image URL
+ * @returns URL with cache busting parameter
+ */
+export function addCacheBuster(url: string): string {
+  if (!url) return url;
+  
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}v=${Date.now()}`;
+}
+/**
+ * Get thumbnail URL from an image URL
+ * @param imageUrl - The original image URL
+ * @returns The thumbnail URL
+ */
 export function getThumbnailUrl(imageUrl: string): string {
-    if (!imageUrl) return imageUrl;
-    
-    // If it's an external URL (not from our S3), return as-is
-    if (!imageUrl.includes('s3.') && !imageUrl.includes('amazonaws.com')) {
-        return imageUrl;
-    }
-    
-    // Check if URL already has a size suffix
-    if (imageUrl.includes('-thumb.jpg') || imageUrl.includes('-thumbnail.jpg')) {
-        return imageUrl;
-    }
-    
-    // Replace the filename with thumbnail version
-    // Example: /uploads/2026/03/05/123456-image.jpg -> /uploads/2026/03/05/123456-image-thumb.jpg
-    // Example: /uploads/2026/03/05/123456-image-medium.jpg -> /uploads/2026/03/05/123456-image-thumb.jpg
-    
-    // Remove existing size suffixes first
-    let url = imageUrl.replace(/-large\.jpg$/, '.jpg')
-                      .replace(/-medium\.jpg$/, '.jpg');
-    
-    // Add thumbnail suffix
-    url = url.replace(/\.jpg$/, '-thumb.jpg')
-             .replace(/\.jpeg$/, '-thumb.jpg')
-             .replace(/\.png$/, '-thumb.jpg');
-    
-    return url;
-}
-
-export function getMediumUrl(imageUrl: string): string {
-    if (!imageUrl) return imageUrl;
-    
-    // If it's an external URL (not from our S3), return as-is
-    if (!imageUrl.includes('s3.') && !imageUrl.includes('amazonaws.com')) {
-        return imageUrl;
-    }
-    
-    // Check if URL already has medium suffix
-    if (imageUrl.includes('-medium.jpg')) {
-        return imageUrl;
-    }
-    
-    // Remove existing size suffixes first
-    let url = imageUrl.replace(/-large\.jpg$/, '.jpg')
-                      .replace(/-thumb\.jpg$/, '.jpg');
-    
-    // Add medium suffix
-    url = url.replace(/\.jpg$/, '-medium.jpg')
-             .replace(/\.jpeg$/, '-medium.jpg')
-             .replace(/\.png$/, '-medium.jpg');
-    
-    return url;
-}
-
-export function getOriginalUrl(imageUrl: string): string {
-    if (!imageUrl) return imageUrl;
-    
-    // Remove all size suffixes to get original
-    return imageUrl.replace(/-large\.jpg$/, '.jpg')
-                   .replace(/-medium\.jpg$/, '.jpg')
-                   .replace(/-thumb\.jpg$/, '.jpg');
+  if (!imageUrl) return '';
+  
+  // Convert to assets domain first
+  const assetsUrl = convertToAssetsUrl(imageUrl);
+  
+  // If it's already a thumbnail, return as is
+  if (assetsUrl.includes('-thumb.')) {
+    return assetsUrl;
+  }
+  
+  // Try to generate thumbnail URL by replacing the filename
+  const lastSlashIndex = assetsUrl.lastIndexOf('/');
+  const lastDotIndex = assetsUrl.lastIndexOf('.');
+  
+  if (lastSlashIndex !== -1 && lastDotIndex !== -1 && lastDotIndex > lastSlashIndex) {
+    const path = assetsUrl.substring(0, lastDotIndex);
+    const extension = assetsUrl.substring(lastDotIndex);
+    return `${path}-thumb.jpg`; // Thumbnails are always JPG
+  }
+  
+  // Fallback to original URL
+  return assetsUrl;
 }

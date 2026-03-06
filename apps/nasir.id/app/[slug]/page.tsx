@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ArrowLeft, Calendar, Tag } from 'lucide-react';
 import AnalyticsTracker from '@/components/AnalyticsTracker';
 import Comments from '@/components/Comments';
+import { convertToAssetsUrl } from '@/lib/image-utils';
 import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
@@ -37,9 +38,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     // Get item image (first from images array, then image_url, then fallback)
     let itemImage = `${baseUrl}/default-og-image.jpg`;
     if (item.images && item.images.length > 0) {
-      itemImage = item.images[0];
+      itemImage = convertToAssetsUrl(item.images[0]);
     } else if (item.image_url) {
-      itemImage = item.image_url;
+      itemImage = convertToAssetsUrl(item.image_url);
     }
 
     // Create description from summary or first 160 chars of content
@@ -140,9 +141,9 @@ export default async function SlugPage({ params }: PageProps) {
   // Get the featured image (first from images array, then image_url)
   let featuredImage = null;
   if (item.images && item.images.length > 0) {
-    featuredImage = item.images[0];
+    featuredImage = convertToAssetsUrl(item.images[0]);
   } else if (item.image_url) {
-    featuredImage = item.image_url;
+    featuredImage = convertToAssetsUrl(item.image_url);
   }
 
   return (

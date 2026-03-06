@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import sql from '@/lib/db';
 import { isAuthenticated } from '@/lib/auth';
+import { processImageUrls } from '@/lib/image-utils';
 
 interface RouteParams {
     params: Promise<{ id: string }>;
@@ -24,7 +25,10 @@ export async function GET(_request: Request, { params }: RouteParams) {
             return NextResponse.json({ error: 'Not found' }, { status: 404 });
         }
 
-        return NextResponse.json(article);
+        // Process image URLs to use assets domain
+        const processedArticle = processImageUrls(article);
+
+        return NextResponse.json(processedArticle);
     } catch (error) {
         console.error('Error fetching article:', error);
         return NextResponse.json({ error: 'Failed to fetch article' }, { status: 500 });
