@@ -77,15 +77,15 @@ module "s3_nasir" {
   source = "git::https://github.com/nasir19noor/terraform.git//aws/modules/s3"
   bucket = "www.nasir.id"
 
-  # Keep public access blocks disabled to allow the bucket policy below
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
+  # # Keep public access blocks disabled to allow the bucket policy below
+  # block_public_acls       = true
+  # block_public_policy     = true
+  # ignore_public_acls      = true
+  # restrict_public_buckets = true
 
-  enable_website_hosting    = false
-  # Disable blanket public read; a prefix-scoped policy is applied below
-  enable_public_read_access = false
+  # enable_website_hosting    = false
+  # # Disable blanket public read; a prefix-scoped policy is applied below
+  # enable_public_read_access = false
 }
 
 resource "time_sleep" "wait_for_s3" {
