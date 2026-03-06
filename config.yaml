@@ -16,13 +16,13 @@ aws:
     bucket_name_wordpress: "wordpress.nasir.id"
     bucket_name_backup: "backup.nasir.id"
     bucket_name_upload: "upload.nasir.id"
+    bucket_name_nasir: "nasir.id"
   acm:
     domain_name_assets: "assets.nasir.id" 
     create_route53_records: false
     validation_method: "DNS"
   cloudfront:
-    domain_name_assets: "assets.nasir.id"   
-
+    domain_name_nasir: "assets.nasir.id"
   ec2:
     kafka: 
       name: "management-eks"
