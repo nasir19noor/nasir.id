@@ -169,6 +169,15 @@ resource "cloudflare_record" "waha_nasir_id" {
   ttl     = 3600
 }
 
+resource "cloudflare_record" "assets_nasir_id_acm_validation" {
+  zone_id = data.cloudflare_zones.nasir_id.zones[0].id
+  name    = "_3c4a03e63b16108a5c8930220098fe53.assets.nasir.id."
+  content = "_4c3847f4d8babde6128bee26c801501d.xlfgrmvvlj.acm-validations.aws."
+  type    = "CNAME"
+  proxied = false
+  ttl     = 3600
+}
+
 
 
 
