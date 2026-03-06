@@ -68,7 +68,7 @@ export default function AdminGalleryPage() {
         const oversizedFiles = Array.from(files).filter(file => file.size > maxSize);
         
         if (oversizedFiles.length > 0) {
-            setError(`Some files are too large (max 50MB): ${oversizedFiles.map(f => f.name).join(', ')}`);
+            setError(`Some files are too large (max 50MB): ${oversizedFiles.map(f => `${f.name} (${(f.size / 1024 / 1024).toFixed(1)}MB)`).join(', ')}`);
             e.target.value = ''; // Reset file input
             return;
         }
@@ -80,6 +80,16 @@ export default function AdminGalleryPage() {
             setError(`Some files are not images: ${invalidFiles.map(f => f.name).join(', ')}`);
             e.target.value = ''; // Reset file input
             return;
+        }
+
+        // Warn about large files
+        const largeFiles = Array.from(files).filter(file => file.size > 5 * 1024 * 1024); // 5MB
+        if (largeFiles.length > 0) {
+            const proceed = confirm(`You're uploading ${largeFiles.length} large file(s) (${largeFiles.map(f => `${f.name}: ${(f.size / 1024 / 1024).toFixed(1)}MB`).join(', ')}). This may take longer. Continue?`);
+            if (!proceed) {
+                e.target.value = '';
+                return;
+            }
         }
 
         setUploading(true);
@@ -100,11 +110,18 @@ export default function AdminGalleryPage() {
                     const formData = new FormData();
                     formData.append('file', file);
 
+                    // Create AbortController for timeout
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
+
                     const res = await fetch('/api/upload', {
                         method: 'POST',
                         credentials: 'include',
                         body: formData,
+                        signal: controller.signal,
                     });
+
+                    clearTimeout(timeoutId);
 
                     if (!res.ok) {
                         const errorData = await res.json().catch(() => ({ error: 'Upload failed' }));
@@ -128,6 +145,9 @@ export default function AdminGalleryPage() {
                     
                     // Show individual file errors for debugging
                     if (files.length === 1) {
+                        if (uploadError instanceof Error && uploadError.name === 'AbortError') {
+                            throw new Error('Upload timeout - file too large or connection too slow');
+                        }
                         throw uploadError; // Re-throw for single file uploads
                     }
                 }
@@ -151,13 +171,26 @@ export default function AdminGalleryPage() {
             setTimeout(() => {
                 setSuccess('');
                 setError('');
-            }, 5000);
+            }, 8000);
             
         } catch (err) {
             console.error('💥 [GALLERY] Upload error:', err);
-            const errorMessage = err instanceof Error ? err.message : 'Failed to upload images';
+            let errorMessage = 'Failed to upload images';
+            
+            if (err instanceof Error) {
+                if (err.message.includes('timeout') || err.name === 'AbortError') {
+                    errorMessage = 'Upload timeout - try compressing your image or check your connection';
+                } else if (err.message.includes('413') || err.message.includes('too large')) {
+                    errorMessage = 'File too large - maximum size is 50MB';
+                } else if (err.message.includes('network') || err.message.includes('fetch')) {
+                    errorMessage = 'Network error - check your connection and try again';
+                } else {
+                    errorMessage = err.message;
+                }
+            }
+            
             setError(errorMessage);
-            setTimeout(() => setError(''), 5000);
+            setTimeout(() => setError(''), 10000);
         } finally {
             setUploading(false);
             // Reset file input

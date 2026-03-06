@@ -20,13 +20,10 @@ const nextConfig = {
     // Increase body size limit for file uploads
     experimental: {
         serverComponentsExternalPackages: ['sharp'],
-    },
-    // Configure API routes
-    api: {
-        bodyParser: {
-            sizeLimit: '50mb',
+        // Increase body parser limit for App Router
+        serverActions: {
+            bodySizeLimit: '50mb',
         },
-        responseLimit: false,
     },
 };
 
