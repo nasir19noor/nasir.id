@@ -59,6 +59,61 @@ export default function AdminGalleryPage() {
         setImages(newImages);
     };
 
+    // Chunked upload function for large files
+    const uploadFileInChunks = async (file: File): Promise<{ url: string; sizes: any }> => {
+        const CHUNK_SIZE = 1024 * 1024; // 1MB chunks
+        const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+        const uploadId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        
+        console.log(`📦 [CHUNKED] Starting chunked upload: ${file.name} (${totalChunks} chunks)`);
+        
+        for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+            const start = chunkIndex * CHUNK_SIZE;
+            const end = Math.min(start + CHUNK_SIZE, file.size);
+            const chunk = file.slice(start, end);
+            
+            // Convert chunk to base64
+            const chunkBuffer = await chunk.arrayBuffer();
+            const chunkBase64 = Buffer.from(chunkBuffer).toString('base64');
+            
+            console.log(`📤 [CHUNKED] Uploading chunk ${chunkIndex + 1}/${totalChunks}`);
+            
+            const response = await fetch('/api/upload/chunked', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    chunk: chunkBase64,
+                    chunkIndex,
+                    totalChunks,
+                    fileName: file.name,
+                    fileType: file.type,
+                    fileSize: file.size,
+                    uploadId
+                }),
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: 'Chunk upload failed' }));
+                throw new Error(errorData.error || `Chunk ${chunkIndex + 1} upload failed`);
+            }
+            
+            const result = await response.json();
+            
+            if (result.complete) {
+                console.log(`✅ [CHUNKED] Upload complete: ${file.name}`);
+                return { url: result.url, sizes: result.sizes };
+            }
+            
+            // Update progress if needed
+            console.log(`📊 [CHUNKED] Progress: ${result.progress?.toFixed(1)}%`);
+        }
+        
+        throw new Error('Upload completed but no final result received');
+    };
+
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
         if (!files || files.length === 0) return;
@@ -82,16 +137,6 @@ export default function AdminGalleryPage() {
             return;
         }
 
-        // Warn about large files
-        const largeFiles = Array.from(files).filter(file => file.size > 5 * 1024 * 1024); // 5MB
-        if (largeFiles.length > 0) {
-            const proceed = confirm(`You're uploading ${largeFiles.length} large file(s) (${largeFiles.map(f => `${f.name}: ${(f.size / 1024 / 1024).toFixed(1)}MB`).join(', ')}). This may take longer. Continue?`);
-            if (!proceed) {
-                e.target.value = '';
-                return;
-            }
-        }
-
         setUploading(true);
         setError('');
         setSuccess('');
@@ -107,30 +152,34 @@ export default function AdminGalleryPage() {
                 try {
                     console.log(`📤 [GALLERY] Uploading ${i + 1}/${files.length}: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
                     
-                    const formData = new FormData();
-                    formData.append('file', file);
+                    let result;
+                    
+                    // Use chunked upload for files larger than 1MB
+                    if (file.size > 1024 * 1024) {
+                        console.log(`📦 [GALLERY] Using chunked upload for large file: ${file.name}`);
+                        result = await uploadFileInChunks(file);
+                    } else {
+                        console.log(`📤 [GALLERY] Using regular upload for small file: ${file.name}`);
+                        // Use regular upload for small files
+                        const formData = new FormData();
+                        formData.append('file', file);
 
-                    // Create AbortController for timeout
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
+                        const res = await fetch('/api/upload', {
+                            method: 'POST',
+                            credentials: 'include',
+                            body: formData,
+                        });
 
-                    const res = await fetch('/api/upload', {
-                        method: 'POST',
-                        credentials: 'include',
-                        body: formData,
-                        signal: controller.signal,
-                    });
+                        if (!res.ok) {
+                            const errorData = await res.json().catch(() => ({ error: 'Upload failed' }));
+                            throw new Error(errorData.error || `HTTP ${res.status}`);
+                        }
 
-                    clearTimeout(timeoutId);
-
-                    if (!res.ok) {
-                        const errorData = await res.json().catch(() => ({ error: 'Upload failed' }));
-                        throw new Error(errorData.error || `HTTP ${res.status}`);
+                        result = await res.json();
                     }
 
-                    const data = await res.json();
                     uploadedImages.push({
-                        url: data.url,
+                        url: result.url,
                         name: file.name,
                         size: file.size,
                         uploadedAt: new Date().toISOString(),
@@ -145,9 +194,6 @@ export default function AdminGalleryPage() {
                     
                     // Show individual file errors for debugging
                     if (files.length === 1) {
-                        if (uploadError instanceof Error && uploadError.name === 'AbortError') {
-                            throw new Error('Upload timeout - file too large or connection too slow');
-                        }
                         throw uploadError; // Re-throw for single file uploads
                     }
                 }
@@ -350,7 +396,7 @@ export default function AdminGalleryPage() {
                 <div className="mb-6 px-4 py-3 bg-blue-50 border border-blue-100 rounded-xl text-blue-600 text-sm">
                     <div className="flex items-center gap-2">
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                        <span>Uploading images... Please wait (large files may take longer)</span>
+                        <span>Uploading images... Large files (>1MB) use chunked upload for better reliability</span>
                     </div>
                 </div>
             )}
