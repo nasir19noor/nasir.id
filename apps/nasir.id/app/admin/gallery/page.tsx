@@ -63,46 +63,101 @@ export default function AdminGalleryPage() {
         const files = e.target.files;
         if (!files || files.length === 0) return;
 
+        // Validate file sizes before upload
+        const maxSize = 50 * 1024 * 1024; // 50MB
+        const oversizedFiles = Array.from(files).filter(file => file.size > maxSize);
+        
+        if (oversizedFiles.length > 0) {
+            setError(`Some files are too large (max 50MB): ${oversizedFiles.map(f => f.name).join(', ')}`);
+            e.target.value = ''; // Reset file input
+            return;
+        }
+
+        // Validate file types
+        const invalidFiles = Array.from(files).filter(file => !file.type.startsWith('image/'));
+        
+        if (invalidFiles.length > 0) {
+            setError(`Some files are not images: ${invalidFiles.map(f => f.name).join(', ')}`);
+            e.target.value = ''; // Reset file input
+            return;
+        }
+
         setUploading(true);
         setError('');
         setSuccess('');
 
         try {
             const uploadedImages: GalleryImage[] = [];
+            let successCount = 0;
+            let failCount = 0;
 
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
-                const formData = new FormData();
-                formData.append('file', file);
+                
+                try {
+                    console.log(`📤 [GALLERY] Uploading ${i + 1}/${files.length}: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+                    
+                    const formData = new FormData();
+                    formData.append('file', file);
 
-                const res = await fetch('/api/upload', {
-                    method: 'POST',
-                    credentials: 'include',
-                    body: formData,
-                });
+                    const res = await fetch('/api/upload', {
+                        method: 'POST',
+                        credentials: 'include',
+                        body: formData,
+                    });
 
-                if (!res.ok) {
-                    throw new Error(`Failed to upload ${file.name}`);
+                    if (!res.ok) {
+                        const errorData = await res.json().catch(() => ({ error: 'Upload failed' }));
+                        throw new Error(errorData.error || `HTTP ${res.status}`);
+                    }
+
+                    const data = await res.json();
+                    uploadedImages.push({
+                        url: data.url,
+                        name: file.name,
+                        size: file.size,
+                        uploadedAt: new Date().toISOString(),
+                    });
+                    
+                    successCount++;
+                    console.log(`✅ [GALLERY] Upload ${i + 1} successful: ${file.name}`);
+                    
+                } catch (uploadError) {
+                    failCount++;
+                    console.error(`❌ [GALLERY] Upload ${i + 1} failed: ${file.name}`, uploadError);
+                    
+                    // Show individual file errors for debugging
+                    if (files.length === 1) {
+                        throw uploadError; // Re-throw for single file uploads
+                    }
                 }
-
-                const data = await res.json();
-                uploadedImages.push({
-                    url: data.url,
-                    name: file.name,
-                    size: file.size,
-                    uploadedAt: new Date().toISOString(),
-                });
             }
 
-            const newImages = [...images, ...uploadedImages];
-            saveImages(newImages);
-            setSuccess(`Successfully uploaded ${uploadedImages.length} image(s)`);
+            if (uploadedImages.length > 0) {
+                const newImages = [...images, ...uploadedImages];
+                saveImages(newImages);
+            }
             
-            // Clear success message after 3 seconds
-            setTimeout(() => setSuccess(''), 3000);
+            // Show results
+            if (successCount > 0 && failCount === 0) {
+                setSuccess(`Successfully uploaded ${successCount} image(s)`);
+            } else if (successCount > 0 && failCount > 0) {
+                setSuccess(`Uploaded ${successCount} image(s), ${failCount} failed`);
+            } else {
+                setError(`All uploads failed (${failCount} files)`);
+            }
+            
+            // Clear messages after delay
+            setTimeout(() => {
+                setSuccess('');
+                setError('');
+            }, 5000);
+            
         } catch (err) {
-            console.error('Upload error:', err);
-            setError(err instanceof Error ? err.message : 'Failed to upload images');
+            console.error('💥 [GALLERY] Upload error:', err);
+            const errorMessage = err instanceof Error ? err.message : 'Failed to upload images';
+            setError(errorMessage);
+            setTimeout(() => setError(''), 5000);
         } finally {
             setUploading(false);
             // Reset file input
@@ -118,6 +173,8 @@ export default function AdminGalleryPage() {
         setSuccess('');
         
         try {
+            console.log('🗑️ [GALLERY] Starting delete for URL:', imageUrl);
+            
             // Call the delete API to remove from S3
             const response = await fetch('/api/gallery/delete', {
                 method: 'DELETE',
@@ -128,25 +185,44 @@ export default function AdminGalleryPage() {
                 body: JSON.stringify({ imageUrl }),
             });
             
+            console.log('🗑️ [GALLERY] Delete API response status:', response.status);
+            
             const result = await response.json();
+            console.log('🗑️ [GALLERY] Delete API response:', result);
             
             if (!response.ok) {
-                throw new Error(result.error || 'Failed to delete image from S3');
+                throw new Error(result.error || `HTTP ${response.status}: Failed to delete image from S3`);
             }
             
             // Remove from local gallery storage
             const newImages = images.filter(img => img.url !== imageUrl);
             saveImages(newImages);
             
-            setSuccess(`Image permanently deleted from S3 storage (${result.deletedKeys?.length || 0} files removed)`);
-            setTimeout(() => setSuccess(''), 5000);
+            // Show detailed success message
+            const successMsg = `Image permanently deleted from S3 storage`;
+            if (result.deletedKeys && result.deletedKeys.length > 0) {
+                console.log('✅ [GALLERY] Successfully deleted keys:', result.deletedKeys);
+                setSuccess(`${successMsg} (${result.deletedKeys.length} files removed)`);
+            } else {
+                setSuccess(successMsg);
+            }
             
-            console.log('🗑️ [GALLERY] Image deleted:', result);
+            // Show failed keys if any
+            if (result.failedKeys && result.failedKeys.length > 0) {
+                console.warn('⚠️ [GALLERY] Some files failed to delete:', result.failedKeys);
+                setError(`Warning: ${result.failedKeys.length} file variants could not be deleted from S3`);
+            }
+            
+            setTimeout(() => {
+                setSuccess('');
+                setError('');
+            }, 5000);
             
         } catch (err) {
             console.error('❌ [GALLERY] Delete error:', err);
-            setError(err instanceof Error ? err.message : 'Failed to delete image');
-            setTimeout(() => setError(''), 5000);
+            const errorMessage = err instanceof Error ? err.message : 'Failed to delete image';
+            setError(`Delete failed: ${errorMessage}`);
+            setTimeout(() => setError(''), 8000);
         } finally {
             setDeleting(null);
         }
@@ -180,12 +256,12 @@ export default function AdminGalleryPage() {
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Gallery</h1>
                     <p className="text-gray-500 mt-1">
-                        Upload and manage your images ({images.length} total)
+                        Upload and manage your images ({images.length} total) • Max 50MB per file
                     </p>
                 </div>
-                <label className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium text-sm cursor-pointer">
+                <label className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
                     <Upload size={18} />
-                    Upload Images
+                    {uploading ? 'Uploading...' : 'Upload Images'}
                     <input
                         type="file"
                         accept="image/*"
@@ -239,7 +315,10 @@ export default function AdminGalleryPage() {
             {/* Upload Progress */}
             {uploading && (
                 <div className="mb-6 px-4 py-3 bg-blue-50 border border-blue-100 rounded-xl text-blue-600 text-sm">
-                    Uploading images... Please wait.
+                    <div className="flex items-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                        <span>Uploading images... Please wait (large files may take longer)</span>
+                    </div>
                 </div>
             )}
 
