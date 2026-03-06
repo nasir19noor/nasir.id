@@ -135,7 +135,7 @@ export default function ContactSection() {
                         <div className="space-y-4">
                             <a
                                 href="mailto:nasir19noor@gmail.com"
-                                className="flex items-center gap-4 p-4 card hover:shadow-medium transition-all group"
+                                className="flex items-center gap-4 p-4 card hover:shadow-lg transition-all group"
                             >
                                 <div className="p-2 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg text-blue-600 group-hover:scale-110 transition-transform">
                                     <Mail size={20} />
@@ -152,7 +152,7 @@ export default function ContactSection() {
                                 href="https://github.com/nasir19noor"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex items-center gap-4 p-4 card hover:shadow-medium transition-all group"
+                                className="flex items-center gap-4 p-4 card hover:shadow-lg transition-all group"
                             >
                                 <div className="p-2 bg-gradient-to-br from-slate-100 to-slate-200 rounded-lg text-slate-600 group-hover:scale-110 transition-transform">
                                     <Github size={20} />
@@ -167,7 +167,7 @@ export default function ContactSection() {
                                 href="https://linkedin.com/in/nasir19noor"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex items-center gap-4 p-4 card hover:shadow-medium transition-all group"
+                                className="flex items-center gap-4 p-4 card hover:shadow-lg transition-all group"
                             >
                                 <div className="p-2 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg text-blue-600 group-hover:scale-110 transition-transform">
                                     <Linkedin size={20} />
@@ -182,7 +182,7 @@ export default function ContactSection() {
                                 href="https://wa.me/6285288358561"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex items-center gap-4 p-4 card hover:shadow-medium transition-all group"
+                                className="flex items-center gap-4 p-4 card hover:shadow-lg transition-all group"
                             >
                                 <div className="p-2 bg-gradient-to-br from-emerald-100 to-emerald-200 rounded-lg text-emerald-600 group-hover:scale-110 transition-transform">
                                     <MessageCircle size={20} />
