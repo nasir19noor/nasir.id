@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { convertToAssetsUrl, addCacheBuster } from '@/lib/image-utils';
 
 interface Settings {
     about_image?: string;
@@ -68,7 +69,7 @@ export default function AboutSection() {
                             {settings.about_image ? (
                                 <img
                                     key={imageKey}
-                                    src={`${settings.about_image}?t=${imageKey}`}
+                                    src={addCacheBuster(convertToAssetsUrl(settings.about_image))}
                                     alt="Profile"
                                     className="w-full h-full object-cover"
                                 />

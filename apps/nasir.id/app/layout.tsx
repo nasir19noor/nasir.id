@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { convertToAssetsUrl } from '@/lib/image-utils';
 
 // Function to fetch settings for metadata
 async function getSettings() {
@@ -55,7 +56,7 @@ export async function generateMetadata(): Promise<Metadata> {
       locale: 'en_US',
       images: [
         {
-          url: settings.about_image || `${baseUrl}/default-og-image.jpg`,
+          url: convertToAssetsUrl(settings.about_image) || `${baseUrl}/default-og-image.jpg`,
           width: 1200,
           height: 630,
           alt: `${settings.hero_title || 'Nasir Noor'} - Profile Picture`,
@@ -70,7 +71,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title,
       description: cleanDescription,
       creator: '@nasir_noor', // Replace with actual Twitter handle if available
-      images: [settings.about_image || `${baseUrl}/default-og-image.jpg`],
+      images: [convertToAssetsUrl(settings.about_image) || `${baseUrl}/default-og-image.jpg`],
     },
     
     // Additional meta tags
