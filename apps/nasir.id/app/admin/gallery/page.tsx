@@ -15,6 +15,7 @@ export default function AdminGalleryPage() {
     const [filteredImages, setFilteredImages] = useState<GalleryImage[]>([]);
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(false);
+    const [deleting, setDeleting] = useState<string | null>(null);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
@@ -109,13 +110,46 @@ export default function AdminGalleryPage() {
         }
     };
 
-    const deleteImage = (imageUrl: string) => {
-        if (!confirm('Are you sure you want to remove this image from the gallery?')) return;
+    const deleteImage = async (imageUrl: string) => {
+        if (!confirm('Are you sure you want to permanently delete this image? This will remove it from S3 storage and cannot be undone.')) return;
         
-        const newImages = images.filter(img => img.url !== imageUrl);
-        saveImages(newImages);
-        setSuccess('Image removed from gallery');
-        setTimeout(() => setSuccess(''), 3000);
+        setDeleting(imageUrl);
+        setError('');
+        setSuccess('');
+        
+        try {
+            // Call the delete API to remove from S3
+            const response = await fetch('/api/gallery/delete', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({ imageUrl }),
+            });
+            
+            const result = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(result.error || 'Failed to delete image from S3');
+            }
+            
+            // Remove from local gallery storage
+            const newImages = images.filter(img => img.url !== imageUrl);
+            saveImages(newImages);
+            
+            setSuccess(`Image permanently deleted from S3 storage (${result.deletedKeys?.length || 0} files removed)`);
+            setTimeout(() => setSuccess(''), 5000);
+            
+            console.log('🗑️ [GALLERY] Image deleted:', result);
+            
+        } catch (err) {
+            console.error('❌ [GALLERY] Delete error:', err);
+            setError(err instanceof Error ? err.message : 'Failed to delete image');
+            setTimeout(() => setError(''), 5000);
+        } finally {
+            setDeleting(null);
+        }
     };
 
     const copyImageUrl = (url: string) => {
@@ -248,7 +282,9 @@ export default function AdminGalleryPage() {
                     {filteredImages.map((image, index) => (
                         <div
                             key={index}
-                            className="group relative bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-all"
+                            className={`group relative bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-all ${
+                                deleting === image.url ? 'opacity-50 pointer-events-none' : ''
+                            }`}
                         >
                             {/* Image */}
                             <div className="aspect-square relative overflow-hidden bg-gray-100">
@@ -257,6 +293,16 @@ export default function AdminGalleryPage() {
                                     alt={image.name}
                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                 />
+                                
+                                {/* Deleting Overlay */}
+                                {deleting === image.url && (
+                                    <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
+                                        <div className="text-white text-center">
+                                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
+                                            <p className="text-sm">Deleting...</p>
+                                        </div>
+                                    </div>
+                                )}
                                 
                                 {/* Overlay Actions */}
                                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
@@ -283,8 +329,13 @@ export default function AdminGalleryPage() {
                                     </button>
                                     <button
                                         onClick={() => deleteImage(image.url)}
-                                        className="p-2 bg-red-500/80 backdrop-blur-sm rounded-lg hover:bg-red-600/80 transition-colors"
-                                        title="Delete"
+                                        disabled={deleting === image.url}
+                                        className={`p-2 backdrop-blur-sm rounded-lg transition-colors ${
+                                            deleting === image.url 
+                                                ? 'bg-gray-500/80 cursor-not-allowed' 
+                                                : 'bg-red-500/80 hover:bg-red-600/80'
+                                        }`}
+                                        title={deleting === image.url ? "Deleting..." : "Delete"}
                                     >
                                         <Trash2 size={14} className="text-white" />
                                     </button>
