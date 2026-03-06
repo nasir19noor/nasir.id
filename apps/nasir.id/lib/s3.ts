@@ -9,6 +9,9 @@ const s3Client = new S3Client({
   },
 });
 
+// Export s3Client for use in other modules
+export { s3Client };
+
 // Debug AWS configuration
 console.log('🔧 [S3] AWS Configuration:');
 console.log(`   Region: ${process.env.AWS_REGION || 'us-east-1'}`);
