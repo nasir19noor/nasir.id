@@ -15,14 +15,14 @@ export default function Navbar() {
     };
 
     return (
-        <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-pink-100 shadow-sm">
+        <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-b border-slate-200 shadow-soft">
             <div className="max-w-7xl mx-auto px-6 py-4">
                 <div className="flex items-center justify-between">
                     <button
                         onClick={() => scrollTo('hero')}
-                        className="text-xl font-bold bg-gradient-to-r from-pink-500 to-blue-500 bg-clip-text text-transparent hover:scale-105 transition-transform flex items-center gap-2"
+                        className="text-xl font-bold gradient-text-primary hover:scale-105 transition-transform flex items-center gap-2"
                     >
-                        <Sparkles size={20} className="text-pink-500" />
+                        <Sparkles size={20} className="text-blue-600" />
                         Nasir Noor
                     </button>
 
@@ -32,10 +32,10 @@ export default function Navbar() {
                             <button
                                 key={item}
                                 onClick={() => scrollTo(item.toLowerCase())}
-                                className="text-gray-700 hover:text-pink-500 transition-colors font-medium relative group"
+                                className="text-slate-700 hover:text-blue-600 transition-colors font-medium relative group"
                             >
                                 {item}
-                                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-pink-500 to-blue-500 group-hover:w-full transition-all duration-300"></span>
+                                <span className="absolute -bottom-1 left-0 w-0 h-0.5 gradient-primary group-hover:w-full transition-all duration-300 rounded-full"></span>
                             </button>
                         ))}
                     </div>
@@ -43,7 +43,7 @@ export default function Navbar() {
                     {/* Mobile Toggle */}
                     <button
                         onClick={() => setIsOpen(!isOpen)}
-                        className="md:hidden text-gray-700 p-2 hover:bg-pink-50 rounded-lg transition-colors"
+                        className="md:hidden text-slate-700 p-2 hover:bg-blue-50 rounded-lg transition-colors"
                     >
                         {isOpen ? <X size={24} /> : <Menu size={24} />}
                     </button>
@@ -51,12 +51,12 @@ export default function Navbar() {
 
                 {/* Mobile Menu */}
                 {isOpen && (
-                    <div className="md:hidden mt-4 pb-4 space-y-4 border-t border-pink-100 pt-4">
+                    <div className="md:hidden mt-4 pb-4 space-y-4 border-t border-slate-200 pt-4 animate-slide-up">
                         {['About', 'Portfolio', 'Blog', 'Contact'].map((item) => (
                             <button
                                 key={item}
                                 onClick={() => scrollTo(item.toLowerCase())}
-                                className="block w-full text-left text-gray-700 hover:text-pink-500 transition-colors font-medium"
+                                className="block w-full text-left text-slate-700 hover:text-blue-600 transition-colors font-medium py-2 px-4 hover:bg-blue-50 rounded-lg"
                             >
                                 {item}
                             </button>

@@ -97,7 +97,7 @@ export async function generateMetadata(): Promise<Metadata> {
     other: {
       'og:image:width': '1200',
       'og:image:height': '630',
-      'theme-color': '#ec4899', // Pink theme color
+      'theme-color': '#3b82f6', // Professional blue theme color
     },
   };
 }

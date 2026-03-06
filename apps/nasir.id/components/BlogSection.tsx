@@ -36,23 +36,23 @@ export default function BlogSection() {
     }, []);
 
     return (
-        <section id="blog" className="py-24 px-6 bg-white/50 backdrop-blur-sm">
+        <section id="blog" className="py-24 px-6 bg-slate-50/50 backdrop-blur-sm">
             <div className="max-w-6xl mx-auto">
-                <h2 className="text-4xl md:text-5xl font-bold mb-8 text-center bg-gradient-to-r from-pink-500 to-blue-500 bg-clip-text text-transparent">
-                    Latest Articles 📚
+                <h2 className="text-4xl md:text-5xl font-bold mb-8 text-center gradient-text-primary font-serif">
+                    Latest Insights
                 </h2>
-                <p className="text-gray-600 text-center mb-12 max-w-2xl mx-auto">
-                    Insights on cloud infrastructure, DevOps automation, and practical
-                    AI/ML applications in modern software engineering.
+                <p className="text-slate-600 text-center mb-12 max-w-2xl mx-auto text-lg">
+                    Thoughts on cloud architecture, DevOps best practices, and emerging
+                    technologies shaping the future of software engineering.
                 </p>
 
                 {loading ? (
                     <div className="text-center py-12">
-                        <p className="text-gray-500">Loading articles...</p>
+                        <p className="text-slate-500">Loading articles...</p>
                     </div>
                 ) : articles.length === 0 ? (
-                    <div className="text-center py-12 bg-white rounded-2xl border-2 border-pink-100">
-                        <p className="text-gray-500">No articles yet. Check back soon! ✨</p>
+                    <div className="text-center py-12 card">
+                        <p className="text-slate-500">No articles yet. Check back soon!</p>
                     </div>
                 ) : (
                     <>
@@ -61,11 +61,12 @@ export default function BlogSection() {
                             {articles.map((article) => (
                                 <article
                                     key={article.id}
-                                    className="group bg-white rounded-2xl overflow-hidden border-2 border-pink-100 hover:border-pink-300 transition-all hover:shadow-xl hover:shadow-pink-100 hover:scale-105"
+                                    className="group card card-hover cursor-pointer"
+                                    onClick={() => window.open(`/${article.slug}`, '_blank')}
                                 >
                                     {/* Image */}
                                     {article.image_url && (
-                                        <div className="aspect-[16/10] relative overflow-hidden bg-gradient-to-br from-pink-100 to-blue-100">
+                                        <div className="aspect-[16/10] relative overflow-hidden bg-gradient-to-br from-blue-50 to-emerald-50">
                                             <Image
                                                 src={getThumbnailUrl(article.image_url)}
                                                 alt={article.title}
@@ -76,8 +77,8 @@ export default function BlogSection() {
                                     )}
 
                                     {/* Content */}
-                                    <div className="p-4">
-                                        <div className="flex items-center gap-4 text-xs text-gray-500 mb-2">
+                                    <div className="p-6">
+                                        <div className="flex items-center gap-4 text-xs text-slate-500 mb-3">
                                             <span className="flex items-center gap-1">
                                                 <Calendar size={12} />
                                                 {new Date(article.published_at).toLocaleDateString('en-US', {
@@ -88,23 +89,20 @@ export default function BlogSection() {
                                             </span>
                                         </div>
 
-                                        <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-pink-600 transition-colors line-clamp-2">
+                                        <h3 className="text-lg font-semibold text-slate-900 mb-3 group-hover:text-blue-600 transition-colors line-clamp-2">
                                             {article.title}
                                         </h3>
                                         {article.summary && (
-                                            <p className="text-gray-600 mb-3 text-sm line-clamp-3">{article.summary}</p>
+                                            <p className="text-slate-600 mb-4 text-sm line-clamp-3">{article.summary}</p>
                                         )}
 
-                                        <a
-                                            href={`/${article.slug}`}
-                                            className="inline-flex items-center gap-2 text-pink-500 hover:text-pink-600 transition-colors group/link font-medium text-sm"
-                                        >
-                                            Read More
+                                        <div className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors group/link font-medium text-sm">
+                                            Read Article
                                             <ArrowRight
                                                 size={14}
                                                 className="group-hover/link:translate-x-1 transition-transform"
                                             />
-                                        </a>
+                                        </div>
                                     </div>
                                 </article>
                             ))}
@@ -114,9 +112,9 @@ export default function BlogSection() {
                         <div className="text-center">
                             <a
                                 href="/#articles"
-                                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-full hover:from-pink-600 hover:to-purple-600 transition-all shadow-lg hover:shadow-xl font-medium"
+                                className="btn-primary inline-flex items-center gap-2"
                             >
-                                View More Articles
+                                View All Articles
                                 <ArrowRight size={18} />
                             </a>
                         </div>

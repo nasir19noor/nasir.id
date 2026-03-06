@@ -46,21 +46,21 @@ export default function PortfolioSection() {
     return (
         <section id="portfolio" className="py-24 px-6">
             <div className="max-w-6xl mx-auto">
-                <h2 className="text-4xl md:text-5xl font-bold mb-8 text-center bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text text-transparent">
-                    Portfolio 🎨
+                <h2 className="text-4xl md:text-5xl font-bold mb-8 text-center gradient-text-secondary font-serif">
+                    Featured Projects
                 </h2>
-                <p className="text-gray-600 text-center mb-12 max-w-2xl mx-auto">
-                    Cloud infrastructure, DevOps automation, and AI/ML integration
-                    projects that deliver measurable business impact.
+                <p className="text-slate-600 text-center mb-12 max-w-2xl mx-auto text-lg">
+                    Cloud infrastructure, DevOps automation, and innovative solutions
+                    that drive business transformation and technical excellence.
                 </p>
 
                 {loading ? (
                     <div className="text-center py-12">
-                        <p className="text-gray-500">Loading portfolio...</p>
+                        <p className="text-slate-500">Loading portfolio...</p>
                     </div>
                 ) : projects.length === 0 ? (
-                    <div className="text-center py-12 bg-white rounded-2xl border-2 border-blue-100">
-                        <p className="text-gray-500">No portfolio items yet. Check back soon! 🚀</p>
+                    <div className="text-center py-12 card">
+                        <p className="text-slate-500">No portfolio items yet. Check back soon!</p>
                     </div>
                 ) : (
                     <>
@@ -69,11 +69,12 @@ export default function PortfolioSection() {
                             {projects.map((project) => (
                                 <article
                                     key={project.id}
-                                    className="group bg-white rounded-2xl overflow-hidden border-2 border-purple-100 hover:border-purple-300 transition-all hover:shadow-xl hover:shadow-purple-100 hover:scale-105"
+                                    className="group card card-hover cursor-pointer"
+                                    onClick={() => window.open(`/${project.slug}`, '_blank')}
                                 >
                                     {/* Image */}
                                     {project.image_url && (
-                                        <div className="aspect-[16/10] relative overflow-hidden bg-gradient-to-br from-purple-100 to-blue-100">
+                                        <div className="aspect-[16/10] relative overflow-hidden bg-gradient-to-br from-emerald-50 to-blue-50">
                                             <Image
                                                 src={getThumbnailUrl(project.image_url)}
                                                 alt={project.project_title}
@@ -84,8 +85,8 @@ export default function PortfolioSection() {
                                     )}
 
                                     {/* Content */}
-                                    <div className="p-4">
-                                        <div className="flex items-center gap-4 text-xs text-gray-500 mb-2">
+                                    <div className="p-6">
+                                        <div className="flex items-center gap-4 text-xs text-slate-500 mb-3">
                                             <span className="flex items-center gap-1">
                                                 <Calendar size={12} />
                                                 {new Date(project.published_at).toLocaleDateString('en-US', {
@@ -96,23 +97,20 @@ export default function PortfolioSection() {
                                             </span>
                                         </div>
 
-                                        <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-purple-600 transition-colors line-clamp-2">
+                                        <h3 className="text-lg font-semibold text-slate-900 mb-3 group-hover:text-emerald-600 transition-colors line-clamp-2">
                                             {project.project_title}
                                         </h3>
                                         {project.description && (
-                                            <p className="text-gray-600 mb-3 text-sm line-clamp-3">{getTextSummary(project.description)}</p>
+                                            <p className="text-slate-600 mb-4 text-sm line-clamp-3">{getTextSummary(project.description)}</p>
                                         )}
 
-                                        <a
-                                            href={`/${project.slug}`}
-                                            className="inline-flex items-center gap-2 text-purple-500 hover:text-purple-600 transition-colors group/link font-medium text-sm"
-                                        >
+                                        <div className="inline-flex items-center gap-2 text-emerald-600 hover:text-emerald-700 transition-colors group/link font-medium text-sm">
                                             View Project
                                             <ArrowRight
                                                 size={14}
                                                 className="group-hover/link:translate-x-1 transition-transform"
                                             />
-                                        </a>
+                                        </div>
                                     </div>
                                 </article>
                             ))}
@@ -122,9 +120,9 @@ export default function PortfolioSection() {
                         <div className="text-center">
                             <a
                                 href="/#portfolio"
-                                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-full hover:from-purple-600 hover:to-blue-600 transition-all shadow-lg hover:shadow-xl font-medium"
+                                className="btn-secondary inline-flex items-center gap-2"
                             >
-                                View More Projects
+                                View All Projects
                                 <ArrowRight size={18} />
                             </a>
                         </div>
