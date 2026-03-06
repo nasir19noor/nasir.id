@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Save } from 'lucide-react';
+import { convertToAssetsUrl, addCacheBuster } from '@/lib/image-utils';
 
 interface Settings {
     hero_title: string;
@@ -28,6 +29,7 @@ export default function SettingsPage() {
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const [fixingUrls, setFixingUrls] = useState(false);
 
     useEffect(() => {
         fetchSettings();
@@ -216,6 +218,36 @@ export default function SettingsPage() {
         }
     };
 
+    const fixImageUrls = async () => {
+        setFixingUrls(true);
+        setError('');
+        setSuccess('');
+        
+        try {
+            const res = await fetch('/api/admin/fix-image-urls', {
+                method: 'POST',
+                credentials: 'include',
+            });
+            
+            if (res.ok) {
+                const result = await res.json();
+                setSuccess('Image URLs fixed successfully! 🎉');
+                console.log('🔧 [ADMIN] URL fix results:', result);
+                
+                // Refresh settings to show updated URLs
+                await fetchSettings();
+            } else {
+                const errorData = await res.json();
+                setError(errorData.error || 'Failed to fix image URLs');
+            }
+        } catch (err) {
+            console.error('Fix URLs error:', err);
+            setError('Failed to fix image URLs');
+        } finally {
+            setFixingUrls(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
@@ -321,18 +353,21 @@ export default function SettingsPage() {
                             {settings.about_image && (
                                 <div className="mt-3">
                                     <img
-                                        src={settings.about_image}
+                                        src={addCacheBuster(convertToAssetsUrl(settings.about_image))}
                                         alt="Profile"
                                         className="h-40 w-40 rounded-2xl object-cover border-4 border-pink-200"
-                                        onLoad={() => console.log('🖼️ [ADMIN] Image loaded successfully:', settings.about_image)}
+                                        onLoad={() => console.log('🖼️ [ADMIN] Image loaded successfully:', convertToAssetsUrl(settings.about_image))}
                                         onError={(e) => {
-                                            console.error('💥 [ADMIN] Image failed to load:', settings.about_image);
+                                            console.error('💥 [ADMIN] Image failed to load:', convertToAssetsUrl(settings.about_image));
                                             console.error('💥 [ADMIN] Image error event:', e);
                                         }}
-                                        key={settings.about_image} // Force re-render when URL changes
+                                        key={convertToAssetsUrl(settings.about_image)} // Force re-render when URL changes
                                     />
                                     <p className="text-xs text-gray-500 mt-1">
                                         Current profile image
+                                    </p>
+                                    <p className="text-xs text-blue-600 mt-1 font-mono break-all">
+                                        {convertToAssetsUrl(settings.about_image)}
                                     </p>
                                 </div>
                             )}
@@ -427,7 +462,15 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Save Button */}
-                <div className="flex justify-end pt-4">
+                <div className="flex justify-between items-center pt-4">
+                    <button
+                        onClick={fixImageUrls}
+                        disabled={fixingUrls}
+                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-full hover:from-blue-600 hover:to-cyan-600 disabled:opacity-50 transition-all shadow-lg hover:shadow-xl font-medium text-sm"
+                    >
+                        🔧 {fixingUrls ? 'Fixing URLs...' : 'Fix Image URLs'}
+                    </button>
+                    
                     <button
                         onClick={handleSave}
                         disabled={saving}

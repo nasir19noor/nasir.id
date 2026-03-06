@@ -15,8 +15,16 @@ export async function GET() {
             let value = setting.value as string;
             
             // Convert image URLs to assets domain
-            if (setting.key === 'profile_image' || setting.key === 'hero_image') {
+            if (setting.key === 'about_image' || setting.key === 'hero_image' || setting.key === 'profile_image') {
+                const originalValue = value;
                 value = convertToAssetsUrl(value);
+                
+                // Debug logging
+                if (originalValue !== value) {
+                    console.log(`🔄 [SETTINGS API] Converted ${setting.key}:`);
+                    console.log(`   From: ${originalValue}`);
+                    console.log(`   To:   ${value}`);
+                }
             }
             
             settingsObj[setting.key as string] = value;
