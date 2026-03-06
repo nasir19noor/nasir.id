@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { DeleteObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { s3Client } from '@/lib/s3';
 import { isAuthenticated } from '@/lib/auth';
 
@@ -19,6 +19,10 @@ export async function DELETE(request: NextRequest) {
         }
 
         console.log('🗑️ [DELETE] Starting deletion for URL:', imageUrl);
+        console.log('🔧 [DELETE] Environment check:');
+        console.log(`   AWS_REGION: ${process.env.AWS_REGION}`);
+        console.log(`   AWS_S3_BUCKET: ${process.env.AWS_S3_BUCKET}`);
+        console.log(`   AWS_ACCESS_KEY_ID: ${process.env.AWS_ACCESS_KEY_ID ? '***' + process.env.AWS_ACCESS_KEY_ID.slice(-4) : 'NOT SET'}`);
 
         // Extract the S3 key from the assets URL
         // URL format: https://assets.nasir.id/uploads/2026/03/05/filename.jpg
@@ -54,6 +58,24 @@ export async function DELETE(request: NextRequest) {
         
         console.log('🗑️ [DELETE] Keys to delete:', keysToDelete);
         console.log('🪣 [DELETE] Using bucket:', process.env.AWS_S3_BUCKET);
+        
+        // Test S3 connection first
+        try {
+            console.log('🔍 [DELETE] Testing S3 connection...');
+            const testCommand = new ListObjectsV2Command({
+                Bucket: process.env.AWS_S3_BUCKET!,
+                Prefix: urlParts.split('/').slice(0, -1).join('/') + '/',
+                MaxKeys: 1
+            });
+            await s3Client.send(testCommand);
+            console.log('✅ [DELETE] S3 connection test successful');
+        } catch (testError) {
+            console.error('❌ [DELETE] S3 connection test failed:', testError);
+            return NextResponse.json(
+                { error: `S3 connection failed: ${testError instanceof Error ? testError.message : 'Unknown error'}` },
+                { status: 500 }
+            );
+        }
         
         // Delete all variants from S3
         const deletePromises = keysToDelete.map(async (key) => {

@@ -41,11 +41,24 @@ export async function uploadToS3(
   }
   
   // Create date-based directory structure: uploads/YYYY/MM/DD/
+  // Use Asia/Jakarta timezone (UTC+7) for consistent date folders
   const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
+  
+  // More reliable timezone handling using Intl.DateTimeFormat
+  const jakartaFormatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Jakarta',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  
+  const jakartaDateParts = jakartaFormatter.formatToParts(now);
+  const year = jakartaDateParts.find(part => part.type === 'year')?.value || '';
+  const month = jakartaDateParts.find(part => part.type === 'month')?.value || '';
+  const day = jakartaDateParts.find(part => part.type === 'day')?.value || '';
   const datePrefix = `${year}/${month}/${day}`;
+  
+  console.log(`📅 [S3] Using Jakarta time for date folder: ${datePrefix} (UTC: ${now.toISOString()})`);
   
   const key = `uploads/${datePrefix}/${Date.now()}-${fileName}`;
   console.log(`📁 [S3] Upload key: ${key}`);
@@ -85,14 +98,25 @@ export async function uploadImageWithSizes(
   }
   
   // Create date-based directory structure
+  // Use Asia/Jakarta timezone (UTC+7) for consistent date folders
   const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
+  
+  // More reliable timezone handling using Intl.DateTimeFormat
+  const jakartaFormatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Jakarta',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  
+  const jakartaDateParts = jakartaFormatter.formatToParts(now);
+  const year = jakartaDateParts.find(part => part.type === 'year')?.value || '';
+  const month = jakartaDateParts.find(part => part.type === 'month')?.value || '';
+  const day = jakartaDateParts.find(part => part.type === 'day')?.value || '';
   const datePrefix = `${year}/${month}/${day}`;
   const timestamp = Date.now();
   
-  console.log(`📅 [S3] Date prefix: uploads/${datePrefix}/`);
+  console.log(`📅 [S3] Using Jakarta time for date folder: uploads/${datePrefix}/ (UTC: ${now.toISOString()})`);
   
   // Remove extension from filename
   const nameWithoutExt = fileName.replace(/\.[^/.]+$/, '');
