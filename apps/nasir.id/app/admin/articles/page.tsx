@@ -472,11 +472,11 @@ export default function AdminArticlesPage() {
 
             {/* Modal */}
             {showModal && (
-                <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-start justify-center pt-12 px-4">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50">
+                    <div className="h-full w-full bg-white flex flex-col">
                         {/* Modal Header */}
-                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                            <h2 className="text-lg font-semibold text-gray-900">
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white sticky top-0 z-10">
+                            <h2 className="text-xl font-semibold text-gray-900">
                                 {editing ? 'Edit Article' : 'New Article'}
                             </h2>
                             <button
@@ -487,7 +487,9 @@ export default function AdminArticlesPage() {
                             </button>
                         </div>
 
-                        {/* Modal Body */}
+                        {/* Modal Body - Scrollable */}
+                        <div className="flex-1 overflow-y-auto">
+                            <div className="p-6 space-y-6 max-w-6xl mx-auto">{/* Content will go here */}
                         <div className="flex-1 overflow-y-auto p-6 space-y-5">
                             {error && (
                                 <div className="px-4 py-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm">
@@ -801,21 +803,21 @@ export default function AdminArticlesPage() {
                             </div>
                         </div>
 
-                        {/* Modal Footer */}
-                        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50">
+                        {/* Modal Footer - Sticky */}
+                        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-white sticky bottom-0 z-10">
                             <button
                                 onClick={() => setShowModal(false)}
-                                className="px-5 py-2.5 text-gray-600 hover:bg-gray-200 rounded-xl transition-colors text-sm font-medium"
+                                className="px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-xl transition-colors font-medium"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleSave}
                                 disabled={saving}
-                                className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors text-sm font-medium"
+                                className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors font-medium"
                             >
                                 <Save size={16} />
-                                {saving ? 'Saving...' : editing ? 'Update' : 'Create'}
+                                {saving ? 'Saving...' : editing ? 'Update Article' : 'Create Article'}
                             </button>
                         </div>
                     </div>
