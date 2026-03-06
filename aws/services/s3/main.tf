@@ -40,33 +40,33 @@ module "s3_itung" {
   # Bucket remains private; CloudFront OAC has exclusive access via the policy below
 }
 
-resource "aws_s3_bucket_policy" "itung_cloudfront_access" {
-  bucket     = module.s3_itung.s3_bucket_id
-  depends_on = [module.s3_itung]
+# resource "aws_s3_bucket_policy" "itung_cloudfront_access" {
+#   bucket     = module.s3_itung.s3_bucket_id
+#   depends_on = [module.s3_itung]
 
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid    = "AllowCloudFrontOAC"
-        Effect = "Allow"
-        Principal = {
-          Service = "cloudfront.amazonaws.com"
-        }
-        Action = "s3:GetObject"
-        Resource = [
-          "${module.s3_itung.s3_bucket_arn}/uploads/*",
-          "${module.s3_itung.s3_bucket_arn}/questions/*"
-        ]
-        Condition = {
-          StringEquals = {
-            "AWS:SourceArn" = data.terraform_remote_state.cloudfront.outputs.cloudfront_itung_distribution_arn
-          }
-        }
-      }
-    ]
-  })
-}
+#   policy = jsonencode({
+#     Version = "2012-10-17"
+#     Statement = [
+#       {
+#         Sid    = "AllowCloudFrontOAC"
+#         Effect = "Allow"
+#         Principal = {
+#           Service = "cloudfront.amazonaws.com"
+#         }
+#         Action = "s3:GetObject"
+#         Resource = [
+#           "${module.s3_itung.s3_bucket_arn}/uploads/*",
+#           "${module.s3_itung.s3_bucket_arn}/questions/*"
+#         ]
+#         Condition = {
+#           StringEquals = {
+#             "AWS:SourceArn" = data.terraform_remote_state.cloudfront.outputs.cloudfront_itung_distribution_arn
+#           }
+#         }
+#       }
+#     ]
+#   })
+# }
 
 module "s3_waha" {
   source = "git::https://github.com/nasir19noor/terraform.git//aws/modules/s3"
