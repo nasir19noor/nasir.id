@@ -88,19 +88,25 @@ module "s3_nasir" {
   enable_public_read_access = false
 }
 
-resource "aws_s3_bucket_policy" "nasir_uploads_public_read" {
-  bucket     = module.s3_nasir.s3_bucket_id
-  depends_on = [module.s3_nasir]
+resource "aws_s3_bucket_policy" "nasir_uploads_cloudfront_only" {
+  bucket = module.s3_nasir.s3_bucket_id
 
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
-        Sid       = "PublicReadUploads"
-        Effect    = "Allow"
-        Principal = "*"
-        Action    = "s3:GetObject"
-        Resource  = "${module.s3_nasir.s3_bucket_arn}/uploads/*"
+        Sid    = "AllowCloudFrontOACUploads"
+        Effect = "Allow"
+        Principal = {
+          Service = "cloudfront.amazonaws.com"
+        }
+        Action   = "s3:GetObject"
+        Resource = "${module.s3_nasir.s3_bucket_arn}/uploads/*"
+        Condition = {
+          StringEquals = {
+            "AWS:SourceArn" = data.terraform_remote_state.cloudfront.outputs.cloudfront_nasir_distribution_arn
+          }
+        }
       }
     ]
   })
