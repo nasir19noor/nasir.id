@@ -59,6 +59,52 @@ export default function AdminGalleryPage() {
         setImages(newImages);
     };
 
+    // Image resizing function
+    const resizeImage = (file: File, maxWidth: number = 1920, quality: number = 0.8): Promise<File> => {
+        return new Promise((resolve, reject) => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            
+            img.onload = () => {
+                // Calculate new dimensions
+                let { width, height } = img;
+                
+                if (width > maxWidth) {
+                    height = (height * maxWidth) / width;
+                    width = maxWidth;
+                }
+                
+                // Set canvas dimensions
+                canvas.width = width;
+                canvas.height = height;
+                
+                // Draw and compress image
+                ctx?.drawImage(img, 0, 0, width, height);
+                
+                canvas.toBlob(
+                    (blob) => {
+                        if (blob) {
+                            const resizedFile = new File([blob], file.name, {
+                                type: 'image/jpeg',
+                                lastModified: Date.now(),
+                            });
+                            console.log(`🔄 [RESIZE] ${file.name}: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(resizedFile.size / 1024 / 1024).toFixed(2)}MB`);
+                            resolve(resizedFile);
+                        } else {
+                            reject(new Error('Failed to compress image'));
+                        }
+                    },
+                    'image/jpeg',
+                    quality
+                );
+            };
+            
+            img.onerror = () => reject(new Error('Failed to load image'));
+            img.src = URL.createObjectURL(file);
+        });
+    };
+
     // Chunked upload function for large files
     const uploadFileInChunks = async (file: File): Promise<{ url: string; sizes: any }> => {
         const CHUNK_SIZE = 1024 * 1024; // 1MB chunks
@@ -185,72 +231,59 @@ export default function AdminGalleryPage() {
             let failCount = 0;
 
             for (let i = 0; i < files.length; i++) {
-                const file = files[i];
+                const originalFile = files[i];
                 
                 try {
-                    console.log(`📤 [GALLERY] Uploading ${i + 1}/${files.length}: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+                    console.log(`📤 [GALLERY] Processing ${i + 1}/${files.length}: ${originalFile.name} (${(originalFile.size / 1024 / 1024).toFixed(2)}MB)`);
+                    
+                    let fileToUpload = originalFile;
+                    
+                    // Resize image if larger than 1MB
+                    if (originalFile.size > 1024 * 1024) {
+                        console.log(`🔄 [GALLERY] Resizing large image: ${originalFile.name}`);
+                        try {
+                            fileToUpload = await resizeImage(originalFile, 1920, 0.8);
+                            console.log(`✅ [GALLERY] Image resized: ${originalFile.name} (${(originalFile.size / 1024 / 1024).toFixed(2)}MB → ${(fileToUpload.size / 1024 / 1024).toFixed(2)}MB)`);
+                        } catch (resizeError) {
+                            console.warn(`⚠️ [GALLERY] Failed to resize ${originalFile.name}, using original:`, resizeError);
+                            fileToUpload = originalFile;
+                        }
+                    }
                     
                     let result;
                     
-                    // Use chunked upload for files larger than 1MB
-                    if (file.size > 1024 * 1024) {
-                        console.log(`📦 [GALLERY] Using chunked upload for large file: ${file.name}`);
-                        try {
-                            result = await uploadFileInChunks(file);
-                        } catch (chunkError) {
-                            console.warn(`⚠️ [GALLERY] Chunked upload failed for ${file.name}, trying regular upload:`, chunkError);
-                            
-                            // Fallback to regular upload if chunked fails
-                            const formData = new FormData();
-                            formData.append('file', file);
+                    // Use regular upload for all files now (since they're resized)
+                    console.log(`📤 [GALLERY] Uploading ${fileToUpload === originalFile ? 'original' : 'resized'} file: ${fileToUpload.name} (${(fileToUpload.size / 1024 / 1024).toFixed(2)}MB)`);
+                    
+                    const formData = new FormData();
+                    formData.append('file', fileToUpload);
 
-                            const res = await fetch('/api/upload', {
-                                method: 'POST',
-                                credentials: 'include',
-                                body: formData,
-                            });
+                    const res = await fetch('/api/upload', {
+                        method: 'POST',
+                        credentials: 'include',
+                        body: formData,
+                    });
 
-                            if (!res.ok) {
-                                const errorData = await res.json().catch(() => ({ error: 'Upload failed' }));
-                                throw new Error(`Both chunked and regular upload failed: ${errorData.error || `HTTP ${res.status}`}`);
-                            }
-
-                            result = await res.json();
-                            console.log(`✅ [GALLERY] Fallback regular upload successful for: ${file.name}`);
-                        }
-                    } else {
-                        console.log(`📤 [GALLERY] Using regular upload for small file: ${file.name}`);
-                        // Use regular upload for small files
-                        const formData = new FormData();
-                        formData.append('file', file);
-
-                        const res = await fetch('/api/upload', {
-                            method: 'POST',
-                            credentials: 'include',
-                            body: formData,
-                        });
-
-                        if (!res.ok) {
-                            const errorData = await res.json().catch(() => ({ error: 'Upload failed' }));
-                            throw new Error(errorData.error || `HTTP ${res.status}`);
-                        }
-
-                        result = await res.json();
+                    if (!res.ok) {
+                        const errorData = await res.json().catch(() => ({ error: 'Upload failed' }));
+                        throw new Error(errorData.error || `HTTP ${res.status}`);
                     }
+
+                    result = await res.json();
 
                     uploadedImages.push({
                         url: result.url,
-                        name: file.name,
-                        size: file.size,
+                        name: originalFile.name, // Keep original filename
+                        size: originalFile.size, // Keep original size for display
                         uploadedAt: new Date().toISOString(),
                     });
                     
                     successCount++;
-                    console.log(`✅ [GALLERY] Upload ${i + 1} successful: ${file.name}`);
+                    console.log(`✅ [GALLERY] Upload ${i + 1} successful: ${originalFile.name}`);
                     
                 } catch (uploadError) {
                     failCount++;
-                    console.error(`❌ [GALLERY] Upload ${i + 1} failed: ${file.name}`, uploadError);
+                    console.error(`❌ [GALLERY] Upload ${i + 1} failed: ${originalFile.name}`, uploadError);
                     
                     // Show individual file errors for debugging
                     if (files.length === 1) {
@@ -395,7 +428,7 @@ export default function AdminGalleryPage() {
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Gallery</h1>
                     <p className="text-gray-500 mt-1">
-                        Upload and manage your images ({images.length} total) • Max 50MB per file
+                        Upload and manage your images ({images.length} total) • Auto-resize large images (&gt;1MB)
                     </p>
                 </div>
                 <label className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
@@ -456,7 +489,7 @@ export default function AdminGalleryPage() {
                 <div className="mb-6 px-4 py-3 bg-blue-50 border border-blue-100 rounded-xl text-blue-600 text-sm">
                     <div className="flex items-center gap-2">
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                        <span>Uploading images... Large files (&gt;1MB) use chunked upload for better reliability</span>
+                        <span>Processing and uploading images... Large files are automatically resized for faster upload</span>
                     </div>
                 </div>
             )}
