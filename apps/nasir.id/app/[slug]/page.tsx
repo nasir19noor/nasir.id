@@ -155,15 +155,15 @@ export default async function SlugPage({ params }: PageProps) {
       />
       
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-sm border-b border-pink-100 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
+      <header className="bg-white/90 backdrop-blur-sm border-b border-pink-100 sticky top-0 z-10 touch-pan-y">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <Link
             href="/"
             className="text-xl font-bold bg-gradient-to-r from-pink-500 to-blue-500 bg-clip-text text-transparent hover:from-pink-600 hover:to-blue-600 transition-all"
           >
             Nasir Noor
           </Link>
-          <nav className="flex items-center gap-6">
+          <nav className="hidden sm:flex items-center gap-6">
             <Link
               href="/#articles"
               className="text-gray-600 hover:text-pink-600 transition-colors font-medium"
@@ -183,12 +183,21 @@ export default async function SlugPage({ params }: PageProps) {
               Contact
             </Link>
           </nav>
+          {/* Mobile menu button - simplified for now */}
+          <div className="sm:hidden">
+            <Link
+              href="/"
+              className="text-gray-600 hover:text-pink-600 transition-colors font-medium text-sm"
+            >
+              Home
+            </Link>
+          </div>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto py-12 px-6">
+      <main className="max-w-4xl mx-auto py-6 sm:py-12 px-4 sm:px-6">
         {/* Content Header */}
-        <header className="mb-12">
+        <header className="mb-8 sm:mb-12">
           <div className="flex items-center gap-2 mb-4">
             <Tag 
               className={isPortfolio ? "text-blue-500" : "text-pink-500"} 
@@ -203,7 +212,7 @@ export default async function SlugPage({ params }: PageProps) {
             </span>
           </div>
           
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 leading-tight mb-6">
+          <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-gray-900 leading-tight mb-4 sm:mb-6">
             {item.title}
           </h1>
           
@@ -221,8 +230,8 @@ export default async function SlugPage({ params }: PageProps) {
 
         {/* Featured Image */}
         {featuredImage && (
-          <div className="mb-12">
-            <div className="aspect-[16/9] relative overflow-hidden rounded-2xl border-2 border-pink-100 bg-gradient-to-br from-pink-100 to-blue-100">
+          <div className="mb-8 sm:mb-12">
+            <div className="aspect-[16/9] relative overflow-hidden rounded-xl sm:rounded-2xl border-2 border-pink-100 bg-gradient-to-br from-pink-100 to-blue-100">
               <img
                 src={featuredImage}
                 alt={item.title}
@@ -233,20 +242,20 @@ export default async function SlugPage({ params }: PageProps) {
         )}
 
         {/* Content */}
-        <article className="bg-white/80 backdrop-blur-sm rounded-2xl border-2 border-pink-100 p-8 md:p-12 mb-12 overflow-x-auto">
+        <article className="bg-white/90 backdrop-blur-sm rounded-xl sm:rounded-2xl border-2 border-pink-100 p-4 sm:p-8 md:p-12 mb-8 sm:mb-12">
           <div 
-            className="prose prose-lg max-w-none prose-headings:text-gray-900 prose-p:text-gray-700 prose-a:text-blue-600 prose-strong:text-gray-900 prose-code:text-pink-600 prose-code:bg-pink-50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-gray-900 prose-pre:text-gray-100 prose-pre:overflow-x-auto prose-table:overflow-x-auto [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6 [&_li]:list-item"
+            className="prose prose-sm sm:prose-lg max-w-none prose-headings:text-gray-900 prose-p:text-gray-700 prose-a:text-blue-600 prose-strong:text-gray-900 prose-code:text-pink-600 prose-code:bg-pink-50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-gray-900 prose-pre:text-gray-100 prose-pre:overflow-x-auto prose-table:overflow-x-auto [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6 [&_li]:list-item break-words"
             dangerouslySetInnerHTML={{ __html: item.content }}
           />
         </article>
 
         {/* Comments Section */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl border-2 border-pink-100 p-8 md:p-12">
+        <div className="bg-white/90 backdrop-blur-sm rounded-xl sm:rounded-2xl border-2 border-pink-100 p-4 sm:p-8 md:p-12">
           <Comments articleId={item.id} articleTitle={item.title} />
         </div>
 
         {/* Navigation */}
-        <div className="mt-12 pt-8 border-t border-pink-200">
+        <div className="mt-8 sm:mt-12 pt-6 sm:pt-8 border-t border-pink-200">
           <Link
             href="/"
             className="inline-flex items-center gap-2 text-pink-600 hover:text-pink-700 transition-colors font-medium"
