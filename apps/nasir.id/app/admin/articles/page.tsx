@@ -44,6 +44,7 @@ export default function AdminArticlesPage() {
     const [saving, setSaving] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState('');
+    const [previewMode, setPreviewMode] = useState<'edit' | 'code' | 'preview'>('edit');
     
     // Ref for the content textarea to handle cursor position
     const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -86,6 +87,7 @@ export default function AdminArticlesPage() {
         setEditing(null);
         setForm(emptyForm);
         setError('');
+        setPreviewMode('edit');
         setShowModal(true);
     };
 
@@ -110,6 +112,7 @@ export default function AdminArticlesPage() {
                 is_portfolio: data.is_portfolio || false,
             });
             setError('');
+            setPreviewMode('edit');
             setShowModal(true);
         } catch (err) {
             console.error('Edit error:', err);
@@ -484,9 +487,45 @@ export default function AdminArticlesPage() {
                     <div className="h-full w-full bg-white flex flex-col">
                         {/* Modal Header */}
                         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white sticky top-0 z-10">
-                            <h2 className="text-xl font-semibold text-gray-900">
-                                {editing ? 'Edit Article' : 'New Article'}
-                            </h2>
+                            <div className="flex items-center gap-4">
+                                <h2 className="text-xl font-semibold text-gray-900">
+                                    {editing ? 'Edit Article' : 'New Article'}
+                                </h2>
+                                
+                                {/* Preview Mode Buttons */}
+                                <div className="flex bg-gray-100 rounded-lg p-1">
+                                    <button
+                                        onClick={() => setPreviewMode('edit')}
+                                        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                                            previewMode === 'edit' 
+                                                ? 'bg-white text-gray-900 shadow-sm' 
+                                                : 'text-gray-600 hover:text-gray-900'
+                                        }`}
+                                    >
+                                        Edit
+                                    </button>
+                                    <button
+                                        onClick={() => setPreviewMode('code')}
+                                        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                                            previewMode === 'code' 
+                                                ? 'bg-white text-gray-900 shadow-sm' 
+                                                : 'text-gray-600 hover:text-gray-900'
+                                        }`}
+                                    >
+                                        Code View
+                                    </button>
+                                    <button
+                                        onClick={() => setPreviewMode('preview')}
+                                        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                                            previewMode === 'preview' 
+                                                ? 'bg-white text-gray-900 shadow-sm' 
+                                                : 'text-gray-600 hover:text-gray-900'
+                                        }`}
+                                    >
+                                        Preview
+                                    </button>
+                                </div>
+                            </div>
                             <button
                                 onClick={() => setShowModal(false)}
                                 className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all"
@@ -632,186 +671,218 @@ export default function AdminArticlesPage() {
                                         Content (HTML)
                                     </label>
                                     
-                                    {/* HTML Editor Toolbar */}
-                                    <div className="border border-gray-200 rounded-t-xl bg-gray-50 p-3 flex flex-wrap gap-1">
-                                        {/* Text Formatting */}
-                                        <div className="flex gap-1 border-r border-gray-300 pr-2 mr-2">
-                                            <button
-                                                type="button"
-                                                onClick={() => insertHtmlTag('strong', 'Bold text')}
-                                                className="px-3 py-1.5 text-xs font-bold bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-                                                title="Bold"
-                                            >
-                                                <strong>B</strong>
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => insertHtmlTag('em', 'Italic text')}
-                                                className="px-3 py-1.5 text-xs italic bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-                                                title="Italic"
-                                            >
-                                                <em>I</em>
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => insertHtmlTag('u', 'Underlined text')}
-                                                className="px-3 py-1.5 text-xs underline bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-                                                title="Underline"
-                                            >
-                                                U
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => insertHtmlTag('code', 'code')}
-                                                className="px-3 py-1.5 text-xs font-mono bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-                                                title="Inline Code"
-                                            >
-                                                &lt;/&gt;
-                                            </button>
-                                        </div>
+                                    {previewMode === 'edit' && (
+                                        <>
+                                            {/* HTML Editor Toolbar */}
+                                            <div className="border border-gray-200 rounded-t-xl bg-gray-50 p-3 flex flex-wrap gap-1">
+                                                {/* Text Formatting */}
+                                                <div className="flex gap-1 border-r border-gray-300 pr-2 mr-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => insertHtmlTag('strong', 'Bold text')}
+                                                        className="px-3 py-1.5 text-xs font-bold bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                                                        title="Bold"
+                                                    >
+                                                        <strong>B</strong>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => insertHtmlTag('em', 'Italic text')}
+                                                        className="px-3 py-1.5 text-xs italic bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                                                        title="Italic"
+                                                    >
+                                                        <em>I</em>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => insertHtmlTag('u', 'Underlined text')}
+                                                        className="px-3 py-1.5 text-xs underline bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                                                        title="Underline"
+                                                    >
+                                                        U
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => insertHtmlTag('code', 'code')}
+                                                        className="px-3 py-1.5 text-xs font-mono bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                                                        title="Inline Code"
+                                                    >
+                                                        &lt;/&gt;
+                                                    </button>
+                                                </div>
 
-                                        {/* Headings */}
-                                        <div className="flex gap-1 border-r border-gray-300 pr-2 mr-2">
-                                            <button
-                                                type="button"
-                                                onClick={() => insertHtmlTag('h1', 'Heading 1')}
-                                                className="px-3 py-1.5 text-xs font-bold bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-                                                title="Heading 1"
-                                            >
-                                                H1
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => insertHtmlTag('h2', 'Heading 2')}
-                                                className="px-3 py-1.5 text-xs font-bold bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-                                                title="Heading 2"
-                                            >
-                                                H2
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => insertHtmlTag('h3', 'Heading 3')}
-                                                className="px-3 py-1.5 text-xs font-bold bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-                                                title="Heading 3"
-                                            >
-                                                H3
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => insertHtmlTag('h4', 'Heading 4')}
-                                                className="px-3 py-1.5 text-xs font-bold bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-                                                title="Heading 4"
-                                            >
-                                                H4
-                                            </button>
-                                        </div>
-                                        {/* Paragraph & Line Break */}
-                                        <div className="flex gap-1 border-r border-gray-300 pr-2 mr-2">
-                                            <button
-                                                type="button"
-                                                onClick={() => insertHtmlTag('p', 'Paragraph text')}
-                                                className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-                                                title="Paragraph"
-                                            >
-                                                P
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => insertHtmlAtCursor('<br>')}
-                                                className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-                                                title="Line Break"
-                                            >
-                                                BR
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => insertHtmlAtCursor('<hr>')}
-                                                className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-                                                title="Horizontal Rule"
-                                            >
-                                                HR
-                                            </button>
-                                        </div>
+                                                {/* Headings */}
+                                                <div className="flex gap-1 border-r border-gray-300 pr-2 mr-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => insertHtmlTag('h1', 'Heading 1')}
+                                                        className="px-3 py-1.5 text-xs font-bold bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                                                        title="Heading 1"
+                                                    >
+                                                        H1
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => insertHtmlTag('h2', 'Heading 2')}
+                                                        className="px-3 py-1.5 text-xs font-bold bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                                                        title="Heading 2"
+                                                    >
+                                                        H2
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => insertHtmlTag('h3', 'Heading 3')}
+                                                        className="px-3 py-1.5 text-xs font-bold bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                                                        title="Heading 3"
+                                                    >
+                                                        H3
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => insertHtmlTag('h4', 'Heading 4')}
+                                                        className="px-3 py-1.5 text-xs font-bold bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                                                        title="Heading 4"
+                                                    >
+                                                        H4
+                                                    </button>
+                                                </div>
+                                                {/* Paragraph & Line Break */}
+                                                <div className="flex gap-1 border-r border-gray-300 pr-2 mr-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => insertHtmlTag('p', 'Paragraph text')}
+                                                        className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                                                        title="Paragraph"
+                                                    >
+                                                        P
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => insertHtmlAtCursor('<br>')}
+                                                        className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                                                        title="Line Break"
+                                                    >
+                                                        BR
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => insertHtmlAtCursor('<hr>')}
+                                                        className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                                                        title="Horizontal Rule"
+                                                    >
+                                                        HR
+                                                    </button>
+                                                </div>
 
-                                        {/* Lists */}
-                                        <div className="flex gap-1 border-r border-gray-300 pr-2 mr-2">
-                                            <button
-                                                type="button"
-                                                onClick={() => insertList('ul')}
-                                                className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-                                                title="Unordered List"
-                                            >
-                                                • List
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => insertList('ol')}
-                                                className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-                                                title="Ordered List"
-                                            >
-                                                1. List
-                                            </button>
-                                        </div>
+                                                {/* Lists */}
+                                                <div className="flex gap-1 border-r border-gray-300 pr-2 mr-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => insertList('ul')}
+                                                        className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                                                        title="Unordered List"
+                                                    >
+                                                        • List
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => insertList('ol')}
+                                                        className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                                                        title="Ordered List"
+                                                    >
+                                                        1. List
+                                                    </button>
+                                                </div>
 
-                                        {/* Links & Media */}
-                                        <div className="flex gap-1 border-r border-gray-300 pr-2 mr-2">
-                                            <button
-                                                type="button"
-                                                onClick={() => insertLink()}
-                                                className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-                                                title="Insert Link"
-                                            >
-                                                🔗 Link
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => insertImage()}
-                                                className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-                                                title="Insert Image"
-                                            >
-                                                🖼️ Image
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => insertTable()}
-                                                className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-                                                title="Insert Table"
-                                            >
-                                                📊 Table
-                                            </button>
-                                        </div>
+                                                {/* Links & Media */}
+                                                <div className="flex gap-1 border-r border-gray-300 pr-2 mr-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => insertLink()}
+                                                        className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                                                        title="Insert Link"
+                                                    >
+                                                        🔗 Link
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => insertImage()}
+                                                        className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                                                        title="Insert Image"
+                                                    >
+                                                        🖼️ Image
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => insertTable()}
+                                                        className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                                                        title="Insert Table"
+                                                    >
+                                                        📊 Table
+                                                    </button>
+                                                </div>
 
-                                        {/* Code Block */}
-                                        <div className="flex gap-1">
-                                            <button
-                                                type="button"
-                                                onClick={() => insertCodeBlock()}
-                                                className="px-3 py-1.5 text-xs font-mono bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-                                                title="Code Block"
-                                            >
-                                                &lt;code/&gt;
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => insertHtmlTag('blockquote', 'Quote text')}
-                                                className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
-                                                title="Blockquote"
-                                            >
-                                                " Quote
-                                            </button>
-                                        </div>
-                                    </div>
+                                                {/* Code Block */}
+                                                <div className="flex gap-1">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => insertCodeBlock()}
+                                                        className="px-3 py-1.5 text-xs font-mono bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                                                        title="Code Block"
+                                                    >
+                                                        &lt;code/&gt;
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => insertHtmlTag('blockquote', 'Quote text')}
+                                                        className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+                                                        title="Blockquote"
+                                                    >
+                                                        " Quote
+                                                    </button>
+                                                </div>
+                                            </div>
 
-                                    <textarea
-                                        ref={contentTextareaRef}
-                                        value={form.content}
-                                        onChange={(e) =>
-                                            setForm({ ...form, content: e.target.value })
-                                        }
-                                        rows={14}
-                                        className="w-full px-4 py-2.5 border border-gray-200 border-t-0 rounded-b-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm resize-none"
-                                        placeholder="<h1>Your HTML content here...</h1><p>Write your article content using HTML tags.</p>"
-                                    />
+                                            <textarea
+                                                ref={contentTextareaRef}
+                                                value={form.content}
+                                                onChange={(e) =>
+                                                    setForm({ ...form, content: e.target.value })
+                                                }
+                                                rows={14}
+                                                className="w-full px-4 py-2.5 border border-gray-200 border-t-0 rounded-b-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm resize-none"
+                                                placeholder="<h1>Your HTML content here...</h1><p>Write your article content using HTML tags.</p>"
+                                            />
+                                        </>
+                                    )}
+
+                                    {previewMode === 'code' && (
+                                        <div className="border border-gray-200 rounded-xl">
+                                            <div className="bg-gray-800 text-gray-100 p-4 rounded-t-xl">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                                                    <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                                                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                                                    <span className="text-sm text-gray-400 ml-2">HTML Code</span>
+                                                </div>
+                                            </div>
+                                            <pre className="bg-gray-900 text-gray-100 p-4 rounded-b-xl overflow-auto max-h-96 text-sm font-mono">
+                                                <code>{form.content || '<p>No content yet...</p>'}</code>
+                                            </pre>
+                                        </div>
+                                    )}
+
+                                    {previewMode === 'preview' && (
+                                        <div className="border border-gray-200 rounded-xl">
+                                            <div className="bg-blue-50 px-4 py-2 border-b border-gray-200 rounded-t-xl">
+                                                <span className="text-sm text-blue-700 font-medium">Live Preview</span>
+                                            </div>
+                                            <div 
+                                                className="p-6 bg-white rounded-b-xl prose prose-lg max-w-none overflow-x-auto"
+                                                dangerouslySetInnerHTML={{ __html: form.content || '<p class="text-gray-400">No content to preview...</p>' }}
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
