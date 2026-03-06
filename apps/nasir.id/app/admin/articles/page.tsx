@@ -903,7 +903,7 @@ export default function AdminArticlesPage() {
                                                 <span className="text-sm text-blue-700 font-medium">Live Preview</span>
                                             </div>
                                             <div 
-                                                className="p-6 bg-white rounded-b-xl prose prose-lg max-w-none overflow-x-auto"
+                                                className="p-6 bg-white rounded-b-xl prose prose-lg max-w-none overflow-x-auto prose-ol:list-decimal prose-ul:list-disc prose-li:list-item prose-ol:pl-6 prose-ul:pl-6"
                                                 dangerouslySetInnerHTML={{ __html: form.content || '<p class="text-gray-400">No content to preview...</p>' }}
                                             />
                                         </div>

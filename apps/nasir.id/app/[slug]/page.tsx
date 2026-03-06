@@ -235,7 +235,7 @@ export default async function SlugPage({ params }: PageProps) {
         {/* Content */}
         <article className="bg-white/80 backdrop-blur-sm rounded-2xl border-2 border-pink-100 p-8 md:p-12 mb-12 overflow-x-auto">
           <div 
-            className="prose prose-lg max-w-none prose-headings:text-gray-900 prose-p:text-gray-700 prose-a:text-blue-600 prose-strong:text-gray-900 prose-code:text-pink-600 prose-code:bg-pink-50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-gray-900 prose-pre:text-gray-100 prose-pre:overflow-x-auto prose-table:overflow-x-auto"
+            className="prose prose-lg max-w-none prose-headings:text-gray-900 prose-p:text-gray-700 prose-a:text-blue-600 prose-strong:text-gray-900 prose-code:text-pink-600 prose-code:bg-pink-50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-gray-900 prose-pre:text-gray-100 prose-pre:overflow-x-auto prose-table:overflow-x-auto prose-ol:list-decimal prose-ul:list-disc prose-li:list-item prose-ol:pl-6 prose-ul:pl-6"
             dangerouslySetInnerHTML={{ __html: item.content }}
           />
         </article>
