@@ -35,7 +35,7 @@ module "cloudfront_nasir" {
     cached_methods         = ["GET", "HEAD"]
 
     use_forwarded_values = false
-    cache_policy_name    = "CachingOptimized"
+    cache_policy_id      = "658327ea-f89d-4fab-a63d-7e88639e58f6" # AWS managed: CachingOptimized
   }
 
   viewer_certificate = {
