@@ -13,6 +13,7 @@ interface Article {
     images?: string[];
     published_at: string;
     is_portfolio: boolean;
+    language?: string;
 }
 
 interface FormData {
@@ -23,6 +24,7 @@ interface FormData {
     image_url: string;
     images: string[];
     is_portfolio: boolean;
+    language: string;
 }
 
 const emptyForm: FormData = { 
@@ -32,7 +34,8 @@ const emptyForm: FormData = {
     content: '', 
     image_url: '', 
     images: [], 
-    is_portfolio: false 
+    is_portfolio: false,
+    language: 'en'
 };
 
 export default function AdminArticlesPage() {
@@ -110,6 +113,7 @@ export default function AdminArticlesPage() {
                 image_url: data.image_url || '',
                 images: data.images || [],
                 is_portfolio: data.is_portfolio || false,
+                language: data.language || 'en',
             });
             setError('');
             setPreviewMode('edit');
@@ -411,7 +415,9 @@ export default function AdminArticlesPage() {
                                 <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">
                                     Type
                                 </th>
-
+                                <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">
+                                    Language
+                                </th>
                                 <th className="text-left px-6 py-4 text-sm font-medium text-gray-500">
                                     Published
                                 </th>
@@ -451,6 +457,15 @@ export default function AdminArticlesPage() {
                                                 : 'bg-blue-100 text-blue-800'
                                         }`}>
                                             {article.is_portfolio ? '📁 Portfolio' : '📝 Article'}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                            article.language === 'id' 
+                                                ? 'bg-red-100 text-red-800' 
+                                                : 'bg-green-100 text-green-800'
+                                        }`}>
+                                            {article.language === 'id' ? '🇮🇩 ID' : '🇺🇸 EN'}
                                         </span>
                                     </td>
 
@@ -578,6 +593,20 @@ export default function AdminArticlesPage() {
                                         className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
                                         placeholder="article-url-slug"
                                     />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                        Language
+                                    </label>
+                                    <select
+                                        value={form.language}
+                                        onChange={(e) => setForm({ ...form, language: e.target.value })}
+                                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    >
+                                        <option value="en">🇺🇸 English</option>
+                                        <option value="id">🇮🇩 Bahasa Indonesia</option>
+                                    </select>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1.5">

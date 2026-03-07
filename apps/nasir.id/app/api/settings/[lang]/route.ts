@@ -47,3 +47,38 @@ export async function GET(
         return NextResponse.json({ error: 'Failed to fetch settings' }, { status: 500 });
     }
 }
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ lang: string }> }
+) {
+    try {
+        const { lang } = await params;
+        
+        // Validate language parameter
+        if (!['en', 'id'].includes(lang)) {
+            return NextResponse.json({ error: 'Invalid language' }, { status: 400 });
+        }
+
+        const body = await request.json();
+        
+        // Update each setting for the specified language
+        for (const [key, value] of Object.entries(body)) {
+            if (key === 'language') continue; // Skip the language field itself
+            
+            await sql`
+                INSERT INTO settings (key, value, language, updated_at)
+                VALUES (${key}, ${value as string}, ${lang}, NOW())
+                ON CONFLICT (key, language)
+                DO UPDATE SET 
+                    value = EXCLUDED.value,
+                    updated_at = EXCLUDED.updated_at
+            `;
+        }
+        
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        console.error('Error updating settings:', error);
+        return NextResponse.json({ error: 'Failed to update settings' }, { status: 500 });
+    }
+}

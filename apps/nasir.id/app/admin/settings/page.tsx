@@ -14,6 +14,7 @@ interface Settings {
 }
 
 export default function SettingsPage() {
+    const [currentLanguage, setCurrentLanguage] = useState<'en' | 'id'>('en');
     const [settings, setSettings] = useState<Settings>({
         hero_title: '',
         hero_subtitle: '',
@@ -33,11 +34,11 @@ export default function SettingsPage() {
 
     useEffect(() => {
         fetchSettings();
-    }, []);
+    }, [currentLanguage]);
 
     const fetchSettings = async () => {
         try {
-            const res = await fetch('/api/settings');
+            const res = await fetch(`/api/settings/${currentLanguage}`);
             if (res.ok) {
                 const data = await res.json();
                 setSettings(data);
@@ -196,9 +197,10 @@ export default function SettingsPage() {
             const settingsToSave = {
                 ...settings,
                 tech_stack: JSON.stringify(techStackArray),
+                language: currentLanguage,
             };
 
-            const res = await fetch('/api/settings', {
+            const res = await fetch(`/api/settings/${currentLanguage}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
@@ -264,6 +266,38 @@ export default function SettingsPage() {
                 </h1>
                 <p className="text-gray-600 mt-1">
                     Customize your landing page content and images
+                </p>
+            </div>
+
+            {/* Language Selector */}
+            <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Language / Bahasa
+                </label>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => setCurrentLanguage('en')}
+                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                            currentLanguage === 'en'
+                                ? 'bg-blue-500 text-white'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                    >
+                        🇺🇸 English
+                    </button>
+                    <button
+                        onClick={() => setCurrentLanguage('id')}
+                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                            currentLanguage === 'id'
+                                ? 'bg-red-500 text-white'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                    >
+                        🇮🇩 Bahasa Indonesia
+                    </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                    Switch between languages to edit content for each version
                 </p>
             </div>
 
