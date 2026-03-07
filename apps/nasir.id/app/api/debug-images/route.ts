@@ -54,6 +54,7 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Debug images error:', error);
-    return NextResponse.json({ error: 'Debug failed', details: error.message }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ error: 'Debug failed', details: errorMessage }, { status: 500 });
   }
 }
