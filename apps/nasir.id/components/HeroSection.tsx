@@ -35,7 +35,7 @@ export default function HeroSection() {
     return (
         <section
             id="hero"
-            className="min-h-screen flex items-center justify-center relative overflow-hidden pt-20"
+            className="min-h-[80vh] flex items-center justify-center relative overflow-hidden pt-20 pb-12"
         >
             {/* Professional floating elements */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -54,7 +54,7 @@ export default function HeroSection() {
             </div>
 
             {/* Content */}
-            <div className="relative z-10 max-w-5xl mx-auto px-6 py-32 text-center animate-slide-up">
+            <div className="relative z-10 max-w-5xl mx-auto px-6 py-16 text-center animate-slide-up">
                 <div className="inline-block mb-6 px-6 py-3 bg-gradient-to-r from-blue-50 to-emerald-50 rounded-full border border-blue-100">
                     <p className="text-sm font-medium gradient-text-primary">
                         🚀 Building the future, one solution at a time
@@ -92,13 +92,6 @@ export default function HeroSection() {
                     >
                         Read Insights
                     </button>
-                </div>
-            </div>
-
-            {/* Scroll indicator */}
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-subtle-pulse">
-                <div className="w-6 h-10 border-2 border-blue-300 rounded-full flex items-start justify-center p-2">
-                    <div className="w-1 h-2 bg-blue-400 rounded-full" />
                 </div>
             </div>
         </section>

@@ -55,17 +55,17 @@ export default function AboutSection() {
     }, []);
 
     return (
-        <section id="about" className="py-24 px-6 bg-gradient-to-br from-purple-50 to-pink-50">
+        <section id="about" className="py-16 px-6 bg-gradient-to-br from-blue-50 to-emerald-50">
             <div className="max-w-6xl mx-auto">
-                <h2 className="text-4xl md:text-5xl font-bold mb-16 text-center bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
-                    About Me 👨‍💻
+                <h2 className="text-4xl md:text-5xl font-bold mb-16 text-center gradient-text-primary font-serif">
+                    About Me
                 </h2>
 
                 <div className="grid md:grid-cols-2 gap-12 items-center">
                     {/* Photo */}
                     <div className="relative">
-                        <div className="aspect-square rounded-2xl overflow-hidden border-4 border-pink-200 relative group shadow-xl hover:shadow-2xl transition-shadow">
-                            <div className="absolute inset-0 bg-gradient-to-br from-pink-200/20 to-blue-200/20 z-10" />
+                        <div className="aspect-square rounded-2xl overflow-hidden border-4 border-blue-200 relative group shadow-xl hover:shadow-2xl transition-shadow">
+                            <div className="absolute inset-0 bg-gradient-to-br from-blue-200/20 to-emerald-200/20 z-10" />
                             {settings.about_image ? (
                                 <img
                                     key={imageKey}
@@ -88,19 +88,19 @@ export default function AboutSection() {
 
                     {/* Bio + Tech Stack */}
                     <div>
-                        <p className="text-gray-700 text-lg leading-relaxed mb-8">
-                            {settings.about_bio || 'I\'m a Cloud & DevOps engineer passionate about building resilient, scalable infrastructure and streamlining deployment pipelines. With expertise across AWS, Azure, and GCP, I automate everything and embrace Infrastructure as Code. Recently diving deep into AI/ML to integrate intelligent automation into DevOps workflows. ✨'}
+                        <p className="text-slate-700 text-lg leading-relaxed mb-8">
+                            {settings.about_bio || 'I\'m a Cloud & DevOps engineer passionate about building resilient, scalable infrastructure and streamlining deployment pipelines. With expertise across AWS, Azure, and GCP, I automate everything and embrace Infrastructure as Code. Recently diving deep into AI/ML to integrate intelligent automation into DevOps workflows.'}
                         </p>
 
-                        <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                            Tech Stack &amp; Tools 🛠️
+                        <h3 className="text-xl font-semibold text-slate-900 mb-4">
+                            Tech Stack &amp; Tools
                         </h3>
 
                         <div className="flex flex-wrap gap-2">
                             {techStack.map((tech) => (
                                 <span
                                     key={tech}
-                                    className="px-4 py-2 bg-white border-2 border-pink-200 rounded-full text-sm text-gray-700 hover:bg-gradient-to-r hover:from-pink-100 hover:to-blue-100 hover:border-pink-300 transition-all hover:scale-105 font-medium"
+                                    className="px-4 py-2 bg-white border-2 border-blue-200 rounded-full text-sm text-slate-700 hover:bg-gradient-to-r hover:from-blue-100 hover:to-emerald-100 hover:border-blue-300 transition-all hover:scale-105 font-medium"
                                 >
                                     {tech}
                                 </span>
