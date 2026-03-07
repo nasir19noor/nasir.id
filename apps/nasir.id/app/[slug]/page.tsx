@@ -39,16 +39,18 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const language = item.language || 'en';
     
     // Get item image (prioritize images array, then image_url, then default)
-    let itemImage = 'https://assets.nasir.id/uploads/2026/03/07/1772859194033-pixar-2-thumb.jpg'; // Default fallback
+    // For Twitter Cards, use original/large images, not thumbnails
+    let itemImage = 'https://images.unsplash.com/photo-1517077304055-6e89abbf09b0?w=1200&h=630&fit=crop'; // Test with known working image
     
     console.log(`🖼️ [ARTICLE META] Processing images for: ${item.title}`);
     console.log(`🖼️ [ARTICLE META] images array:`, item.images);
     console.log(`🖼️ [ARTICLE META] image_url:`, item.image_url);
     
-    // Try images array first (preferred)
+    // Try images array first (preferred) - use original size for Twitter Cards
     if (item.images && Array.isArray(item.images) && item.images.length > 0) {
       const firstImage = item.images[0];
       if (firstImage && typeof firstImage === 'string' && firstImage.trim()) {
+        // Use original image for Twitter Cards, not thumbnail
         itemImage = convertToAssetsUrl(firstImage.trim());
         console.log(`🖼️ [ARTICLE META] ✅ Using images[0]: ${itemImage}`);
       }
@@ -60,7 +62,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     }
     // Use default if no images found
     else {
-      console.log(`🖼️ [ARTICLE META] ⚠️ No article images found, using default`);
+      console.log(`🖼️ [ARTICLE META] ⚠️ No article images found, using test default`);
     }
     
     console.log(`🖼️ [ARTICLE META] Final image: ${itemImage}`);
@@ -117,12 +119,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         description,
         creator: '@nasir19noor',
         site: '@nasir19noor',
-        images: [
-          {
-            url: itemImage,
-            alt: `${item.title} - Nasir Noor`,
-          },
-        ],
+        images: [itemImage],
       },
       
       // Additional structured data
@@ -233,8 +230,35 @@ export default async function SlugPage({ params }: PageProps) {
         </header>
 
         <main className="max-w-4xl mx-auto py-6 sm:py-12 px-4 sm:px-6 min-h-screen">
+          {/* Add explicit Twitter Card meta tags */}
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+                // Add Twitter Card meta tags if not already present
+                if (!document.querySelector('meta[name="twitter:card"]')) {
+                  const metaTags = [
+                    { name: 'twitter:card', content: 'summary_large_image' },
+                    { name: 'twitter:site', content: '@nasir19noor' },
+                    { name: 'twitter:creator', content: '@nasir19noor' },
+                    { name: 'twitter:title', content: '${item.title.replace(/'/g, "\\'")}' },
+                    { name: 'twitter:description', content: '${(item.summary || '').replace(/'/g, "\\'")}' },
+                    { name: 'twitter:image', content: '${featuredImage || itemImage}' },
+                    { name: 'twitter:image:alt', content: '${item.title.replace(/'/g, "\\'")} - Nasir Noor' }
+                  ];
+                  
+                  metaTags.forEach(tag => {
+                    const meta = document.createElement('meta');
+                    meta.setAttribute('name', tag.name);
+                    meta.setAttribute('content', tag.content);
+                    document.head.appendChild(meta);
+                  });
+                }
+              `,
+            }}
+          />
+          
           <TwitterCardDebug 
-            url={`https://nasir.id/${slug}`}
+            url={\`https://nasir.id/\${slug}\`}
             title={item.title}
             description={item.summary}
             image={featuredImage || undefined}

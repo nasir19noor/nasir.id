@@ -37,16 +37,18 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const item = results[0];
     
     // Get item image (prioritize images array, then image_url, then default)
-    let itemImage = 'https://assets.nasir.id/uploads/2026/03/07/1772859194033-pixar-2-thumb.jpg'; // Default fallback
+    // For Twitter Cards, use original/large images, not thumbnails
+    let itemImage = 'https://images.unsplash.com/photo-1517077304055-6e89abbf09b0?w=1200&h=630&fit=crop'; // Test with known working image
     
     console.log(`🖼️ [ARTICLE META ID] Processing images for: ${item.title}`);
     console.log(`🖼️ [ARTICLE META ID] images array:`, item.images);
     console.log(`🖼️ [ARTICLE META ID] image_url:`, item.image_url);
     
-    // Try images array first (preferred)
+    // Try images array first (preferred) - use original size for Twitter Cards
     if (item.images && Array.isArray(item.images) && item.images.length > 0) {
       const firstImage = item.images[0];
       if (firstImage && typeof firstImage === 'string' && firstImage.trim()) {
+        // Use original image for Twitter Cards, not thumbnail
         itemImage = convertToAssetsUrl(firstImage.trim());
         console.log(`🖼️ [ARTICLE META ID] ✅ Using images[0]: ${itemImage}`);
       }
@@ -115,12 +117,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         description,
         creator: '@nasir19noor',
         site: '@nasir19noor',
-        images: [
-          {
-            url: itemImage,
-            alt: `${item.title} - Nasir Noor`,
-          },
-        ],
+        images: [itemImage],
       },
       
       // Additional structured data
