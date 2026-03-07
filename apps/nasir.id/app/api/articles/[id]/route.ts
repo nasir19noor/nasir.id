@@ -16,7 +16,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     try {
         const { id } = await params;
         const [article] = await sql`
-      SELECT id, title, slug, summary, content, image_url, images, is_portfolio, published_at 
+      SELECT id, title, slug, summary, content, image_url, images, is_portfolio, language, published_at 
       FROM articles 
       WHERE id = ${parseInt(id)}
     `;
@@ -43,15 +43,16 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
     try {
         const { id } = await params;
-        const { title, slug, summary, content, image_url, images, is_portfolio } = await request.json();
+        const { title, slug, summary, content, image_url, images, is_portfolio, language } = await request.json();
 
         const imagesArray = Array.isArray(images) ? images : [];
+        const articleLanguage = language || 'en'; // Default to 'en' if not provided
 
         const [article] = await sql`
       UPDATE articles 
-      SET title = ${title}, slug = ${slug}, summary = ${summary || ''}, content = ${content}, image_url = ${image_url || ''}, images = ${imagesArray}, is_portfolio = ${is_portfolio || false}
+      SET title = ${title}, slug = ${slug}, summary = ${summary || ''}, content = ${content}, image_url = ${image_url || ''}, images = ${imagesArray}, is_portfolio = ${is_portfolio || false}, language = ${articleLanguage}
       WHERE id = ${parseInt(id)}
-      RETURNING id, title, slug, summary, image_url, images, is_portfolio, published_at
+      RETURNING id, title, slug, summary, image_url, images, is_portfolio, language, published_at
     `;
 
         if (!article) {
