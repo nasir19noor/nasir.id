@@ -37,13 +37,15 @@ export async function generateMetadata(): Promise<Metadata> {
   const settings = await getIndonesianSettings();
   const baseUrl = 'https://nasir.id';
   
-  const description = settings.hero_description || settings.about_bio || 'Cloud & DevOps engineer yang passionate dalam membangun infrastruktur yang resilient dan scalable.';
+  // Use about_bio for description instead of hero_description for more professional social previews
+  const description = settings.about_bio || settings.hero_description || 'Cloud & DevOps engineer yang passionate dalam membangun infrastruktur yang resilient dan scalable.';
   const title = `${settings.hero_title} | ${settings.hero_subtitle}` || 'Nasir Noor | Arsitek Cloud & Insinyur DevOps';
   
   // Use profile image for Indonesian homepage
   const ogImage = 'https://assets.nasir.id/uploads/2026/03/07/1772859194033-pixar-2-thumb.jpg';
   
-  console.log('🖼️ [HOMEPAGE ID METADATA] Using OG image:', ogImage);
+  console.log('🖼️ [HOMEPAGE ID METADATA] Using profile image:', ogImage);
+  console.log('🖼️ [HOMEPAGE ID METADATA] Using about description:', description);
   
   return {
     title,
@@ -64,7 +66,7 @@ export async function generateMetadata(): Promise<Metadata> {
           url: ogImage,
           width: 1200,
           height: 630,
-          alt: `${settings.hero_title || 'Nasir Noor'} - Arsitek Cloud & Insinyur DevOps`,
+          alt: `${settings.hero_title || 'Nasir Noor'} - Arsitek Cloud & Insinyur DevOps Profile Photo`,
           type: 'image/jpeg',
         },
       ],

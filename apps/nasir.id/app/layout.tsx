@@ -31,16 +31,16 @@ export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSettings();
   const baseUrl = 'https://nasir.id';
   
-  // Use hero description if available, otherwise use about bio
-  const description = settings.hero_description || settings.about_bio || 'Cloud & DevOps engineer passionate about building resilient, scalable infrastructure and exploring AI/ML integration.';
+  // Use about_bio for description instead of hero_description for more professional social previews
+  const description = settings.about_bio || settings.hero_description || 'Cloud & DevOps engineer passionate about building resilient, scalable infrastructure and exploring AI/ML integration.';
   
   // Clean up description for meta tags (remove emojis and extra formatting)
   const cleanDescription = description.replace(/[^\w\s.,!?-]/g, '').trim();
   
   const title = `${settings.hero_title} | ${settings.hero_subtitle}` || 'Nasir Noor | Cloud & DevOps Engineer';
   
-  // Get the best image for social sharing
-  let ogImage = 'https://assets.nasir.id/uploads/2026/03/07/1772859194033-pixar-2-thumb.jpg'; // Default profile image with proper dimensions
+  // Use profile image (about_image) for social sharing
+  let ogImage = 'https://assets.nasir.id/uploads/2026/03/07/1772859194033-pixar-2-thumb.jpg'; // Default profile image
   
   if (settings.about_image) {
     const convertedImage = convertToAssetsUrl(settings.about_image);
@@ -50,7 +50,8 @@ export async function generateMetadata(): Promise<Metadata> {
     }
   }
   
-  console.log('🖼️ [HOMEPAGE METADATA] Using OG image:', ogImage);
+  console.log('🖼️ [HOMEPAGE METADATA] Using profile image:', ogImage);
+  console.log('🖼️ [HOMEPAGE METADATA] Using about description:', cleanDescription);
   
   return {
     title,
@@ -72,7 +73,7 @@ export async function generateMetadata(): Promise<Metadata> {
           url: ogImage,
           width: 1200,
           height: 630,
-          alt: `${settings.hero_title || 'Nasir Noor'} - Cloud & DevOps Engineer`,
+          alt: `${settings.hero_title || 'Nasir Noor'} - Cloud & DevOps Engineer Profile Photo`,
           type: 'image/jpeg',
         },
       ],
