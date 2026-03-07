@@ -40,15 +40,10 @@ export async function generateMetadata(): Promise<Metadata> {
   const description = settings.hero_description || settings.about_bio || 'Cloud & DevOps engineer yang passionate dalam membangun infrastruktur yang resilient dan scalable.';
   const title = `${settings.hero_title} | ${settings.hero_subtitle}` || 'Nasir Noor | Arsitek Cloud & Insinyur DevOps';
   
-  // Generate auto-branded OG image URL for Indonesian homepage
-  const ogImageUrl = `${baseUrl}/api/og?${new URLSearchParams({
-    title: settings.hero_title || 'Nasir Noor',
-    subtitle: settings.hero_subtitle || 'Arsitek Cloud | Insinyur DevOps',
-    type: 'website',
-    language: 'id',
-  }).toString()}`;
+  // Use profile image for Indonesian homepage
+  const ogImage = 'https://assets.nasir.id/uploads/2026/03/07/1772859194033-pixar-2-thumb.jpg';
   
-  console.log('🖼️ [HOMEPAGE ID METADATA] Generated OG image:', ogImageUrl);
+  console.log('🖼️ [HOMEPAGE ID METADATA] Using OG image:', ogImage);
   
   return {
     title,
@@ -66,11 +61,11 @@ export async function generateMetadata(): Promise<Metadata> {
       locale: 'id_ID',
       images: [
         {
-          url: ogImageUrl,
+          url: ogImage,
           width: 1200,
           height: 630,
           alt: `${settings.hero_title || 'Nasir Noor'} - Arsitek Cloud & Insinyur DevOps`,
-          type: 'image/png',
+          type: 'image/jpeg',
         },
       ],
     },
@@ -80,13 +75,13 @@ export async function generateMetadata(): Promise<Metadata> {
       title,
       description,
       creator: '@nasir_noor',
-      images: [ogImageUrl],
+      images: [ogImage],
     },
     
     other: {
       'og:image:width': '1200',
       'og:image:height': '630',
-      'og:image:type': 'image/png',
+      'og:image:type': 'image/jpeg',
       'twitter:image:width': '1200',
       'twitter:image:height': '630',
       'twitter:site': '@nasir_noor',
