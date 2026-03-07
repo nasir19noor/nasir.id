@@ -2,11 +2,12 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { convertToAssetsUrl } from '@/lib/image-utils';
 
-// Function to fetch settings for metadata
-async function getSettings() {
+// Function to fetch English settings for metadata
+async function getEnglishSettings() {
   try {
     const baseUrl = 'https://nasir.id';
-    const response = await fetch(`${baseUrl}/api/settings`, {
+    // Explicitly fetch English settings
+    const response = await fetch(`${baseUrl}/api/settings/en`, {
       cache: 'no-store', // Always fetch fresh data for metadata
     });
     
@@ -14,10 +15,10 @@ async function getSettings() {
       return await response.json();
     }
   } catch (error) {
-    console.error('Failed to fetch settings for metadata:', error);
+    console.error('Failed to fetch English settings for metadata:', error);
   }
   
-  // Fallback settings
+  // Fallback English settings
   return {
     hero_title: 'Nasir Noor',
     hero_subtitle: 'Cloud Wizard 🧙‍♂️ | DevOps Ninja 🥷 | AI Explorer 🚀',
@@ -28,7 +29,7 @@ async function getSettings() {
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  const settings = await getSettings();
+  const settings = await getEnglishSettings();
   const baseUrl = 'https://nasir.id';
   
   // Use about_bio for description instead of hero_description for more professional social previews
@@ -50,8 +51,8 @@ export async function generateMetadata(): Promise<Metadata> {
     }
   }
   
-  console.log('🖼️ [HOMEPAGE METADATA] Using profile image:', ogImage);
-  console.log('🖼️ [HOMEPAGE METADATA] Using about description:', cleanDescription);
+  console.log('🖼️ [HOMEPAGE EN METADATA] Using profile image:', ogImage);
+  console.log('🖼️ [HOMEPAGE EN METADATA] Using about description:', cleanDescription);
   
   return {
     title,
