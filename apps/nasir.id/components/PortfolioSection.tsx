@@ -92,7 +92,7 @@ export default function PortfolioSection({ language = 'en' }: PortfolioSectionPr
                                 <article
                                     key={project.id}
                                     className="group card card-hover cursor-pointer"
-                                    onClick={() => window.open(`/${project.slug}`, '_blank')}
+                                    onClick={() => window.open(language === 'id' ? `/id/${project.slug}` : `/${project.slug}`, '_blank')}
                                 >
                                     {/* Image */}
                                     {(() => {
@@ -114,7 +114,7 @@ export default function PortfolioSection({ language = 'en' }: PortfolioSectionPr
                                         <div className="flex items-center gap-4 text-xs text-slate-500 mb-3">
                                             <span className="flex items-center gap-1">
                                                 <Calendar size={12} />
-                                                {new Date(project.published_at).toLocaleDateString('en-US', {
+                                                {new Date(project.published_at).toLocaleDateString(language === 'id' ? 'id-ID' : 'en-US', {
                                                     month: 'short',
                                                     day: 'numeric',
                                                     year: 'numeric'
@@ -130,7 +130,7 @@ export default function PortfolioSection({ language = 'en' }: PortfolioSectionPr
                                         )}
 
                                         <div className="inline-flex items-center gap-2 text-emerald-600 hover:text-emerald-700 transition-colors group/link font-medium text-sm">
-                                            View Project
+                                            {language === 'id' ? 'Lihat Proyek' : 'View Project'}
                                             <ArrowRight
                                                 size={14}
                                                 className="group-hover/link:translate-x-1 transition-transform"
@@ -144,10 +144,10 @@ export default function PortfolioSection({ language = 'en' }: PortfolioSectionPr
                         {/* View all link */}
                         <div className="text-center">
                             <a
-                                href="/#portfolio"
+                                href={language === 'id' ? '/id/portfolio' : '/portfolio'}
                                 className="btn-secondary inline-flex items-center gap-2"
                             >
-                                View All Projects
+                                {language === 'id' ? 'Lihat Semua Proyek' : 'View All Projects'}
                                 <ArrowRight size={18} />
                             </a>
                         </div>

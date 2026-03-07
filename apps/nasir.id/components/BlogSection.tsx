@@ -70,20 +70,22 @@ export default function BlogSection({ language = 'en' }: BlogSectionProps) {
         <section id="blog" className="py-24 px-6 bg-slate-50/50 backdrop-blur-sm">
             <div className="max-w-6xl mx-auto">
                 <h2 className="text-4xl md:text-5xl font-bold mb-8 text-center gradient-text-primary font-serif">
-                    Latest Insights
+                    {language === 'id' ? 'Wawasan Terbaru' : 'Latest Insights'}
                 </h2>
                 <p className="text-slate-600 text-center mb-12 max-w-2xl mx-auto text-lg">
-                    Thoughts on cloud architecture, DevOps best practices, and emerging
-                    technologies shaping the future of software engineering.
+                    {language === 'id' 
+                        ? 'Pemikiran tentang arsitektur cloud, praktik terbaik DevOps, dan teknologi emerging yang membentuk masa depan rekayasa perangkat lunak.'
+                        : 'Thoughts on cloud architecture, DevOps best practices, and emerging technologies shaping the future of software engineering.'
+                    }
                 </p>
 
                 {loading ? (
                     <div className="text-center py-12">
-                        <p className="text-slate-500">Loading articles...</p>
+                        <p className="text-slate-500">{language === 'id' ? 'Memuat artikel...' : 'Loading articles...'}</p>
                     </div>
                 ) : articles.length === 0 ? (
                     <div className="text-center py-12 card">
-                        <p className="text-slate-500">No articles yet. Check back soon!</p>
+                        <p className="text-slate-500">{language === 'id' ? 'Belum ada artikel. Segera hadir!' : 'No articles yet. Check back soon!'}</p>
                     </div>
                 ) : (
                     <>
@@ -93,7 +95,7 @@ export default function BlogSection({ language = 'en' }: BlogSectionProps) {
                                 <article
                                     key={article.id}
                                     className="group card card-hover cursor-pointer"
-                                    onClick={() => window.open(`/${article.slug}`, '_blank')}
+                                    onClick={() => window.open(language === 'id' ? `/id/${article.slug}` : `/${article.slug}`, '_blank')}
                                 >
                                     {/* Image */}
                                     {(() => {
@@ -115,7 +117,7 @@ export default function BlogSection({ language = 'en' }: BlogSectionProps) {
                                         <div className="flex items-center gap-4 text-xs text-slate-500 mb-3">
                                             <span className="flex items-center gap-1">
                                                 <Calendar size={12} />
-                                                {new Date(article.published_at).toLocaleDateString('en-US', {
+                                                {new Date(article.published_at).toLocaleDateString(language === 'id' ? 'id-ID' : 'en-US', {
                                                     month: 'short',
                                                     day: 'numeric',
                                                     year: 'numeric'
@@ -131,7 +133,7 @@ export default function BlogSection({ language = 'en' }: BlogSectionProps) {
                                         )}
 
                                         <div className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors group/link font-medium text-sm">
-                                            Read Article
+                                            {language === 'id' ? 'Baca Artikel' : 'Read Article'}
                                             <ArrowRight
                                                 size={14}
                                                 className="group-hover/link:translate-x-1 transition-transform"
@@ -145,10 +147,10 @@ export default function BlogSection({ language = 'en' }: BlogSectionProps) {
                         {/* View all link */}
                         <div className="text-center">
                             <a
-                                href="/#articles"
+                                href={language === 'id' ? '/id/articles' : '/articles'}
                                 className="btn-primary inline-flex items-center gap-2"
                             >
-                                View All Articles
+                                {language === 'id' ? 'Lihat Semua Artikel' : 'View All Articles'}
                                 <ArrowRight size={18} />
                             </a>
                         </div>
