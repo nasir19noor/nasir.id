@@ -121,150 +121,156 @@ export default async function SlugPage({ params }: PageProps) {
 
   console.log(`🔍 [SLUG] Looking up content for slug: ${slug}`);
 
-  const results = await sql`
-    SELECT id, title, content, published_at, is_portfolio, summary, image_url, images
-    FROM articles 
-    WHERE slug = ${slug}
-    LIMIT 1
-  `;
+  try {
+    const results = await sql`
+      SELECT id, title, content, published_at, is_portfolio, summary, image_url, images
+      FROM articles 
+      WHERE slug = ${slug}
+      LIMIT 1
+    `;
 
-  if (!results || results.length === 0) {
-    console.log(`❌ [SLUG] No content found for slug: ${slug}`);
-    notFound();
-  }
+    if (!results || results.length === 0) {
+      console.log(`❌ [SLUG] No content found for slug: ${slug}`);
+      notFound();
+    }
 
-  const item = results[0];
-  const isPortfolio = item.is_portfolio;
-  
-  console.log(`✅ [SLUG] Found ${isPortfolio ? 'portfolio project' : 'article'}: ${item.title}`);
+    const item = results[0];
+    const isPortfolio = item.is_portfolio;
+    
+    console.log(`✅ [SLUG] Found ${isPortfolio ? 'portfolio project' : 'article'}: ${item.title}`);
 
-  // Get the featured image (first from images array, then image_url)
-  let featuredImage = null;
-  if (item.images && item.images.length > 0) {
-    featuredImage = convertToAssetsUrl(item.images[0]);
-  } else if (item.image_url) {
-    featuredImage = convertToAssetsUrl(item.image_url);
-  }
+    // Get the featured image (first from images array, then image_url)
+    let featuredImage = null;
+    if (item.images && item.images.length > 0) {
+      featuredImage = convertToAssetsUrl(item.images[0]);
+    } else if (item.image_url) {
+      featuredImage = convertToAssetsUrl(item.image_url);
+    }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-blue-50 to-purple-50">
-      <AnalyticsTracker 
-        pageType={isPortfolio ? "portfolio" : "article"} 
-        articleId={item.id} 
-        articleSlug={slug} 
-      />
-      
-      {/* Header */}
-      <header className="bg-white/90 backdrop-blur-sm border-b border-pink-100 sticky top-0 z-10 touch-pan-y">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <Link
-            href="/"
-            className="text-xl font-bold bg-gradient-to-r from-pink-500 to-blue-500 bg-clip-text text-transparent hover:from-pink-600 hover:to-blue-600 transition-all"
-          >
-            Nasir Noor
-          </Link>
-          <nav className="hidden sm:flex items-center gap-6">
-            <Link
-              href="/#articles"
-              className="text-gray-600 hover:text-pink-600 transition-colors font-medium"
-            >
-              Articles
-            </Link>
-            <Link
-              href="/#portfolio"
-              className="text-gray-600 hover:text-blue-600 transition-colors font-medium"
-            >
-              Portfolio
-            </Link>
-            <Link
-              href="/#contact"
-              className="text-gray-600 hover:text-purple-600 transition-colors font-medium"
-            >
-              Contact
-            </Link>
-          </nav>
-          {/* Mobile menu button - simplified for now */}
-          <div className="sm:hidden">
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50">
+        <AnalyticsTracker 
+          pageType={isPortfolio ? "portfolio" : "article"} 
+          articleId={item.id} 
+          articleSlug={slug} 
+        />
+        
+        {/* Header */}
+        <header className="bg-white/90 backdrop-blur-sm border-b border-slate-200 sticky top-0 z-10">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
             <Link
               href="/"
-              className="text-gray-600 hover:text-pink-600 transition-colors font-medium text-sm"
+              className="text-xl font-bold gradient-text-primary hover:scale-105 transition-transform"
             >
-              Home
+              Nasir Noor
             </Link>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-4xl mx-auto py-6 sm:py-12 px-4 sm:px-6">
-        {/* Content Header */}
-        <header className="mb-8 sm:mb-12">
-          <div className="flex items-center gap-2 mb-4">
-            <Tag 
-              className={isPortfolio ? "text-blue-500" : "text-pink-500"} 
-              size={20} 
-            />
-            <span className={`text-sm font-medium px-3 py-1 rounded-full ${
-              isPortfolio 
-                ? "bg-blue-100 text-blue-700" 
-                : "bg-pink-100 text-pink-700"
-            }`}>
-              {isPortfolio ? "Portfolio Project" : "Article"}
-            </span>
-          </div>
-          
-          <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-gray-900 leading-tight mb-4 sm:mb-6">
-            {item.title}
-          </h1>
-          
-          <div className="flex items-center gap-2 text-gray-500">
-            <Calendar size={16} />
-            <span className="text-sm">
-              Published on {new Date(item.published_at).toLocaleDateString('en-US', {
-                month: 'long',
-                day: 'numeric',
-                year: 'numeric',
-              })}
-            </span>
+            <nav className="hidden sm:flex items-center gap-6">
+              <Link
+                href="/#articles"
+                className="text-slate-600 hover:text-blue-600 transition-colors font-medium"
+              >
+                Articles
+              </Link>
+              <Link
+                href="/#portfolio"
+                className="text-slate-600 hover:text-emerald-600 transition-colors font-medium"
+              >
+                Portfolio
+              </Link>
+              <Link
+                href="/#contact"
+                className="text-slate-600 hover:text-blue-600 transition-colors font-medium"
+              >
+                Contact
+              </Link>
+            </nav>
+            {/* Mobile menu button */}
+            <div className="sm:hidden">
+              <Link
+                href="/"
+                className="text-slate-600 hover:text-blue-600 transition-colors font-medium text-sm px-3 py-2 rounded-lg hover:bg-blue-50"
+              >
+                Home
+              </Link>
+            </div>
           </div>
         </header>
 
-        {/* Featured Image */}
-        {featuredImage && (
-          <div className="mb-8 sm:mb-12">
-            <div className="aspect-[16/9] relative overflow-hidden rounded-xl sm:rounded-2xl border-2 border-pink-100 bg-gradient-to-br from-pink-100 to-blue-100">
-              <img
-                src={featuredImage}
-                alt={item.title}
-                className="w-full h-full object-cover"
+        <main className="max-w-4xl mx-auto py-6 sm:py-12 px-4 sm:px-6 min-h-screen">
+          {/* Content Header */}
+          <header className="mb-8 sm:mb-12">
+            <div className="flex items-center gap-2 mb-4">
+              <Tag 
+                className={isPortfolio ? "text-emerald-500" : "text-blue-500"} 
+                size={20} 
               />
+              <span className={`text-sm font-medium px-3 py-1 rounded-full ${
+                isPortfolio 
+                  ? "bg-emerald-100 text-emerald-700" 
+                  : "bg-blue-100 text-blue-700"
+              }`}>
+                {isPortfolio ? "Portfolio Project" : "Article"}
+              </span>
             </div>
+            
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-slate-900 leading-tight mb-4 sm:mb-6 font-serif">
+              {item.title}
+            </h1>
+            
+            <div className="flex items-center gap-2 text-slate-500">
+              <Calendar size={16} />
+              <span className="text-sm">
+                Published on {new Date(item.published_at).toLocaleDateString('en-US', {
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric',
+                })}
+              </span>
+            </div>
+          </header>
+
+          {/* Featured Image */}
+          {featuredImage && (
+            <div className="mb-8 sm:mb-12">
+              <div className="aspect-[16/9] relative overflow-hidden rounded-xl sm:rounded-2xl border border-slate-200 bg-gradient-to-br from-blue-50 to-emerald-50 shadow-lg">
+                <img
+                  src={featuredImage}
+                  alt={item.title}
+                  className="w-full h-full object-cover"
+                  loading="eager"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Content */}
+          <article className="card p-4 sm:p-8 md:p-12 mb-8 sm:mb-12">
+            <div 
+              className="prose prose-sm sm:prose-lg max-w-none prose-headings:text-slate-900 prose-p:text-slate-700 prose-a:text-blue-600 prose-strong:text-slate-900 prose-code:text-blue-600 prose-code:bg-blue-50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-slate-900 prose-pre:text-slate-100 prose-pre:overflow-x-auto prose-table:overflow-x-auto [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6 [&_li]:list-item break-words overflow-x-auto"
+              dangerouslySetInnerHTML={{ __html: item.content }}
+            />
+          </article>
+
+          {/* Comments Section */}
+          <div className="card p-4 sm:p-8 md:p-12">
+            <Comments articleId={item.id} articleTitle={item.title} />
           </div>
-        )}
 
-        {/* Content */}
-        <article className="bg-white/90 backdrop-blur-sm rounded-xl sm:rounded-2xl border-2 border-pink-100 p-4 sm:p-8 md:p-12 mb-8 sm:mb-12">
-          <div 
-            className="prose prose-sm sm:prose-lg max-w-none prose-headings:text-gray-900 prose-p:text-gray-700 prose-a:text-blue-600 prose-strong:text-gray-900 prose-code:text-pink-600 prose-code:bg-pink-50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-gray-900 prose-pre:text-gray-100 prose-pre:overflow-x-auto prose-table:overflow-x-auto [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6 [&_li]:list-item break-words"
-            dangerouslySetInnerHTML={{ __html: item.content }}
-          />
-        </article>
-
-        {/* Comments Section */}
-        <div className="bg-white/90 backdrop-blur-sm rounded-xl sm:rounded-2xl border-2 border-pink-100 p-4 sm:p-8 md:p-12">
-          <Comments articleId={item.id} articleTitle={item.title} />
-        </div>
-
-        {/* Navigation */}
-        <div className="mt-8 sm:mt-12 pt-6 sm:pt-8 border-t border-pink-200">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-pink-600 hover:text-pink-700 transition-colors font-medium"
-          >
-            <ArrowLeft size={16} />
-            Back to Home
-          </Link>
-        </div>
-      </main>
-    </div>
-  );
+          {/* Navigation */}
+          <div className="mt-8 sm:mt-12 pt-6 sm:pt-8 border-t border-slate-200">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors font-medium"
+            >
+              <ArrowLeft size={16} />
+              Back to Home
+            </Link>
+          </div>
+        </main>
+      </div>
+    );
+  } catch (error) {
+    console.error(`💥 [SLUG] Error loading article ${slug}:`, error);
+    notFound();
+  }
 }
