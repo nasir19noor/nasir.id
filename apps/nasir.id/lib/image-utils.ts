@@ -10,24 +10,24 @@
 export function convertToAssetsUrl(url: string): string {
   if (!url) return url;
   
+  const assetsDomain = process.env.ASSETS_DOMAIN || 'https://assets.nasir.id';
+  
   // If already an assets URL, return as is
-  if (url.startsWith('https://assets.nasir.id/')) {
+  if (url.startsWith(assetsDomain)) {
     return url;
   }
   
-  // Convert S3 URLs to assets URLs
+  // Convert S3 URLs to assets URLs using environment variables
   const s3Patterns = [
-    /^https:\/\/s3\.([^.]+)\.amazonaws\.com\/([^/]+)\/(.+)$/,
-    /^https:\/\/([^.]+)\.s3\.([^.]+)\.amazonaws\.com\/(.+)$/,
-    /^https:\/\/([^.]+)\.s3\.amazonaws\.com\/(.+)$/
+    process.env.S3_BUCKET_URL_1 || 'https://s3.ap-southeast-1.amazonaws.com/www.nasir.id',
+    process.env.S3_BUCKET_URL_2 || 'https://www.nasir.id.s3.ap-southeast-1.amazonaws.com',
+    process.env.S3_BUCKET_URL_3 || 'https://www.nasir.id.s3.amazonaws.com'
   ];
   
-  for (const pattern of s3Patterns) {
-    const match = url.match(pattern);
-    if (match) {
-      // Extract the key (path after bucket name)
-      const key = match[3] || match[2];
-      return `https://assets.nasir.id/${key}`;
+  for (const s3Url of s3Patterns) {
+    if (url.startsWith(s3Url + '/')) {
+      const key = url.replace(s3Url + '/', '');
+      return `${assetsDomain}/${key}`;
     }
   }
   

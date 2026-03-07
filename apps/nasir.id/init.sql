@@ -1,3 +1,10 @@
+-- Nasir.id Portfolio Website Database Schema
+-- Complete initialization script with all tables, indexes, and sample data
+
+-- ============================================================================
+-- TABLES
+-- ============================================================================
+
 -- Articles table (merged with portfolio)
 CREATE TABLE IF NOT EXISTS articles (
   id SERIAL PRIMARY KEY,
@@ -23,11 +30,6 @@ CREATE TABLE IF NOT EXISTS comments (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
-
--- Create indexes for comments
-CREATE INDEX IF NOT EXISTS idx_comments_article_id ON comments(article_id);
-CREATE INDEX IF NOT EXISTS idx_comments_approved ON comments(approved);
-CREATE INDEX IF NOT EXISTS idx_comments_created_at ON comments(created_at);
 
 -- Settings table for landing page configuration
 CREATE TABLE IF NOT EXISTS settings (
@@ -57,11 +59,29 @@ CREATE TABLE IF NOT EXISTS analytics (
     visited_at TIMESTAMP DEFAULT NOW()
 );
 
--- Create indexes for better query performance
+-- ============================================================================
+-- INDEXES
+-- ============================================================================
+
+-- Comments indexes
+CREATE INDEX IF NOT EXISTS idx_comments_article_id ON comments(article_id);
+CREATE INDEX IF NOT EXISTS idx_comments_approved ON comments(approved);
+CREATE INDEX IF NOT EXISTS idx_comments_created_at ON comments(created_at);
+
+-- Analytics indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_analytics_visited_at ON analytics(visited_at);
 CREATE INDEX IF NOT EXISTS idx_analytics_page_type ON analytics(page_type);
 CREATE INDEX IF NOT EXISTS idx_analytics_article_id ON analytics(article_id);
 CREATE INDEX IF NOT EXISTS idx_analytics_visitor_ip ON analytics(visitor_ip);
+
+-- Articles indexes
+CREATE INDEX IF NOT EXISTS idx_articles_slug ON articles(slug);
+CREATE INDEX IF NOT EXISTS idx_articles_is_portfolio ON articles(is_portfolio);
+CREATE INDEX IF NOT EXISTS idx_articles_published_at ON articles(published_at);
+
+-- ============================================================================
+-- VIEWS
+-- ============================================================================
 
 -- Create view for analytics summary
 CREATE OR REPLACE VIEW analytics_summary AS
@@ -90,14 +110,18 @@ WHERE article_id IS NOT NULL
 GROUP BY article_id, article_slug
 ORDER BY view_count DESC;
 
--- Insert default settings
+-- ============================================================================
+-- DEFAULT DATA
+-- ============================================================================
+
+-- Insert default settings (using environment variables where possible)
 INSERT INTO settings (key, value) VALUES
-('hero_title', 'Nasir Noor'),
-('hero_subtitle', 'Cloud Wizard 🧙‍♂️ | DevOps Ninja 🥷 | AI Explorer 🚀'),
-('hero_description', 'Turning coffee into infrastructure ☕ → ☁️ and making servers dance to my automation tunes 💃'),
-('about_image', 'https://images.unsplash.com/photo-1752859951149-7d3fc700a7ec?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxOYXNpcnwxNzcyNjAxMzE2fDA&ixlib=rb-4.1.0&q=80&w=1080'),
-('about_bio', 'I''m a Cloud & DevOps engineer passionate about building resilient, scalable infrastructure and streamlining deployment pipelines. With expertise across AWS, Azure, and GCP, I automate everything and embrace Infrastructure as Code. Recently diving deep into AI/ML to integrate intelligent automation into DevOps workflows. ✨'),
-('tech_stack', '["AWS ☁️","Azure 🌐","GCP 🚀","Kubernetes ⚓","Docker 🐳","Terraform 🏗️","Ansible 🤖","Jenkins 🔧","GitLab CI/CD 🦊","Python 🐍","Bash 💻","Prometheus 📊","Grafana 📈","ELK Stack 🔍","ArgoCD 🔄","Helm ⛵","Linux 🐧","Machine Learning 🧠","TensorFlow 🤖","PyTorch 🔥"]')
+('hero_title', COALESCE(current_setting('app.default_hero_title', true), 'Nasir Noor')),
+('hero_subtitle', COALESCE(current_setting('app.default_hero_subtitle', true), 'Cloud Architect | DevOps Engineer | Innovation Leader')),
+('hero_description', COALESCE(current_setting('app.default_hero_description', true), 'Transforming ideas into scalable cloud solutions with expertise in modern infrastructure, automation, and emerging technologies.')),
+('about_image', COALESCE(current_setting('app.default_about_image', true), 'https://images.unsplash.com/photo-1752859951149-7d3fc700a7ec?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxOYXNpcnwxNzcyNjAxMzE2fDA&ixlib=rb-4.1.0&q=80&w=1080')),
+('about_bio', COALESCE(current_setting('app.default_about_bio', true), 'I''m a Cloud & DevOps engineer passionate about building resilient, scalable infrastructure and streamlining deployment pipelines. With expertise across AWS, Azure, and GCP, I automate everything and embrace Infrastructure as Code. Recently diving deep into AI/ML to integrate intelligent automation into DevOps workflows.')),
+('tech_stack', COALESCE(current_setting('app.default_tech_stack', true), '["AWS ☁️","Azure 🌐","GCP 🚀","Kubernetes ⚓","Docker 🐳","Terraform 🏗️","Ansible 🤖","Jenkins 🔧","GitLab CI/CD 🦊","Python 🐍","Bash 💻","Prometheus 📊","Grafana 📈","ELK Stack 🔍","ArgoCD 🔄","Helm ⛵","Linux 🐧","Machine Learning 🧠","TensorFlow 🤖","PyTorch 🔥"]'))
 ON CONFLICT (key) DO NOTHING;
 
 -- Insert sample article
@@ -197,3 +221,58 @@ INSERT INTO articles (title, slug, summary, content, is_portfolio, published_at)
   '2026-02-10T10:00:00Z'
 )
 ON CONFLICT (slug) DO NOTHING;
+
+-- ============================================================================
+-- MIGRATION UTILITIES (for existing installations)
+-- ============================================================================
+
+-- Function to convert S3 URLs to assets domain URLs
+CREATE OR REPLACE FUNCTION convert_s3_to_assets_url(input_url TEXT)
+RETURNS TEXT AS $$
+BEGIN
+    IF input_url IS NULL THEN
+        RETURN NULL;
+    END IF;
+    
+    -- If already an assets URL, return as is
+    IF input_url LIKE 'https://assets.nasir.id/%' THEN
+        RETURN input_url;
+    END IF;
+    
+    -- Convert various S3 URL formats to assets domain
+    IF input_url LIKE 'https://s3.ap-southeast-1.amazonaws.com/www.nasir.id/%' THEN
+        RETURN REPLACE(input_url, 'https://s3.ap-southeast-1.amazonaws.com/www.nasir.id/', 'https://assets.nasir.id/');
+    END IF;
+    
+    IF input_url LIKE 'https://www.nasir.id.s3.ap-southeast-1.amazonaws.com/%' THEN
+        RETURN REPLACE(input_url, 'https://www.nasir.id.s3.ap-southeast-1.amazonaws.com/', 'https://assets.nasir.id/');
+    END IF;
+    
+    IF input_url LIKE 'https://www.nasir.id.s3.amazonaws.com/%' THEN
+        RETURN REPLACE(input_url, 'https://www.nasir.id.s3.amazonaws.com/', 'https://assets.nasir.id/');
+    END IF;
+    
+    -- Return original URL if no pattern matches
+    RETURN input_url;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Update existing image URLs (run this for migrations)
+-- UPDATE articles SET image_url = convert_s3_to_assets_url(image_url) WHERE image_url LIKE '%amazonaws.com%';
+-- UPDATE settings SET value = convert_s3_to_assets_url(value) WHERE key IN ('about_image', 'hero_image', 'profile_image') AND value LIKE '%amazonaws.com%';
+
+-- ============================================================================
+-- COMPLETION MESSAGE
+-- ============================================================================
+
+DO $$
+BEGIN
+    RAISE NOTICE '✅ Database initialization completed successfully!';
+    RAISE NOTICE '📊 Tables created: articles, comments, settings, analytics';
+    RAISE NOTICE '🔍 Indexes created for optimal performance';
+    RAISE NOTICE '📈 Views created: analytics_summary, popular_articles';
+    RAISE NOTICE '🎯 Sample data inserted';
+    RAISE NOTICE '🔧 Migration utilities available';
+    RAISE NOTICE '';
+    RAISE NOTICE '🚀 Your Nasir.id portfolio website database is ready!';
+END $$;

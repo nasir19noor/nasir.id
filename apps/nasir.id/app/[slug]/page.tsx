@@ -61,8 +61,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       keywords: item.is_portfolio 
         ? ['Portfolio', 'Project', 'Cloud Engineering', 'DevOps', 'AWS', 'Azure', 'GCP']
         : ['Article', 'Blog', 'Cloud Engineering', 'DevOps', 'AWS', 'Azure', 'GCP', 'Tutorial'],
-      authors: [{ name: 'Nasir Noor' }],
-      creator: 'Nasir Noor',
+      authors: [{ name: process.env.SITE_OWNER_NAME || 'Nasir Noor' }],
+      creator: process.env.SITE_OWNER_NAME || 'Nasir Noor',
       
       // Open Graph tags
       openGraph: {
@@ -73,7 +73,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         type: item.is_portfolio ? 'website' : 'article',
         locale: 'en_US',
         publishedTime: publishedDate,
-        authors: ['Nasir Noor'],
+        authors: [process.env.SITE_OWNER_NAME || 'Nasir Noor'],
         section: item.is_portfolio ? 'Portfolio' : 'Technology',
         tags: item.is_portfolio 
           ? ['Portfolio', 'Project', 'Cloud Engineering', 'DevOps']
@@ -94,14 +94,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         card: 'summary_large_image',
         title,
         description,
-        creator: '@nasir_noor', // Replace with actual Twitter handle
+        creator: process.env.TWITTER_HANDLE || '@nasir_noor',
         images: [itemImage],
       },
       
       // Additional structured data
       other: {
         'article:published_time': publishedDate,
-        'article:author': 'Nasir Noor',
+        'article:author': process.env.SITE_OWNER_NAME || 'Nasir Noor',
         'article:section': item.is_portfolio ? 'Portfolio' : 'Technology',
         'og:image:width': '1200',
         'og:image:height': '630',

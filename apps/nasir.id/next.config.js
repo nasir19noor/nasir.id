@@ -13,7 +13,7 @@ const nextConfig = {
             },
             {
                 protocol: 'https',
-                hostname: 'assets.nasir.id',
+                hostname: process.env.ASSETS_DOMAIN?.replace('https://', '') || 'assets.nasir.id',
             },
         ],
     },
@@ -22,7 +22,7 @@ const nextConfig = {
         serverComponentsExternalPackages: ['sharp'],
         // Increase body parser limit for App Router
         serverActions: {
-            bodySizeLimit: '50mb',
+            bodySizeLimit: process.env.MAX_UPLOAD_SIZE || '50mb',
         },
     },
 };
