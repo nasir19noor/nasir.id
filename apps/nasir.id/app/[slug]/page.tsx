@@ -7,7 +7,6 @@ import Comments from '@/components/Comments';
 import { convertToAssetsUrl } from '@/lib/image-utils';
 import type { Metadata } from 'next';
 import ShareButtons from '@/components/ShareButtons';
-import TwitterCardDebug from '@/components/TwitterCardDebug';
 
 export const dynamic = 'force-dynamic';
 
@@ -230,39 +229,6 @@ export default async function SlugPage({ params }: PageProps) {
         </header>
 
         <main className="max-w-4xl mx-auto py-6 sm:py-12 px-4 sm:px-6 min-h-screen">
-          {/* Add explicit Twitter Card meta tags */}
-          <script
-            dangerouslySetInnerHTML={{
-              __html: `
-                // Add Twitter Card meta tags if not already present
-                if (!document.querySelector('meta[name="twitter:card"]')) {
-                  const metaTags = [
-                    { name: 'twitter:card', content: 'summary_large_image' },
-                    { name: 'twitter:site', content: '@nasir19noor' },
-                    { name: 'twitter:creator', content: '@nasir19noor' },
-                    { name: 'twitter:title', content: '${item.title.replace(/'/g, "\\'")}' },
-                    { name: 'twitter:description', content: '${(item.summary || '').replace(/'/g, "\\'")}' },
-                    { name: 'twitter:image', content: '${featuredImage || itemImage}' },
-                    { name: 'twitter:image:alt', content: '${item.title.replace(/'/g, "\\'")} - Nasir Noor' }
-                  ];
-                  
-                  metaTags.forEach(tag => {
-                    const meta = document.createElement('meta');
-                    meta.setAttribute('name', tag.name);
-                    meta.setAttribute('content', tag.content);
-                    document.head.appendChild(meta);
-                  });
-                }
-              `,
-            }}
-          />
-          
-          <TwitterCardDebug 
-            url={\`https://nasir.id/\${slug}\`}
-            title={item.title}
-            description={item.summary}
-            image={featuredImage || undefined}
-          />
           {/* Content Header */}
           <header className="mb-8 sm:mb-12">
             <div className="flex items-center gap-2 mb-4">
