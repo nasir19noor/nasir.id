@@ -22,7 +22,7 @@ async function getSettings() {
     hero_title: 'Nasir Noor',
     hero_subtitle: 'Cloud Wizard 🧙‍♂️ | DevOps Ninja 🥷 | AI Explorer 🚀',
     hero_description: 'Turning coffee into infrastructure ☕ → ☁️ and making servers dance to my automation tunes 💃',
-    about_image: 'https://images.unsplash.com/photo-1752859951149-7d3fc700a7ec?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxOYXNpcnwxNzcyNjAxMzE2fDA&ixlib=rb-4.1.0&q=80&w=1080',
+    about_image: 'https://assets.nasir.id/uploads/2026/03/07/1772859194033-pixar-2-thumb.jpg',
     about_bio: 'Cloud & DevOps engineer passionate about building resilient, scalable infrastructure and exploring AI/ML integration.'
   };
 }
@@ -40,7 +40,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const title = `${settings.hero_title} | ${settings.hero_subtitle}` || 'Nasir Noor | Cloud & DevOps Engineer';
   
   // Get the best image for social sharing
-  let ogImage = 'https://images.unsplash.com/photo-1752859951149-7d3fc700a7ec?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxOYXNpcnwxNzcyNjAxMzE2fDA&ixlib=rb-4.1.0&q=80&w=1200&h=630'; // Default profile image with proper dimensions
+  let ogImage = 'https://assets.nasir.id/uploads/2026/03/07/1772859194033-pixar-2-thumb.jpg'; // Default profile image with proper dimensions
   
   if (settings.about_image) {
     const convertedImage = convertToAssetsUrl(settings.about_image);

@@ -36,7 +36,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const item = results[0];
     
     // Get item image (prioritize images array, then image_url, then default)
-    let itemImage = 'https://images.unsplash.com/photo-1752859951149-7d3fc700a7ec?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxOYXNpcnwxNzcyNjAxMzE2fDA&ixlib=rb-4.1.0&q=80&w=1200&h=630'; // Default fallback
+    let itemImage = 'https://assets.nasir.id/uploads/2026/03/07/1772859194033-pixar-2-thumb.jpg'; // Default fallback
     
     console.log(`🖼️ [ARTICLE META] Processing images for: ${item.title}`);
     console.log(`🖼️ [ARTICLE META] images array:`, item.images);

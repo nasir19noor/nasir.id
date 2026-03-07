@@ -116,19 +116,52 @@ export function getThumbnailUrl(imageUrl: string): string {
   // Convert to assets domain first
   const assetsUrl = convertToAssetsUrl(imageUrl);
   
-  // If it's already a thumbnail, return as is
-  if (assetsUrl.includes('-thumb.')) {
+  // If it's already a sized variant, return as is
+  if (assetsUrl.includes('-thumb.') || assetsUrl.includes('-medium.') || assetsUrl.includes('-large.')) {
     return assetsUrl;
   }
   
-  // Try to generate thumbnail URL by replacing the filename
+  // Generate thumbnail URL from original filename
   const lastSlashIndex = assetsUrl.lastIndexOf('/');
   const lastDotIndex = assetsUrl.lastIndexOf('.');
   
   if (lastSlashIndex !== -1 && lastDotIndex !== -1 && lastDotIndex > lastSlashIndex) {
-    const path = assetsUrl.substring(0, lastDotIndex);
-    const extension = assetsUrl.substring(lastDotIndex);
-    return `${path}-thumb.jpg`; // Thumbnails are always JPG
+    const pathWithFilename = assetsUrl.substring(0, lastDotIndex);
+    
+    // For thumbnails, prefer -thumb.jpg, fallback to -medium.jpg
+    // This matches your actual file naming: nasir.id.png -> nasir.id-thumb.jpg
+    return `${pathWithFilename}-thumb.jpg`;
+  }
+  
+  // Fallback to original URL
+  return assetsUrl;
+}
+
+/**
+ * Get medium-sized image URL from an image URL
+ * @param imageUrl - The original image URL
+ * @returns The medium-sized image URL
+ */
+export function getMediumUrl(imageUrl: string): string {
+  if (!imageUrl) return '';
+  
+  // Convert to assets domain first
+  const assetsUrl = convertToAssetsUrl(imageUrl);
+  
+  // If it's already a sized variant, return as is
+  if (assetsUrl.includes('-thumb.') || assetsUrl.includes('-medium.') || assetsUrl.includes('-large.')) {
+    return assetsUrl;
+  }
+  
+  // Generate medium URL from original filename
+  const lastSlashIndex = assetsUrl.lastIndexOf('/');
+  const lastDotIndex = assetsUrl.lastIndexOf('.');
+  
+  if (lastSlashIndex !== -1 && lastDotIndex !== -1 && lastDotIndex > lastSlashIndex) {
+    const pathWithFilename = assetsUrl.substring(0, lastDotIndex);
+    
+    // For medium size: nasir.id.png -> nasir.id-medium.jpg
+    return `${pathWithFilename}-medium.jpg`;
   }
   
   // Fallback to original URL

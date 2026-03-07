@@ -38,18 +38,27 @@ export default function BlogSection() {
 
     // Helper function to get the best image URL for an article
     const getArticleImageUrl = (article: Article): string | null => {
+        console.log(`🖼️ [BLOG] Processing article: ${article.title}`);
+        console.log(`🖼️ [BLOG] Raw images:`, article.images);
+        console.log(`🖼️ [BLOG] Raw image_url:`, article.image_url);
+        
         // Priority: images array first, then image_url, then null
         if (article.images && Array.isArray(article.images) && article.images.length > 0) {
             const firstImage = article.images[0];
             if (firstImage && typeof firstImage === 'string' && firstImage.trim()) {
-                return getThumbnailUrl(firstImage.trim());
+                const thumbnailUrl = getThumbnailUrl(firstImage.trim());
+                console.log(`🖼️ [BLOG] ✅ Using images[0]: ${firstImage.trim()} -> ${thumbnailUrl}`);
+                return thumbnailUrl;
             }
         }
         
         if (article.image_url && typeof article.image_url === 'string' && article.image_url.trim()) {
-            return getThumbnailUrl(article.image_url.trim());
+            const thumbnailUrl = getThumbnailUrl(article.image_url.trim());
+            console.log(`🖼️ [BLOG] ✅ Using image_url: ${article.image_url.trim()} -> ${thumbnailUrl}`);
+            return thumbnailUrl;
         }
         
+        console.log(`🖼️ [BLOG] ❌ No image found for article`);
         return null;
     };
 

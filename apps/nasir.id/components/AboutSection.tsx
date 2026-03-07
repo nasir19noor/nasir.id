@@ -75,7 +75,7 @@ export default function AboutSection() {
                                 />
                             ) : (
                                 <Image
-                                    src="https://images.unsplash.com/photo-1752859951149-7d3fc700a7ec?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjB0ZWNoJTIwZGV2ZWxvcGVyJTIwcG9ydHJhaXR8ZW58MXx8fHwxNzcyNjAxMzE2fDA&ixlib=rb-4.1.0&q=80&w=1080"
+                                    src="https://assets.nasir.id/uploads/2026/03/07/1772859194033-pixar-2-thumb.jpg"
                                     alt="Profile"
                                     width={600}
                                     height={600}

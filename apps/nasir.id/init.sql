@@ -119,7 +119,7 @@ INSERT INTO settings (key, value) VALUES
 ('hero_title', 'Nasir Noor'),
 ('hero_subtitle', 'Cloud Architect | DevOps Engineer | Innovation Leader'),
 ('hero_description', 'Transforming ideas into scalable cloud solutions with expertise in modern infrastructure, automation, and emerging technologies.'),
-('about_image', 'https://images.unsplash.com/photo-1752859951149-7d3fc700a7ec?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxOYXNpcnwxNzcyNjAxMzE2fDA&ixlib=rb-4.1.0&q=80&w=1080'),
+('about_image', 'https://assets.nasir.id/uploads/2026/03/07/1772859194033-pixar-2-thumb.jpg'),
 ('about_bio', 'I''m a Cloud & DevOps engineer passionate about building resilient, scalable infrastructure and streamlining deployment pipelines. With expertise across AWS, Azure, and GCP, I automate everything and embrace Infrastructure as Code. Recently diving deep into AI/ML to integrate intelligent automation into DevOps workflows.'),
 ('tech_stack', '["AWS ☁️","Azure 🌐","GCP 🚀","Kubernetes ⚓","Docker 🐳","Terraform 🏗️","Ansible 🤖","Jenkins 🔧","GitLab CI/CD 🦊","Python 🐍","Bash 💻","Prometheus 📊","Grafana 📈","ELK Stack 🔍","ArgoCD 🔄","Helm ⛵","Linux 🐧","Machine Learning 🧠","TensorFlow 🤖","PyTorch 🔥"]')
 ON CONFLICT (key) DO NOTHING;
