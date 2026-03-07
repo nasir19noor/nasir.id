@@ -11,6 +11,7 @@ interface Article {
     slug: string;
     summary: string;
     image_url: string;
+    images: string[];
     published_at: string;
 }
 
@@ -34,6 +35,23 @@ export default function BlogSection() {
         }
         fetchArticles();
     }, []);
+
+    // Helper function to get the best image URL for an article
+    const getArticleImageUrl = (article: Article): string | null => {
+        // Priority: images array first, then image_url, then null
+        if (article.images && Array.isArray(article.images) && article.images.length > 0) {
+            const firstImage = article.images[0];
+            if (firstImage && typeof firstImage === 'string' && firstImage.trim()) {
+                return getThumbnailUrl(firstImage.trim());
+            }
+        }
+        
+        if (article.image_url && typeof article.image_url === 'string' && article.image_url.trim()) {
+            return getThumbnailUrl(article.image_url.trim());
+        }
+        
+        return null;
+    };
 
     return (
         <section id="blog" className="py-24 px-6 bg-slate-50/50 backdrop-blur-sm">
@@ -65,16 +83,19 @@ export default function BlogSection() {
                                     onClick={() => window.open(`/${article.slug}`, '_blank')}
                                 >
                                     {/* Image */}
-                                    {article.image_url && (
-                                        <div className="aspect-[16/10] relative overflow-hidden bg-gradient-to-br from-blue-50 to-emerald-50">
-                                            <Image
-                                                src={getThumbnailUrl(article.image_url)}
-                                                alt={article.title}
-                                                fill
-                                                className="object-cover group-hover:scale-105 transition-transform duration-300"
-                                            />
-                                        </div>
-                                    )}
+                                    {(() => {
+                                        const imageUrl = getArticleImageUrl(article);
+                                        return imageUrl ? (
+                                            <div className="aspect-[16/10] relative overflow-hidden bg-gradient-to-br from-blue-50 to-emerald-50">
+                                                <Image
+                                                    src={imageUrl}
+                                                    alt={article.title}
+                                                    fill
+                                                    className="object-cover group-hover:scale-105 transition-transform duration-300"
+                                                />
+                                            </div>
+                                        ) : null;
+                                    })()}
 
                                     {/* Content */}
                                     <div className="p-6">

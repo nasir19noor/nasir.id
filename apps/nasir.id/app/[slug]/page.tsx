@@ -35,20 +35,32 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
     const item = results[0];
     
-    // Get item image (first from images array, then image_url, then default profile)
+    // Get item image (prioritize images array, then image_url, then default)
     let itemImage = 'https://images.unsplash.com/photo-1752859951149-7d3fc700a7ec?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxOYXNpcnwxNzcyNjAxMzE2fDA&ixlib=rb-4.1.0&q=80&w=1200&h=630'; // Default fallback
     
-    if (item.images && item.images.length > 0) {
-      const convertedImage = convertToAssetsUrl(item.images[0]);
-      if (convertedImage && (convertedImage.includes('.jpg') || convertedImage.includes('.jpeg') || convertedImage.includes('.png'))) {
-        itemImage = convertedImage;
-      }
-    } else if (item.image_url) {
-      const convertedImage = convertToAssetsUrl(item.image_url);
-      if (convertedImage && (convertedImage.includes('.jpg') || convertedImage.includes('.jpeg') || convertedImage.includes('.png'))) {
-        itemImage = convertedImage;
+    console.log(`🖼️ [ARTICLE META] Processing images for: ${item.title}`);
+    console.log(`🖼️ [ARTICLE META] images array:`, item.images);
+    console.log(`🖼️ [ARTICLE META] image_url:`, item.image_url);
+    
+    // Try images array first (preferred)
+    if (item.images && Array.isArray(item.images) && item.images.length > 0) {
+      const firstImage = item.images[0];
+      if (firstImage && typeof firstImage === 'string' && firstImage.trim()) {
+        itemImage = convertToAssetsUrl(firstImage.trim());
+        console.log(`🖼️ [ARTICLE META] ✅ Using images[0]: ${itemImage}`);
       }
     }
+    // Fallback to image_url if no images array
+    else if (item.image_url && typeof item.image_url === 'string' && item.image_url.trim()) {
+      itemImage = convertToAssetsUrl(item.image_url.trim());
+      console.log(`🖼️ [ARTICLE META] ✅ Using image_url: ${itemImage}`);
+    }
+    // Use default if no images found
+    else {
+      console.log(`🖼️ [ARTICLE META] ⚠️ No article images found, using default`);
+    }
+    
+    console.log(`🖼️ [ARTICLE META] Final image: ${itemImage}`);
 
     // Create description from summary or first 160 chars of content
     let description = item.summary || '';

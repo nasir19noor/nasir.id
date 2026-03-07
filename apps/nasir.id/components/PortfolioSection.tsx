@@ -10,6 +10,7 @@ interface PortfolioItem {
     project_title: string;
     description: string;
     image_url: string;
+    images: string[];
     slug: string;
     published_at: string;
 }
@@ -43,6 +44,23 @@ export default function PortfolioSection() {
         return text.length > 150 ? text.substring(0, 150) + '...' : text;
     };
 
+    // Helper function to get the best image URL for a portfolio item
+    const getPortfolioImageUrl = (project: PortfolioItem): string | null => {
+        // Priority: images array first, then image_url, then null
+        if (project.images && Array.isArray(project.images) && project.images.length > 0) {
+            const firstImage = project.images[0];
+            if (firstImage && typeof firstImage === 'string' && firstImage.trim()) {
+                return getThumbnailUrl(firstImage.trim());
+            }
+        }
+        
+        if (project.image_url && typeof project.image_url === 'string' && project.image_url.trim()) {
+            return getThumbnailUrl(project.image_url.trim());
+        }
+        
+        return null;
+    };
+
     return (
         <section id="portfolio" className="py-24 px-6">
             <div className="max-w-6xl mx-auto">
@@ -73,16 +91,19 @@ export default function PortfolioSection() {
                                     onClick={() => window.open(`/${project.slug}`, '_blank')}
                                 >
                                     {/* Image */}
-                                    {project.image_url && (
-                                        <div className="aspect-[16/10] relative overflow-hidden bg-gradient-to-br from-emerald-50 to-blue-50">
-                                            <Image
-                                                src={getThumbnailUrl(project.image_url)}
-                                                alt={project.project_title}
-                                                fill
-                                                className="object-cover group-hover:scale-105 transition-transform duration-300"
-                                            />
-                                        </div>
-                                    )}
+                                    {(() => {
+                                        const imageUrl = getPortfolioImageUrl(project);
+                                        return imageUrl ? (
+                                            <div className="aspect-[16/10] relative overflow-hidden bg-gradient-to-br from-emerald-50 to-blue-50">
+                                                <Image
+                                                    src={imageUrl}
+                                                    alt={project.project_title}
+                                                    fill
+                                                    className="object-cover group-hover:scale-105 transition-transform duration-300"
+                                                />
+                                            </div>
+                                        ) : null;
+                                    })()}
 
                                     {/* Content */}
                                     <div className="p-6">
