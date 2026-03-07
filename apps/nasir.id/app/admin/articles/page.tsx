@@ -48,6 +48,7 @@ export default function AdminArticlesPage() {
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState('');
     const [previewMode, setPreviewMode] = useState<'edit' | 'code' | 'preview'>('edit');
+    const [defaultLanguage, setDefaultLanguage] = useState<'en' | 'id'>('en');
     
     // Ref for the content textarea to handle cursor position
     const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -88,7 +89,10 @@ export default function AdminArticlesPage() {
 
     const openCreate = () => {
         setEditing(null);
-        setForm(emptyForm);
+        setForm({
+            ...emptyForm,
+            language: defaultLanguage
+        });
         setError('');
         setPreviewMode('edit');
         setShowModal(true);
@@ -370,13 +374,43 @@ export default function AdminArticlesPage() {
                         Manage your blog articles and portfolio projects
                     </p>
                 </div>
-                <button
-                    onClick={openCreate}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium text-sm"
-                >
-                    <Plus size={18} />
-                    New Article/Project
-                </button>
+                
+                {/* Default Language Selector */}
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-600">Default language for new articles:</span>
+                        <div className="flex gap-1">
+                            <button
+                                onClick={() => setDefaultLanguage('en')}
+                                className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                                    defaultLanguage === 'en'
+                                        ? 'bg-blue-500 text-white'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                }`}
+                            >
+                                🇺🇸 EN
+                            </button>
+                            <button
+                                onClick={() => setDefaultLanguage('id')}
+                                className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                                    defaultLanguage === 'id'
+                                        ? 'bg-red-500 text-white'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                }`}
+                            >
+                                🇮🇩 ID
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <button
+                        onClick={openCreate}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium text-sm"
+                    >
+                        <Plus size={18} />
+                        New Article/Project
+                    </button>
+                </div>
             </div>
 
             {error && !showModal && (
