@@ -85,7 +85,7 @@ export async function generateMetadata(): Promise<Metadata> {
       card: 'summary_large_image',
       title,
       description: cleanDescription,
-      creator: '@nasir_noor',
+      creator: '@nasir19noor',
       images: [ogImage],
     },
     
@@ -115,7 +115,7 @@ export async function generateMetadata(): Promise<Metadata> {
       'og:image:type': 'image/jpeg',
       'twitter:image:width': '1200',
       'twitter:image:height': '630',
-      'twitter:site': '@nasir_noor',
+      'twitter:site': '@nasir19noor',
       'fb:app_id': '', // Add your Facebook App ID if you have one
       'theme-color': '#3b82f6', // Professional blue theme color
     },
@@ -155,8 +155,8 @@ export default function RootLayout({
                 <meta property="og:type" content="website" />
                 <meta property="og:locale" content="en_US" />
                 <meta name="twitter:card" content="summary_large_image" />
-                <meta name="twitter:site" content="@nasir_noor" />
-                <meta name="twitter:creator" content="@nasir_noor" />
+                <meta name="twitter:site" content="@nasir19noor" />
+                <meta name="twitter:creator" content="@nasir19noor" />
             </head>
             <body>{children}</body>
         </html>

@@ -76,7 +76,7 @@ export async function generateMetadata(): Promise<Metadata> {
       card: 'summary_large_image',
       title,
       description,
-      creator: '@nasir_noor',
+      creator: '@nasir19noor',
       images: [ogImage],
     },
     
@@ -86,7 +86,7 @@ export async function generateMetadata(): Promise<Metadata> {
       'og:image:type': 'image/jpeg',
       'twitter:image:width': '1200',
       'twitter:image:height': '630',
-      'twitter:site': '@nasir_noor',
+      'twitter:site': '@nasir19noor',
       'theme-color': '#3b82f6',
     },
   };

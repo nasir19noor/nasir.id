@@ -113,8 +113,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         card: 'summary_large_image',
         title,
         description,
-        creator: '@nasir_noor',
-        images: [itemImage],
+        creator: '@nasir19noor',
+        site: '@nasir19noor',
+        images: [
+          {
+            url: itemImage,
+            alt: `${item.title} - Nasir Noor`,
+          },
+        ],
       },
       
       // Additional structured data
@@ -125,9 +131,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         'og:image:width': '1200',
         'og:image:height': '630',
         'og:image:type': 'image/jpeg',
+        'twitter:card': 'summary_large_image',
+        'twitter:image': itemImage,
         'twitter:image:width': '1200',
         'twitter:image:height': '630',
-        'twitter:site': '@nasir_noor',
+        'twitter:image:alt': `${item.title} - Nasir Noor`,
+        'twitter:site': '@nasir19noor',
+        'twitter:creator': '@nasir19noor',
         'fb:app_id': '',
       },
     };

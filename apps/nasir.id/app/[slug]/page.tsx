@@ -7,6 +7,7 @@ import Comments from '@/components/Comments';
 import { convertToAssetsUrl } from '@/lib/image-utils';
 import type { Metadata } from 'next';
 import ShareButtons from '@/components/ShareButtons';
+import TwitterCardDebug from '@/components/TwitterCardDebug';
 
 export const dynamic = 'force-dynamic';
 
@@ -114,8 +115,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         card: 'summary_large_image',
         title,
         description,
-        creator: '@nasir_noor',
-        images: [itemImage],
+        creator: '@nasir19noor',
+        site: '@nasir19noor',
+        images: [
+          {
+            url: itemImage,
+            alt: `${item.title} - Nasir Noor`,
+          },
+        ],
       },
       
       // Additional structured data
@@ -126,9 +133,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         'og:image:width': '1200',
         'og:image:height': '630',
         'og:image:type': 'image/jpeg',
+        'twitter:card': 'summary_large_image',
+        'twitter:image': itemImage,
         'twitter:image:width': '1200',
         'twitter:image:height': '630',
-        'twitter:site': '@nasir_noor',
+        'twitter:image:alt': `${item.title} - Nasir Noor`,
+        'twitter:site': '@nasir19noor',
+        'twitter:creator': '@nasir19noor',
         'fb:app_id': '', // Add your Facebook App ID if you have one
       },
     };
@@ -222,6 +233,12 @@ export default async function SlugPage({ params }: PageProps) {
         </header>
 
         <main className="max-w-4xl mx-auto py-6 sm:py-12 px-4 sm:px-6 min-h-screen">
+          <TwitterCardDebug 
+            url={`https://nasir.id/${slug}`}
+            title={item.title}
+            description={item.summary}
+            image={featuredImage || undefined}
+          />
           {/* Content Header */}
           <header className="mb-8 sm:mb-12">
             <div className="flex items-center gap-2 mb-4">
