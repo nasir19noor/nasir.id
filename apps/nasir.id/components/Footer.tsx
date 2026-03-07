@@ -1,6 +1,10 @@
 import { Heart, Coffee, Code } from 'lucide-react';
 
-export default function Footer() {
+interface FooterProps {
+    language?: string;
+}
+
+export default function Footer({ language = 'en' }: FooterProps) {
     const year = new Date().getFullYear();
 
     return (

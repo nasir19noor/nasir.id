@@ -3,7 +3,11 @@
 import { useState } from 'react';
 import { Send, Mail, Github, Linkedin, MessageCircle } from 'lucide-react';
 
-export default function ContactSection() {
+interface ContactSectionProps {
+    language?: string;
+}
+
+export default function ContactSection({ language = 'en' }: ContactSectionProps) {
     const [form, setForm] = useState({ name: '', email: '', message: '' });
     const [sending, setSending] = useState(false);
     const [status, setStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
