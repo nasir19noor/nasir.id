@@ -5,7 +5,7 @@ import { convertToAssetsUrl } from '@/lib/image-utils';
 // Function to fetch settings for metadata
 async function getSettings() {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://nasir.id';
+    const baseUrl = 'https://nasir.id';
     const response = await fetch(`${baseUrl}/api/settings`, {
       cache: 'no-store', // Always fetch fresh data for metadata
     });
@@ -19,17 +19,17 @@ async function getSettings() {
   
   // Fallback settings
   return {
-    hero_title: process.env.DEFAULT_HERO_TITLE || 'Nasir Noor',
-    hero_subtitle: process.env.DEFAULT_HERO_SUBTITLE || 'Cloud Wizard 🧙‍♂️ | DevOps Ninja 🥷 | AI Explorer 🚀',
-    hero_description: process.env.DEFAULT_HERO_DESCRIPTION || 'Turning coffee into infrastructure ☕ → ☁️ and making servers dance to my automation tunes 💃',
-    about_image: process.env.DEFAULT_ABOUT_IMAGE || 'https://images.unsplash.com/photo-1752859951149-7d3fc700a7ec?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxOYXNpcnwxNzcyNjAxMzE2fDA&ixlib=rb-4.1.0&q=80&w=1080',
-    about_bio: process.env.DEFAULT_ABOUT_BIO || 'Cloud & DevOps engineer passionate about building resilient, scalable infrastructure and exploring AI/ML integration.'
+    hero_title: 'Nasir Noor',
+    hero_subtitle: 'Cloud Wizard 🧙‍♂️ | DevOps Ninja 🥷 | AI Explorer 🚀',
+    hero_description: 'Turning coffee into infrastructure ☕ → ☁️ and making servers dance to my automation tunes 💃',
+    about_image: 'https://images.unsplash.com/photo-1752859951149-7d3fc700a7ec?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxOYXNpcnwxNzcyNjAxMzE2fDA&ixlib=rb-4.1.0&q=80&w=1080',
+    about_bio: 'Cloud & DevOps engineer passionate about building resilient, scalable infrastructure and exploring AI/ML integration.'
   };
 }
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSettings();
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://nasir.id';
+  const baseUrl = 'https://nasir.id';
   
   // Use hero description if available, otherwise use about bio
   const description = settings.hero_description || settings.about_bio || 'Cloud & DevOps engineer passionate about building resilient, scalable infrastructure and exploring AI/ML integration.';
@@ -42,9 +42,9 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title,
     description: cleanDescription,
-    keywords: (process.env.DEFAULT_KEYWORDS || 'Cloud Engineer,DevOps,AWS,Azure,GCP,Kubernetes,Docker,Terraform,AI/ML,Infrastructure').split(','),
-    authors: [{ name: settings.hero_title || process.env.SITE_OWNER_NAME || 'Nasir Noor' }],
-    creator: settings.hero_title || process.env.SITE_OWNER_NAME || 'Nasir Noor',
+    keywords: ['Cloud Engineer', 'DevOps', 'AWS', 'Azure', 'GCP', 'Kubernetes', 'Docker', 'Terraform', 'AI/ML', 'Infrastructure'],
+    authors: [{ name: settings.hero_title || 'Nasir Noor' }],
+    creator: settings.hero_title || 'Nasir Noor',
     
     // Open Graph tags for social media
     openGraph: {
@@ -59,7 +59,7 @@ export async function generateMetadata(): Promise<Metadata> {
           url: convertToAssetsUrl(settings.about_image) || `${baseUrl}/default-og-image.jpg`,
           width: 1200,
           height: 630,
-          alt: `${settings.hero_title || process.env.SITE_OWNER_NAME || 'Nasir Noor'} - Profile Picture`,
+          alt: `${settings.hero_title || 'Nasir Noor'} - Profile Picture`,
           type: 'image/jpeg',
         },
       ],
@@ -70,7 +70,7 @@ export async function generateMetadata(): Promise<Metadata> {
       card: 'summary_large_image',
       title,
       description: cleanDescription,
-      creator: process.env.TWITTER_HANDLE || '@nasir_noor',
+      creator: '@nasir_noor',
       images: [convertToAssetsUrl(settings.about_image) || `${baseUrl}/default-og-image.jpg`],
     },
     

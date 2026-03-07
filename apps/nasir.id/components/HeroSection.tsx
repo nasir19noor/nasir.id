@@ -63,7 +63,7 @@ export default function HeroSection() {
                 
                 <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold mb-6 tracking-tight font-serif">
                     <span className="gradient-text-primary">
-                        {settings.hero_title || process.env.NEXT_PUBLIC_DEFAULT_HERO_TITLE || 'Nasir Noor'}
+                        {settings.hero_title || 'Nasir Noor'}
                     </span>
                 </h1>
                 

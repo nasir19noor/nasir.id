@@ -74,7 +74,7 @@ export async function uploadToS3(
     console.log(`☁️ [S3] Sending upload command to S3...`);
     await s3Client.send(command);
     // Return assets domain URL instead of S3 URL
-    const url = `${process.env.ASSETS_DOMAIN || 'https://assets.nasir.id'}/${key}`;
+    const url = `https://assets.nasir.id/${key}`;
     console.log(`✅ [S3] Upload successful, returning assets URL: ${url}`);
     return url;
   } catch (error) {
@@ -139,7 +139,7 @@ export async function uploadImageWithSizes(
         Body: file,
         ContentType: contentType,
       }));
-      result.original = `${process.env.ASSETS_DOMAIN || 'https://assets.nasir.id'}/${key}`;
+      result.original = `https://assets.nasir.id/${key}`;
       console.log(`✅ [S3] Non-image upload successful: ${result.original}`);
       return result;
     } catch (error) {
@@ -166,7 +166,7 @@ export async function uploadImageWithSizes(
       Body: file,
       ContentType: contentType,
     }));
-    result.original = `${process.env.ASSETS_DOMAIN || 'https://assets.nasir.id'}/${originalKey}`;
+    result.original = `https://assets.nasir.id/${originalKey}`;
     console.log(`✅ [S3] Original uploaded: ${result.original}`);
 
     // Generate and upload resized versions only if original is large enough
@@ -185,7 +185,7 @@ export async function uploadImageWithSizes(
         Body: largeBuffer,
         ContentType: 'image/jpeg',
       }));
-      result.large = `${process.env.ASSETS_DOMAIN || 'https://assets.nasir.id'}/${largeKey}`;
+      result.large = `https://assets.nasir.id/${largeKey}`;
       console.log(`✅ [S3] Large version uploaded: ${result.large}`);
     } else {
       console.log(`⏭️ [S3] Skipping large version (original width ${originalWidth} <= 1920)`);
@@ -206,7 +206,7 @@ export async function uploadImageWithSizes(
         Body: mediumBuffer,
         ContentType: 'image/jpeg',
       }));
-      result.medium = `${process.env.ASSETS_DOMAIN || 'https://assets.nasir.id'}/${mediumKey}`;
+      result.medium = `https://assets.nasir.id/${mediumKey}`;
       console.log(`✅ [S3] Medium version uploaded: ${result.medium}`);
     } else {
       console.log(`⏭️ [S3] Skipping medium version (original width ${originalWidth} <= 1024)`);
@@ -227,7 +227,7 @@ export async function uploadImageWithSizes(
         Body: thumbnailBuffer,
         ContentType: 'image/jpeg',
       }));
-      result.thumbnail = `${process.env.ASSETS_DOMAIN || 'https://assets.nasir.id'}/${thumbnailKey}`;
+      result.thumbnail = `https://assets.nasir.id/${thumbnailKey}`;
       console.log(`✅ [S3] Thumbnail uploaded: ${result.thumbnail}`);
     } else {
       console.log(`⏭️ [S3] Skipping thumbnail (original width ${originalWidth} <= 400)`);

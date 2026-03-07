@@ -26,8 +26,7 @@ export async function DELETE(request: NextRequest) {
 
         // Extract the S3 key from the assets URL
         // URL format: https://assets.nasir.id/uploads/2026/03/05/filename.jpg
-        const assetsDomain = process.env.ASSETS_DOMAIN || 'https://assets.nasir.id';
-        const urlParts = imageUrl.replace(assetsDomain + '/', '');
+        const urlParts = imageUrl.replace('https://assets.nasir.id/', '');
         console.log('🔍 [DELETE] URL parts after domain removal:', urlParts);
         
         if (!urlParts.startsWith('uploads/')) {

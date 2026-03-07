@@ -134,7 +134,7 @@ export default function ContactSection() {
 
                         <div className="space-y-4">
                             <a
-                                href={`mailto:${process.env.NEXT_PUBLIC_SITE_OWNER_EMAIL || 'nasir19noor@gmail.com'}`}
+                                href="mailto:nasir19noor@gmail.com"
                                 className="flex items-center gap-4 p-4 card hover:shadow-lg transition-all group"
                             >
                                 <div className="p-2 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg text-blue-600 group-hover:scale-110 transition-transform">
@@ -143,13 +143,13 @@ export default function ContactSection() {
                                 <div>
                                     <div className="text-slate-900 font-medium">Email</div>
                                     <div className="text-slate-600 text-sm">
-                                        {process.env.NEXT_PUBLIC_SITE_OWNER_EMAIL || 'nasir19noor@gmail.com'}
+                                        nasir19noor@gmail.com
                                     </div>
                                 </div>
                             </a>
 
                             <a
-                                href={process.env.NEXT_PUBLIC_GITHUB_URL || 'https://github.com/nasir19noor'}
+                                href="https://github.com/nasir19noor"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="flex items-center gap-4 p-4 card hover:shadow-lg transition-all group"
@@ -159,12 +159,12 @@ export default function ContactSection() {
                                 </div>
                                 <div>
                                     <div className="text-slate-900 font-medium">GitHub</div>
-                                    <div className="text-slate-600 text-sm">@{process.env.NEXT_PUBLIC_GITHUB_USERNAME || 'nasir19noor'}</div>
+                                    <div className="text-slate-600 text-sm">@nasir19noor</div>
                                 </div>
                             </a>
 
                             <a
-                                href={process.env.NEXT_PUBLIC_LINKEDIN_URL || 'https://linkedin.com/in/nasir19noor'}
+                                href="https://linkedin.com/in/nasir19noor"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="flex items-center gap-4 p-4 card hover:shadow-lg transition-all group"
@@ -174,12 +174,12 @@ export default function ContactSection() {
                                 </div>
                                 <div>
                                     <div className="text-slate-900 font-medium">LinkedIn</div>
-                                    <div className="text-slate-600 text-sm">/in/{process.env.NEXT_PUBLIC_LINKEDIN_USERNAME || 'nasir19noor'}</div>
+                                    <div className="text-slate-600 text-sm">/in/nasir19noor</div>
                                 </div>
                             </a>
 
                             <a
-                                href={process.env.NEXT_PUBLIC_WHATSAPP_URL || 'https://wa.me/6285288358561'}
+                                href="https://wa.me/6285288358561"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="flex items-center gap-4 p-4 card hover:shadow-lg transition-all group"
@@ -189,7 +189,7 @@ export default function ContactSection() {
                                 </div>
                                 <div>
                                     <div className="text-slate-900 font-medium">WhatsApp</div>
-                                    <div className="text-slate-600 text-sm">{process.env.NEXT_PUBLIC_SITE_OWNER_PHONE || '+62 852-8835-8561'}</div>
+                                    <div className="text-slate-600 text-sm">+62 852-8835-8561</div>
                                 </div>
                             </a>
                         </div>
