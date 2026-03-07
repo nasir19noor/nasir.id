@@ -6,6 +6,7 @@ import AnalyticsTracker from '@/components/AnalyticsTracker';
 import Comments from '@/components/Comments';
 import { convertToAssetsUrl } from '@/lib/image-utils';
 import type { Metadata } from 'next';
+import ShareButtons from '@/components/ShareButtons';
 
 export const dynamic = 'force-dynamic';
 
@@ -146,10 +147,9 @@ export default async function IndonesianSlugPage({ params }: PageProps) {
 
   try {
     const results = await sql`
-      SELECT a.id, at.title, at.content, a.published_at, a.is_portfolio, at.summary, a.image_url, a.images
-      FROM articles a
-      JOIN article_translations at ON a.id = at.article_id
-      WHERE at.slug = ${slug} AND at.language = 'id'
+      SELECT id, title, content, published_at, is_portfolio, summary, image_url, images
+      FROM articles
+      WHERE slug = ${slug} AND language = 'id'
       LIMIT 1
     `;
 
@@ -272,6 +272,14 @@ export default async function IndonesianSlugPage({ params }: PageProps) {
             <div 
               className="prose prose-sm sm:prose-lg max-w-none prose-headings:text-slate-900 prose-p:text-slate-700 prose-a:text-blue-600 prose-strong:text-slate-900 prose-code:text-blue-600 prose-code:bg-blue-50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-slate-900 prose-pre:text-slate-100 prose-pre:overflow-x-auto prose-table:overflow-x-auto [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6 [&_li]:list-item break-words overflow-x-auto"
               dangerouslySetInnerHTML={{ __html: item.content }}
+            />
+            
+            {/* Share Buttons */}
+            <ShareButtons 
+              url={`https://nasir.id/id/${slug}`}
+              title={item.title}
+              description={item.summary}
+              language="id"
             />
           </article>
 

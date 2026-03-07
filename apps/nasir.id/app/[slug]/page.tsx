@@ -6,6 +6,7 @@ import AnalyticsTracker from '@/components/AnalyticsTracker';
 import Comments from '@/components/Comments';
 import { convertToAssetsUrl } from '@/lib/image-utils';
 import type { Metadata } from 'next';
+import ShareButtons from '@/components/ShareButtons';
 
 export const dynamic = 'force-dynamic';
 
@@ -272,6 +273,14 @@ export default async function SlugPage({ params }: PageProps) {
             <div 
               className="prose prose-sm sm:prose-lg max-w-none prose-headings:text-slate-900 prose-p:text-slate-700 prose-a:text-blue-600 prose-strong:text-slate-900 prose-code:text-blue-600 prose-code:bg-blue-50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-slate-900 prose-pre:text-slate-100 prose-pre:overflow-x-auto prose-table:overflow-x-auto [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6 [&_li]:list-item break-words overflow-x-auto"
               dangerouslySetInnerHTML={{ __html: item.content }}
+            />
+            
+            {/* Share Buttons */}
+            <ShareButtons 
+              url={`https://nasir.id/${slug}`}
+              title={item.title}
+              description={item.summary}
+              language="en"
             />
           </article>
 
