@@ -94,7 +94,7 @@ export default function PortfolioSection({ language = 'en' }: PortfolioSectionPr
                                 <article
                                     key={project.id}
                                     className="group card card-hover cursor-pointer"
-                                    onClick={() => window.open(language === 'id' ? `/id/${project.slug}` : `/${project.slug}`, '_blank')}
+                                    onClick={() => window.open(`/${project.slug}`, '_blank')}
                                 >
                                     {/* Image */}
                                     {(() => {

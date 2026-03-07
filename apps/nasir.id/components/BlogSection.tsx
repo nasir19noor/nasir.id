@@ -95,7 +95,7 @@ export default function BlogSection({ language = 'en' }: BlogSectionProps) {
                                 <article
                                     key={article.id}
                                     className="group card card-hover cursor-pointer"
-                                    onClick={() => window.open(language === 'id' ? `/id/${article.slug}` : `/${article.slug}`, '_blank')}
+                                    onClick={() => window.open(`/${article.slug}`, '_blank')}
                                 >
                                     {/* Image */}
                                     {(() => {
