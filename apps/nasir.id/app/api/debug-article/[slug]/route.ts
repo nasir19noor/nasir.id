@@ -42,7 +42,8 @@ export async function GET(
       processing: {
         would_use_images_array: !!(item.images && item.images.length > 0),
         would_use_image_url: !item.images?.length && !!item.image_url,
-        would_use_default: !item.images?.length && !item.image_url
+        would_use_default: !item.images?.length && !item.image_url,
+        final_image: '' // Add this property to the type
       }
     };
     
@@ -54,7 +55,7 @@ export async function GET(
       finalImage = convertToAssetsUrl(item.image_url);
     }
     
-    debugInfo.processing['final_image'] = finalImage;
+    debugInfo.processing.final_image = finalImage;
     
     return NextResponse.json(debugInfo);
   } catch (error) {
