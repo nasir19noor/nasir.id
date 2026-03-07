@@ -20,7 +20,7 @@ export default function ShareButtons({ url, title, description = '', language = 
   };
 
   const shareUrls = {
-    twitter: `https://twitter.com/intent/tweet?text=${shareData.title}&url=${shareData.url}&via=nasir_noor`,
+    twitter: `https://twitter.com/intent/tweet?text=${shareData.title}&url=${shareData.url}&via=nasir19noor`,
     threads: `https://threads.net/intent/post?text=${shareData.title}%20${shareData.url}`,
     facebook: `https://www.facebook.com/sharer/sharer.php?u=${shareData.url}`,
     linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${shareData.url}`,
