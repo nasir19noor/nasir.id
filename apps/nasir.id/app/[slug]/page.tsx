@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   try {
     const results = await sql`
-      SELECT id, title, summary, content, image_url, images, published_at, is_portfolio
+      SELECT id, title, summary, content, image_url, images, published_at, is_portfolio, language
       FROM articles 
       WHERE slug = ${slug}
       LIMIT 1
@@ -34,34 +34,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     }
 
     const item = results[0];
+    const language = item.language || 'en';
     
-    // Get item image (prioritize images array, then image_url, then default)
-    let itemImage = 'https://assets.nasir.id/uploads/2026/03/07/1772859194033-pixar-2-thumb.jpg'; // Default fallback
-    
-    console.log(`🖼️ [ARTICLE META] Processing images for: ${item.title}`);
-    console.log(`🖼️ [ARTICLE META] images array:`, item.images);
-    console.log(`🖼️ [ARTICLE META] image_url:`, item.image_url);
-    
-    // Try images array first (preferred)
-    if (item.images && Array.isArray(item.images) && item.images.length > 0) {
-      const firstImage = item.images[0];
-      if (firstImage && typeof firstImage === 'string' && firstImage.trim()) {
-        itemImage = convertToAssetsUrl(firstImage.trim());
-        console.log(`🖼️ [ARTICLE META] ✅ Using images[0]: ${itemImage}`);
-      }
-    }
-    // Fallback to image_url if no images array
-    else if (item.image_url && typeof item.image_url === 'string' && item.image_url.trim()) {
-      itemImage = convertToAssetsUrl(item.image_url.trim());
-      console.log(`🖼️ [ARTICLE META] ✅ Using image_url: ${itemImage}`);
-    }
-    // Use default if no images found
-    else {
-      console.log(`🖼️ [ARTICLE META] ⚠️ No article images found, using default`);
-    }
-    
-    console.log(`🖼️ [ARTICLE META] Final image: ${itemImage}`);
-
     // Create description from summary or first 160 chars of content
     let description = item.summary || '';
     if (!description && item.content) {
@@ -72,7 +46,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
     const title = `${item.title} | Nasir.id`;
     const publishedDate = new Date(item.published_at).toISOString();
-    const itemType = item.is_portfolio ? 'portfolio project' : 'article';
+    const itemType = item.is_portfolio ? 'portfolio' : 'article';
+
+    // Generate auto-branded OG image URL
+    const ogImageUrl = `${baseUrl}/api/og?${new URLSearchParams({
+      title: item.title,
+      type: itemType,
+      date: item.published_at,
+      language: language,
+    }).toString()}`;
+
+    console.log(`🖼️ [ARTICLE META] Generated OG image URL: ${ogImageUrl}`);
 
     return {
       title,
@@ -90,7 +74,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         url: `${baseUrl}/${slug}`,
         siteName: 'Nasir.id',
         type: item.is_portfolio ? 'website' : 'article',
-        locale: 'en_US',
+        locale: language === 'id' ? 'id_ID' : 'en_US',
         publishedTime: publishedDate,
         authors: ['Nasir Noor'],
         section: item.is_portfolio ? 'Portfolio' : 'Technology',
@@ -99,11 +83,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
           : ['Article', 'Technology', 'Cloud Engineering', 'DevOps'],
         images: [
           {
-            url: itemImage,
+            url: ogImageUrl,
             width: 1200,
             height: 630,
-            alt: item.title,
-            type: 'image/jpeg',
+            alt: `${item.title} - Nasir Noor`,
+            type: 'image/png',
           },
         ],
       },
@@ -114,7 +98,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         title,
         description,
         creator: '@nasir_noor',
-        images: [itemImage],
+        images: [ogImageUrl],
       },
       
       // Additional structured data
@@ -124,7 +108,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         'article:section': item.is_portfolio ? 'Portfolio' : 'Technology',
         'og:image:width': '1200',
         'og:image:height': '630',
-        'og:image:type': 'image/jpeg',
+        'og:image:type': 'image/png',
         'twitter:image:width': '1200',
         'twitter:image:height': '630',
         'twitter:site': '@nasir_noor',

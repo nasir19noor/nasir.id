@@ -20,10 +20,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   try {
     const results = await sql`
-      SELECT a.id, at.title, at.summary, at.content, a.image_url, a.images, a.published_at, a.is_portfolio
-      FROM articles a
-      JOIN article_translations at ON a.id = at.article_id
-      WHERE at.slug = ${slug} AND at.language = 'id'
+      SELECT id, title, summary, content, image_url, images, published_at, is_portfolio, language
+      FROM articles
+      WHERE slug = ${slug} AND language = 'id'
       LIMIT 1
     `;
 
@@ -36,21 +35,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
     const item = results[0];
     
-    // Get item image (prioritize images array, then image_url, then default)
-    let itemImage = 'https://assets.nasir.id/uploads/2026/03/07/1772859194033-pixar-2-thumb.jpg'; // Default fallback
-    
-    // Try images array first (preferred)
-    if (item.images && Array.isArray(item.images) && item.images.length > 0) {
-      const firstImage = item.images[0];
-      if (firstImage && typeof firstImage === 'string' && firstImage.trim()) {
-        itemImage = convertToAssetsUrl(firstImage.trim());
-      }
-    }
-    // Fallback to image_url if no images array
-    else if (item.image_url && typeof item.image_url === 'string' && item.image_url.trim()) {
-      itemImage = convertToAssetsUrl(item.image_url.trim());
-    }
-
     // Create description from summary or first 160 chars of content
     let description = item.summary || '';
     if (!description && item.content) {
@@ -61,6 +45,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
     const title = `${item.title} | Nasir.id`;
     const publishedDate = new Date(item.published_at).toISOString();
+    const itemType = item.is_portfolio ? 'portfolio' : 'article';
+
+    // Generate auto-branded OG image URL for Indonesian content
+    const ogImageUrl = `${baseUrl}/api/og?${new URLSearchParams({
+      title: item.title,
+      type: itemType,
+      date: item.published_at,
+      language: 'id',
+    }).toString()}`;
+
+    console.log(`🖼️ [ARTICLE META ID] Generated OG image URL: ${ogImageUrl}`);
 
     return {
       title,
@@ -87,11 +82,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
           : ['Artikel', 'Teknologi', 'Cloud Engineering', 'DevOps'],
         images: [
           {
-            url: itemImage,
+            url: ogImageUrl,
             width: 1200,
             height: 630,
-            alt: item.title,
-            type: 'image/jpeg',
+            alt: `${item.title} - Nasir Noor`,
+            type: 'image/png',
           },
         ],
       },
@@ -102,7 +97,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         title,
         description,
         creator: '@nasir_noor',
-        images: [itemImage],
+        images: [ogImageUrl],
       },
       
       // Additional structured data
@@ -112,7 +107,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         'article:section': item.is_portfolio ? 'Portfolio' : 'Teknologi',
         'og:image:width': '1200',
         'og:image:height': '630',
-        'og:image:type': 'image/jpeg',
+        'og:image:type': 'image/png',
         'twitter:image:width': '1200',
         'twitter:image:height': '630',
         'twitter:site': '@nasir_noor',

@@ -69,20 +69,22 @@ export default function PortfolioSection({ language = 'en' }: PortfolioSectionPr
         <section id="portfolio" className="py-24 px-6">
             <div className="max-w-6xl mx-auto">
                 <h2 className="text-4xl md:text-5xl font-bold mb-8 text-center gradient-text-secondary font-serif">
-                    Featured Projects
+                    {language === 'id' ? 'Proyek Unggulan' : 'Featured Projects'}
                 </h2>
                 <p className="text-slate-600 text-center mb-12 max-w-2xl mx-auto text-lg">
-                    Cloud infrastructure, DevOps automation, and innovative solutions
-                    that drive business transformation and technical excellence.
+                    {language === 'id'
+                        ? 'Infrastruktur cloud, otomasi DevOps, dan solusi inovatif yang mendorong transformasi bisnis dan keunggulan teknis.'
+                        : 'Cloud infrastructure, DevOps automation, and innovative solutions that drive business transformation and technical excellence.'
+                    }
                 </p>
 
                 {loading ? (
                     <div className="text-center py-12">
-                        <p className="text-slate-500">Loading portfolio...</p>
+                        <p className="text-slate-500">{language === 'id' ? 'Memuat portfolio...' : 'Loading portfolio...'}</p>
                     </div>
                 ) : projects.length === 0 ? (
                     <div className="text-center py-12 card">
-                        <p className="text-slate-500">No portfolio items yet. Check back soon!</p>
+                        <p className="text-slate-500">{language === 'id' ? 'Belum ada item portfolio. Segera hadir!' : 'No portfolio items yet. Check back soon!'}</p>
                     </div>
                 ) : (
                     <>

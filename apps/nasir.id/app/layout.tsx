@@ -39,18 +39,15 @@ export async function generateMetadata(): Promise<Metadata> {
   
   const title = `${settings.hero_title} | ${settings.hero_subtitle}` || 'Nasir Noor | Cloud & DevOps Engineer';
   
-  // Get the best image for social sharing
-  let ogImage = 'https://assets.nasir.id/uploads/2026/03/07/1772859194033-pixar-2-thumb.jpg'; // Default profile image with proper dimensions
+  // Generate auto-branded OG image URL for homepage
+  const ogImageUrl = `${baseUrl}/api/og?${new URLSearchParams({
+    title: settings.hero_title || 'Nasir Noor',
+    subtitle: settings.hero_subtitle || 'Cloud Architect | DevOps Engineer',
+    type: 'website',
+    language: 'en',
+  }).toString()}`;
   
-  if (settings.about_image) {
-    const convertedImage = convertToAssetsUrl(settings.about_image);
-    // Verify it's a valid image URL
-    if (convertedImage && (convertedImage.includes('.jpg') || convertedImage.includes('.jpeg') || convertedImage.includes('.png'))) {
-      ogImage = convertedImage;
-    }
-  }
-  
-  console.log('🖼️ [METADATA] Using OG image:', ogImage);
+  console.log('🖼️ [HOMEPAGE METADATA] Generated OG image:', ogImageUrl);
   
   return {
     title,
@@ -69,11 +66,11 @@ export async function generateMetadata(): Promise<Metadata> {
       locale: 'en_US',
       images: [
         {
-          url: ogImage,
+          url: ogImageUrl,
           width: 1200,
           height: 630,
           alt: `${settings.hero_title || 'Nasir Noor'} - Cloud & DevOps Engineer`,
-          type: 'image/jpeg',
+          type: 'image/png',
         },
       ],
     },
@@ -84,7 +81,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title,
       description: cleanDescription,
       creator: '@nasir_noor',
-      images: [ogImage],
+      images: [ogImageUrl],
     },
     
     // Additional meta tags
@@ -110,7 +107,7 @@ export async function generateMetadata(): Promise<Metadata> {
     other: {
       'og:image:width': '1200',
       'og:image:height': '630',
-      'og:image:type': 'image/jpeg',
+      'og:image:type': 'image/png',
       'twitter:image:width': '1200',
       'twitter:image:height': '630',
       'twitter:site': '@nasir_noor',
