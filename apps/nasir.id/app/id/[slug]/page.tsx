@@ -1,0 +1,289 @@
+import sql from '@/lib/db';
+import { notFound } from 'next/navigation';
+import Link from 'next/link';
+import { ArrowLeft, Calendar, Tag } from 'lucide-react';
+import AnalyticsTracker from '@/components/AnalyticsTracker';
+import Comments from '@/components/Comments';
+import { convertToAssetsUrl } from '@/lib/image-utils';
+import type { Metadata } from 'next';
+
+export const dynamic = 'force-dynamic';
+
+interface PageProps {
+  params: Promise<{ slug: string }>;
+}
+
+// Generate metadata for Indonesian article/portfolio pages
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const baseUrl = 'https://nasir.id';
+
+  try {
+    const results = await sql`
+      SELECT a.id, at.title, at.summary, at.content, a.image_url, a.images, a.published_at, a.is_portfolio
+      FROM articles a
+      JOIN article_translations at ON a.id = at.article_id
+      WHERE at.slug = ${slug} AND at.language = 'id'
+      LIMIT 1
+    `;
+
+    if (!results || results.length === 0) {
+      return {
+        title: 'Halaman Tidak Ditemukan | Nasir.id',
+        description: 'Halaman yang diminta tidak dapat ditemukan.',
+      };
+    }
+
+    const item = results[0];
+    
+    // Get item image (prioritize images array, then image_url, then default)
+    let itemImage = 'https://assets.nasir.id/uploads/2026/03/07/1772859194033-pixar-2-thumb.jpg'; // Default fallback
+    
+    // Try images array first (preferred)
+    if (item.images && Array.isArray(item.images) && item.images.length > 0) {
+      const firstImage = item.images[0];
+      if (firstImage && typeof firstImage === 'string' && firstImage.trim()) {
+        itemImage = convertToAssetsUrl(firstImage.trim());
+      }
+    }
+    // Fallback to image_url if no images array
+    else if (item.image_url && typeof item.image_url === 'string' && item.image_url.trim()) {
+      itemImage = convertToAssetsUrl(item.image_url.trim());
+    }
+
+    // Create description from summary or first 160 chars of content
+    let description = item.summary || '';
+    if (!description && item.content) {
+      // Strip HTML tags and get first 160 characters
+      const plainText = item.content.replace(/<[^>]*>/g, '');
+      description = plainText.substring(0, 160).trim() + '...';
+    }
+
+    const title = `${item.title} | Nasir.id`;
+    const publishedDate = new Date(item.published_at).toISOString();
+
+    return {
+      title,
+      description,
+      keywords: item.is_portfolio 
+        ? ['Portfolio', 'Proyek', 'Cloud Engineering', 'DevOps', 'AWS', 'Azure', 'GCP']
+        : ['Artikel', 'Blog', 'Cloud Engineering', 'DevOps', 'AWS', 'Azure', 'GCP', 'Tutorial'],
+      authors: [{ name: 'Nasir Noor' }],
+      creator: 'Nasir Noor',
+      
+      // Open Graph tags
+      openGraph: {
+        title,
+        description,
+        url: `${baseUrl}/id/${slug}`,
+        siteName: 'Nasir.id',
+        type: item.is_portfolio ? 'website' : 'article',
+        locale: 'id_ID',
+        publishedTime: publishedDate,
+        authors: ['Nasir Noor'],
+        section: item.is_portfolio ? 'Portfolio' : 'Teknologi',
+        tags: item.is_portfolio 
+          ? ['Portfolio', 'Proyek', 'Cloud Engineering', 'DevOps']
+          : ['Artikel', 'Teknologi', 'Cloud Engineering', 'DevOps'],
+        images: [
+          {
+            url: itemImage,
+            width: 1200,
+            height: 630,
+            alt: item.title,
+            type: 'image/jpeg',
+          },
+        ],
+      },
+      
+      // Twitter Card tags
+      twitter: {
+        card: 'summary_large_image',
+        title,
+        description,
+        creator: '@nasir_noor',
+        images: [itemImage],
+      },
+      
+      // Additional structured data
+      other: {
+        'article:published_time': publishedDate,
+        'article:author': 'Nasir Noor',
+        'article:section': item.is_portfolio ? 'Portfolio' : 'Teknologi',
+        'og:image:width': '1200',
+        'og:image:height': '630',
+        'og:image:type': 'image/jpeg',
+        'twitter:image:width': '1200',
+        'twitter:image:height': '630',
+        'twitter:site': '@nasir_noor',
+        'fb:app_id': '',
+      },
+    };
+  } catch (error) {
+    console.error('Error generating metadata:', error);
+    return {
+      title: 'Nasir.id',
+      description: 'Cloud & DevOps engineer yang passionate dalam membangun infrastruktur yang resilient dan scalable.',
+    };
+  }
+}
+
+export default async function IndonesianSlugPage({ params }: PageProps) {
+  const { slug } = await params;
+
+  console.log(`🔍 [ID SLUG] Looking up Indonesian content for slug: ${slug}`);
+
+  try {
+    const results = await sql`
+      SELECT a.id, at.title, at.content, a.published_at, a.is_portfolio, at.summary, a.image_url, a.images
+      FROM articles a
+      JOIN article_translations at ON a.id = at.article_id
+      WHERE at.slug = ${slug} AND at.language = 'id'
+      LIMIT 1
+    `;
+
+    if (!results || results.length === 0) {
+      console.log(`❌ [ID SLUG] No Indonesian content found for slug: ${slug}`);
+      notFound();
+    }
+
+    const item = results[0];
+    const isPortfolio = item.is_portfolio;
+    
+    console.log(`✅ [ID SLUG] Found Indonesian ${isPortfolio ? 'portfolio project' : 'article'}: ${item.title}`);
+
+    // Get the featured image (first from images array, then image_url)
+    let featuredImage = null;
+    if (item.images && item.images.length > 0) {
+      featuredImage = convertToAssetsUrl(item.images[0]);
+    } else if (item.image_url) {
+      featuredImage = convertToAssetsUrl(item.image_url);
+    }
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50">
+        <AnalyticsTracker 
+          pageType={isPortfolio ? "portfolio" : "article"} 
+          articleId={item.id} 
+          articleSlug={slug} 
+        />
+        
+        {/* Header */}
+        <header className="bg-white/90 backdrop-blur-sm border-b border-slate-200 sticky top-0 z-10">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+            <Link
+              href="/id"
+              className="text-xl font-bold gradient-text-primary hover:scale-105 transition-transform"
+            >
+              Nasir Noor
+            </Link>
+            <nav className="hidden sm:flex items-center gap-6">
+              <Link
+                href="/id#articles"
+                className="text-slate-600 hover:text-blue-600 transition-colors font-medium"
+              >
+                Artikel
+              </Link>
+              <Link
+                href="/id#portfolio"
+                className="text-slate-600 hover:text-emerald-600 transition-colors font-medium"
+              >
+                Portfolio
+              </Link>
+              <Link
+                href="/id#contact"
+                className="text-slate-600 hover:text-blue-600 transition-colors font-medium"
+              >
+                Kontak
+              </Link>
+            </nav>
+            {/* Mobile menu button */}
+            <div className="sm:hidden">
+              <Link
+                href="/id"
+                className="text-slate-600 hover:text-blue-600 transition-colors font-medium text-sm px-3 py-2 rounded-lg hover:bg-blue-50"
+              >
+                Beranda
+              </Link>
+            </div>
+          </div>
+        </header>
+
+        <main className="max-w-4xl mx-auto py-6 sm:py-12 px-4 sm:px-6 min-h-screen">
+          {/* Content Header */}
+          <header className="mb-8 sm:mb-12">
+            <div className="flex items-center gap-2 mb-4">
+              <Tag 
+                className={isPortfolio ? "text-emerald-500" : "text-blue-500"} 
+                size={20} 
+              />
+              <span className={`text-sm font-medium px-3 py-1 rounded-full ${
+                isPortfolio 
+                  ? "bg-emerald-100 text-emerald-700" 
+                  : "bg-blue-100 text-blue-700"
+              }`}>
+                {isPortfolio ? "Proyek Portfolio" : "Artikel"}
+              </span>
+            </div>
+            
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-slate-900 leading-tight mb-4 sm:mb-6 font-serif">
+              {item.title}
+            </h1>
+            
+            <div className="flex items-center gap-2 text-slate-500">
+              <Calendar size={16} />
+              <span className="text-sm">
+                Dipublikasikan pada {new Date(item.published_at).toLocaleDateString('id-ID', {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                })}
+              </span>
+            </div>
+          </header>
+
+          {/* Featured Image */}
+          {featuredImage && (
+            <div className="mb-8 sm:mb-12">
+              <div className="aspect-[16/9] relative overflow-hidden rounded-xl sm:rounded-2xl border border-slate-200 bg-gradient-to-br from-blue-50 to-emerald-50 shadow-lg">
+                <img
+                  src={featuredImage}
+                  alt={item.title}
+                  className="w-full h-full object-cover"
+                  loading="eager"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Content */}
+          <article className="card p-4 sm:p-8 md:p-12 mb-8 sm:mb-12">
+            <div 
+              className="prose prose-sm sm:prose-lg max-w-none prose-headings:text-slate-900 prose-p:text-slate-700 prose-a:text-blue-600 prose-strong:text-slate-900 prose-code:text-blue-600 prose-code:bg-blue-50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-slate-900 prose-pre:text-slate-100 prose-pre:overflow-x-auto prose-table:overflow-x-auto [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6 [&_li]:list-item break-words overflow-x-auto"
+              dangerouslySetInnerHTML={{ __html: item.content }}
+            />
+          </article>
+
+          {/* Comments Section */}
+          <div className="card p-4 sm:p-8 md:p-12">
+            <Comments articleId={item.id} articleTitle={item.title} />
+          </div>
+
+          {/* Navigation */}
+          <div className="mt-8 sm:mt-12 pt-6 sm:pt-8 border-t border-slate-200">
+            <Link
+              href="/id"
+              className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors font-medium"
+            >
+              <ArrowLeft size={16} />
+              Kembali ke Beranda
+            </Link>
+          </div>
+        </main>
+      </div>
+    );
+  } catch (error) {
+    console.error(`💥 [ID SLUG] Error loading Indonesian article ${slug}:`, error);
+    notFound();
+  }
+}

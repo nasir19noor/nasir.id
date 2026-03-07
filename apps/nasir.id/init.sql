@@ -5,17 +5,19 @@
 -- TABLES
 -- ============================================================================
 
--- Articles table (merged with portfolio)
+-- Articles table (merged with portfolio) - with language support
 CREATE TABLE IF NOT EXISTS articles (
   id SERIAL PRIMARY KEY,
   title VARCHAR(500) NOT NULL,
-  slug VARCHAR(500) UNIQUE NOT NULL,
+  slug VARCHAR(500) NOT NULL,
   summary TEXT,
   content TEXT NOT NULL,
   image_url TEXT,
   images TEXT[] DEFAULT '{}',
   is_portfolio BOOLEAN DEFAULT FALSE,
-  published_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  language VARCHAR(5) DEFAULT 'en',
+  published_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(slug, language)
 );
 
 -- Comments table for articles and portfolio items
@@ -31,12 +33,14 @@ CREATE TABLE IF NOT EXISTS comments (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Settings table for landing page configuration
+-- Settings table for landing page configuration - with language support
 CREATE TABLE IF NOT EXISTS settings (
   id SERIAL PRIMARY KEY,
-  key VARCHAR(100) UNIQUE NOT NULL,
+  key VARCHAR(100) NOT NULL,
   value TEXT,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  language VARCHAR(5) DEFAULT 'en',
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(key, language)
 );
 
 -- Analytics table for visitor tracking
@@ -75,9 +79,13 @@ CREATE INDEX IF NOT EXISTS idx_analytics_article_id ON analytics(article_id);
 CREATE INDEX IF NOT EXISTS idx_analytics_visitor_ip ON analytics(visitor_ip);
 
 -- Articles indexes
-CREATE INDEX IF NOT EXISTS idx_articles_slug ON articles(slug);
+CREATE INDEX IF NOT EXISTS idx_articles_slug_language ON articles(slug, language);
+CREATE INDEX IF NOT EXISTS idx_articles_language ON articles(language);
 CREATE INDEX IF NOT EXISTS idx_articles_is_portfolio ON articles(is_portfolio);
 CREATE INDEX IF NOT EXISTS idx_articles_published_at ON articles(published_at);
+
+-- Settings indexes
+CREATE INDEX IF NOT EXISTS idx_settings_key_language ON settings(key, language);
 
 -- ============================================================================
 -- VIEWS
@@ -114,15 +122,25 @@ ORDER BY view_count DESC;
 -- DEFAULT DATA
 -- ============================================================================
 
--- Insert default settings
-INSERT INTO settings (key, value) VALUES
-('hero_title', 'Nasir Noor'),
-('hero_subtitle', 'Cloud Architect | DevOps Engineer | Innovation Leader'),
-('hero_description', 'Transforming ideas into scalable cloud solutions with expertise in modern infrastructure, automation, and emerging technologies.'),
-('about_image', 'https://assets.nasir.id/uploads/2026/03/07/1772859194033-pixar-2-thumb.jpg'),
-('about_bio', 'I''m a Cloud & DevOps engineer passionate about building resilient, scalable infrastructure and streamlining deployment pipelines. With expertise across AWS, Azure, and GCP, I automate everything and embrace Infrastructure as Code. Recently diving deep into AI/ML to integrate intelligent automation into DevOps workflows.'),
-('tech_stack', '["AWS ☁️","Azure 🌐","GCP 🚀","Kubernetes ⚓","Docker 🐳","Terraform 🏗️","Ansible 🤖","Jenkins 🔧","GitLab CI/CD 🦊","Python 🐍","Bash 💻","Prometheus 📊","Grafana 📈","ELK Stack 🔍","ArgoCD 🔄","Helm ⛵","Linux 🐧","Machine Learning 🧠","TensorFlow 🤖","PyTorch 🔥"]')
-ON CONFLICT (key) DO NOTHING;
+-- Insert default settings (English)
+INSERT INTO settings (key, value, language) VALUES
+('hero_title', 'Nasir Noor', 'en'),
+('hero_subtitle', 'Cloud Architect | DevOps Engineer | Innovation Leader', 'en'),
+('hero_description', 'Transforming ideas into scalable cloud solutions with expertise in modern infrastructure, automation, and emerging technologies.', 'en'),
+('about_image', 'https://assets.nasir.id/uploads/2026/03/07/1772859194033-pixar-2-thumb.jpg', 'en'),
+('about_bio', 'I''m a Cloud & DevOps engineer passionate about building resilient, scalable infrastructure and streamlining deployment pipelines. With expertise across AWS, Azure, and GCP, I automate everything and embrace Infrastructure as Code. Recently diving deep into AI/ML to integrate intelligent automation into DevOps workflows.', 'en'),
+('tech_stack', '["AWS ☁️","Azure 🌐","GCP 🚀","Kubernetes ⚓","Docker 🐳","Terraform 🏗️","Ansible 🤖","Jenkins 🔧","GitLab CI/CD 🦊","Python 🐍","Bash 💻","Prometheus 📊","Grafana 📈","ELK Stack 🔍","ArgoCD 🔄","Helm ⛵","Linux 🐧","Machine Learning 🧠","TensorFlow 🤖","PyTorch 🔥"]', 'en')
+ON CONFLICT (key, language) DO NOTHING;
+
+-- Insert Indonesian settings
+INSERT INTO settings (key, value, language) VALUES
+('hero_title', 'Nasir Noor', 'id'),
+('hero_subtitle', 'Arsitek Cloud | Insinyur DevOps | Pemimpin Inovasi', 'id'),
+('hero_description', 'Mengubah ide menjadi solusi cloud yang scalable dengan keahlian dalam infrastruktur modern, otomasi, dan teknologi emerging.', 'id'),
+('about_image', 'https://assets.nasir.id/uploads/2026/03/07/1772859194033-pixar-2-thumb.jpg', 'id'),
+('about_bio', 'Saya adalah seorang Cloud & DevOps engineer yang passionate dalam membangun infrastruktur yang resilient dan scalable serta merampingkan deployment pipeline. Dengan keahlian di AWS, Azure, dan GCP, saya mengotomatisasi segala hal dan menerapkan Infrastructure as Code. Baru-baru ini mendalami AI/ML untuk mengintegrasikan otomasi cerdas ke dalam workflow DevOps.', 'id'),
+('tech_stack', '["AWS ☁️","Azure 🌐","GCP 🚀","Kubernetes ⚓","Docker 🐳","Terraform 🏗️","Ansible 🤖","Jenkins 🔧","GitLab CI/CD 🦊","Python 🐍","Bash 💻","Prometheus 📊","Grafana 📈","ELK Stack 🔍","ArgoCD 🔄","Helm ⛵","Linux 🐧","Machine Learning 🧠","TensorFlow 🤖","PyTorch 🔥"]', 'id')
+ON CONFLICT (key, language) DO NOTHING;
 
 -- Insert sample article
 INSERT INTO articles (title, slug, summary, content, is_portfolio, published_at) VALUES
@@ -177,6 +195,60 @@ spec:
 )
 ON CONFLICT (slug) DO NOTHING;
 
+-- Insert Indonesian version of the sample article as a separate row
+INSERT INTO articles (title, slug, summary, content, is_portfolio, language, published_at) VALUES
+(
+  'Memulai dengan Kubernetes di GCP',
+  'memulai-dengan-kubernetes-di-gcp',
+  'Panduan lengkap untuk deploy cluster Kubernetes pertama Anda di Google Cloud Platform.',
+  '<h1>Memulai dengan Kubernetes di GCP</h1>
+
+<p>Kubernetes telah menjadi standar de facto untuk orkestrasi container. Dalam artikel ini, kita akan membahas cara setup cluster GKE yang production-ready.</p>
+
+<h2>Prasyarat</h2>
+<ul>
+<li>Akun Google Cloud</li>
+<li><code>gcloud</code> CLI terinstall</li>
+<li><code>kubectl</code> terinstall</li>
+</ul>
+
+<h2>Membuat Cluster</h2>
+<pre><code>gcloud container clusters create my-cluster \
+  --zone us-central1-a \
+  --num-nodes 3 \
+  --machine-type e2-medium</code></pre>
+
+<h2>Deploy Aplikasi Pertama</h2>
+<p>Setelah cluster siap, deploy aplikasi nginx sederhana:</p>
+
+<pre><code>apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:latest
+        ports:
+        - containerPort: 80</code></pre>
+
+<h2>Kesimpulan</h2>
+<p>Dengan GKE, memulai dengan Kubernetes menjadi mudah. Managed control plane memungkinkan Anda fokus pada aplikasi daripada manajemen cluster.</p>',
+  FALSE,
+  'id',
+  '2026-02-20T10:00:00Z'
+)
+ON CONFLICT (slug, language) DO NOTHING;
+
 -- Insert sample portfolio items
 INSERT INTO articles (title, slug, summary, content, is_portfolio, published_at) VALUES
 (
@@ -221,6 +293,53 @@ INSERT INTO articles (title, slug, summary, content, is_portfolio, published_at)
   '2026-02-10T10:00:00Z'
 )
 ON CONFLICT (slug) DO NOTHING;
+
+-- Insert Indonesian versions of portfolio items as separate rows
+INSERT INTO articles (title, slug, summary, content, is_portfolio, language, published_at) VALUES
+(
+  'Platform Migrasi Cloud',
+  'platform-migrasi-cloud',
+  'Migrasi infrastruktur legacy on-premise ke lingkungan multi-cloud dengan zero downtime.',
+  '<h2>Gambaran Proyek</h2>
+<p>Berhasil migrasi infrastruktur legacy on-premise ke lingkungan multi-cloud dengan zero downtime, meningkatkan skalabilitas dan mengurangi biaya operasional sebesar 40%.</p>
+
+<h3>Pencapaian Utama</h3>
+<ul>
+<li>Strategi migrasi zero downtime</li>
+<li>Pengurangan biaya 40%</li>
+<li>Peningkatan skalabilitas dan reliabilitas</li>
+<li>Implementasi arsitektur multi-cloud</li>
+</ul>
+
+<h3>Teknologi yang Digunakan</h3>
+<p>AWS, Terraform, Docker, Kubernetes, Ansible</p>',
+  TRUE,
+  'id',
+  '2026-02-15T10:00:00Z'
+),
+(
+  'Otomasi Pipeline CI/CD',
+  'otomasi-pipeline-cicd',
+  'Membangun pipeline CI/CD end-to-end dengan automated testing, security scanning, dan deployment.',
+  '<h2>Gambaran Proyek</h2>
+<p>Merancang dan mengimplementasikan pipeline CI/CD komprehensif yang mengotomatisasi seluruh proses software delivery, dari commit kode hingga deployment production.</p>
+
+<h3>Fitur Utama</h3>
+<ul>
+<li>Automated testing dan quality gates</li>
+<li>Integrasi security scanning</li>
+<li>Strategi blue-green deployment</li>
+<li>Kemampuan rollback</li>
+<li>Dukungan multi-environment</li>
+</ul>
+
+<h3>Teknologi yang Digunakan</h3>
+<p>Jenkins, GitLab CI, ArgoCD, Helm, Docker, Kubernetes</p>',
+  TRUE,
+  'id',
+  '2026-02-10T10:00:00Z'
+)
+ON CONFLICT (slug, language) DO NOTHING;
 
 -- ============================================================================
 -- MIGRATION UTILITIES (for existing installations)

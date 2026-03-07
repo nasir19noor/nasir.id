@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Menu, X, Sparkles } from 'lucide-react';
+import LanguageToggle from './LanguageToggle';
 
 export default function Navbar() {
     const [isOpen, setIsOpen] = useState(false);
@@ -38,6 +39,7 @@ export default function Navbar() {
                                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 gradient-primary group-hover:w-full transition-all duration-300 rounded-full"></span>
                             </button>
                         ))}
+                        <LanguageToggle />
                     </div>
 
                     {/* Mobile Toggle */}
@@ -61,6 +63,9 @@ export default function Navbar() {
                                 {item}
                             </button>
                         ))}
+                        <div className="px-4 py-2">
+                            <LanguageToggle />
+                        </div>
                     </div>
                 )}
             </div>
