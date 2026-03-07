@@ -40,7 +40,17 @@ export async function generateMetadata(): Promise<Metadata> {
   const title = `${settings.hero_title} | ${settings.hero_subtitle}` || 'Nasir Noor | Cloud & DevOps Engineer';
   
   // Get the best image for social sharing
-  const ogImage = convertToAssetsUrl(settings.about_image) || `${baseUrl}/api/og?title=${encodeURIComponent(settings.hero_title || 'Nasir Noor')}&subtitle=${encodeURIComponent(settings.hero_subtitle || 'Cloud & DevOps Engineer')}`;
+  let ogImage = 'https://images.unsplash.com/photo-1752859951149-7d3fc700a7ec?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxOYXNpcnwxNzcyNjAxMzE2fDA&ixlib=rb-4.1.0&q=80&w=1200&h=630'; // Default profile image with proper dimensions
+  
+  if (settings.about_image) {
+    const convertedImage = convertToAssetsUrl(settings.about_image);
+    // Verify it's a valid image URL
+    if (convertedImage && (convertedImage.includes('.jpg') || convertedImage.includes('.jpeg') || convertedImage.includes('.png'))) {
+      ogImage = convertedImage;
+    }
+  }
+  
+  console.log('🖼️ [METADATA] Using OG image:', ogImage);
   
   return {
     title,
@@ -128,6 +138,7 @@ export default function RootLayout({
                 {/* Preconnect to external domains for performance */}
                 <link rel="preconnect" href="https://s3.ap-southeast-1.amazonaws.com" />
                 <link rel="preconnect" href="https://assets.nasir.id" />
+                <link rel="preconnect" href="https://images.unsplash.com" />
                 <link rel="preconnect" href="https://fonts.googleapis.com" />
                 <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
                 
@@ -136,6 +147,14 @@ export default function RootLayout({
                 <meta name="mobile-web-app-capable" content="yes" />
                 <meta name="apple-mobile-web-app-capable" content="yes" />
                 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+                
+                {/* Fallback Open Graph tags */}
+                <meta property="og:site_name" content="Nasir.id" />
+                <meta property="og:type" content="website" />
+                <meta property="og:locale" content="en_US" />
+                <meta name="twitter:card" content="summary_large_image" />
+                <meta name="twitter:site" content="@nasir_noor" />
+                <meta name="twitter:creator" content="@nasir_noor" />
             </head>
             <body>{children}</body>
         </html>

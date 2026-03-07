@@ -35,12 +35,19 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
     const item = results[0];
     
-    // Get item image (first from images array, then image_url, then fallback to dynamic OG)
-    let itemImage = `${baseUrl}/api/og?title=${encodeURIComponent(item.title)}&type=${item.is_portfolio ? 'Portfolio' : 'Article'}`;
+    // Get item image (first from images array, then image_url, then default profile)
+    let itemImage = 'https://images.unsplash.com/photo-1752859951149-7d3fc700a7ec?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxOYXNpcnwxNzcyNjAxMzE2fDA&ixlib=rb-4.1.0&q=80&w=1200&h=630'; // Default fallback
+    
     if (item.images && item.images.length > 0) {
-      itemImage = convertToAssetsUrl(item.images[0]);
+      const convertedImage = convertToAssetsUrl(item.images[0]);
+      if (convertedImage && (convertedImage.includes('.jpg') || convertedImage.includes('.jpeg') || convertedImage.includes('.png'))) {
+        itemImage = convertedImage;
+      }
     } else if (item.image_url) {
-      itemImage = convertToAssetsUrl(item.image_url);
+      const convertedImage = convertToAssetsUrl(item.image_url);
+      if (convertedImage && (convertedImage.includes('.jpg') || convertedImage.includes('.jpeg') || convertedImage.includes('.png'))) {
+        itemImage = convertedImage;
+      }
     }
 
     // Create description from summary or first 160 chars of content
