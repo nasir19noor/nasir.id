@@ -39,6 +39,9 @@ export async function generateMetadata(): Promise<Metadata> {
   
   const title = `${settings.hero_title} | ${settings.hero_subtitle}` || 'Nasir Noor | Cloud & DevOps Engineer';
   
+  // Get the best image for social sharing
+  const ogImage = convertToAssetsUrl(settings.about_image) || `${baseUrl}/api/og?title=${encodeURIComponent(settings.hero_title || 'Nasir Noor')}&subtitle=${encodeURIComponent(settings.hero_subtitle || 'Cloud & DevOps Engineer')}`;
+  
   return {
     title,
     description: cleanDescription,
@@ -56,10 +59,10 @@ export async function generateMetadata(): Promise<Metadata> {
       locale: 'en_US',
       images: [
         {
-          url: convertToAssetsUrl(settings.about_image) || `${baseUrl}/default-og-image.jpg`,
+          url: ogImage,
           width: 1200,
           height: 630,
-          alt: `${settings.hero_title || 'Nasir Noor'} - Profile Picture`,
+          alt: `${settings.hero_title || 'Nasir Noor'} - Cloud & DevOps Engineer`,
           type: 'image/jpeg',
         },
       ],
@@ -71,7 +74,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title,
       description: cleanDescription,
       creator: '@nasir_noor',
-      images: [convertToAssetsUrl(settings.about_image) || `${baseUrl}/default-og-image.jpg`],
+      images: [ogImage],
     },
     
     // Additional meta tags
@@ -97,6 +100,11 @@ export async function generateMetadata(): Promise<Metadata> {
     other: {
       'og:image:width': '1200',
       'og:image:height': '630',
+      'og:image:type': 'image/jpeg',
+      'twitter:image:width': '1200',
+      'twitter:image:height': '630',
+      'twitter:site': '@nasir_noor',
+      'fb:app_id': '', // Add your Facebook App ID if you have one
       'theme-color': '#3b82f6', // Professional blue theme color
     },
   };
@@ -119,8 +127,15 @@ export default function RootLayout({
                 
                 {/* Preconnect to external domains for performance */}
                 <link rel="preconnect" href="https://s3.ap-southeast-1.amazonaws.com" />
+                <link rel="preconnect" href="https://assets.nasir.id" />
                 <link rel="preconnect" href="https://fonts.googleapis.com" />
                 <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+                
+                {/* Additional meta tags for better social media support */}
+                <meta name="format-detection" content="telephone=no" />
+                <meta name="mobile-web-app-capable" content="yes" />
+                <meta name="apple-mobile-web-app-capable" content="yes" />
+                <meta name="apple-mobile-web-app-status-bar-style" content="default" />
             </head>
             <body>{children}</body>
         </html>

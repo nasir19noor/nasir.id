@@ -35,8 +35,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
     const item = results[0];
     
-    // Get item image (first from images array, then image_url, then fallback)
-    let itemImage = `${baseUrl}/default-og-image.jpg`;
+    // Get item image (first from images array, then image_url, then fallback to dynamic OG)
+    let itemImage = `${baseUrl}/api/og?title=${encodeURIComponent(item.title)}&type=${item.is_portfolio ? 'Portfolio' : 'Article'}`;
     if (item.images && item.images.length > 0) {
       itemImage = convertToAssetsUrl(item.images[0]);
     } else if (item.image_url) {
@@ -105,6 +105,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         'article:section': item.is_portfolio ? 'Portfolio' : 'Technology',
         'og:image:width': '1200',
         'og:image:height': '630',
+        'og:image:type': 'image/jpeg',
+        'twitter:image:width': '1200',
+        'twitter:image:height': '630',
+        'twitter:site': '@nasir_noor',
+        'fb:app_id': '', // Add your Facebook App ID if you have one
       },
     };
   } catch (error) {
