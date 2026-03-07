@@ -9,13 +9,17 @@ interface Settings {
     hero_description?: string;
 }
 
-export default function HeroSection() {
+interface HeroSectionProps {
+    language?: string;
+}
+
+export default function HeroSection({ language = 'en' }: HeroSectionProps) {
     const [settings, setSettings] = useState<Settings>({});
 
     useEffect(() => {
         async function fetchSettings() {
             try {
-                const res = await fetch('/api/settings');
+                const res = await fetch(`/api/settings/${language}`);
                 if (res.ok) {
                     const data = await res.json();
                     setSettings(data);
@@ -25,7 +29,7 @@ export default function HeroSection() {
             }
         }
         fetchSettings();
-    }, []);
+    }, [language]);
 
     const scrollTo = (id: string) => {
         const el = document.getElementById(id);

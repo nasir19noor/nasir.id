@@ -15,14 +15,18 @@ interface PortfolioItem {
     published_at: string;
 }
 
-export default function PortfolioSection() {
+interface PortfolioSectionProps {
+    language?: string;
+}
+
+export default function PortfolioSection({ language = 'en' }: PortfolioSectionProps) {
     const [projects, setProjects] = useState<PortfolioItem[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         async function fetchPortfolio() {
             try {
-                const res = await fetch('/api/public/portfolio');
+                const res = await fetch(`/api/public/portfolio/${language}`);
                 if (res.ok) {
                     const data = await res.json();
                     setProjects(data);
@@ -34,7 +38,7 @@ export default function PortfolioSection() {
             }
         }
         fetchPortfolio();
-    }, []);
+    }, [language]);
 
     // Extract plain text from HTML for summary
     const getTextSummary = (html: string) => {

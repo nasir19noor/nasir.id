@@ -14,29 +14,17 @@ export async function GET(
             return NextResponse.json({ error: 'Invalid language' }, { status: 400 });
         }
 
-        // Get translated settings
-        const translatedSettings = await sql`
-            SELECT setting_key, value 
-            FROM setting_translations
-            WHERE language = ${lang}
-        `;
-        
-        // Get shared settings (like images) from main settings table
-        const sharedSettings = await sql`
+        // Get settings for the specified language
+        const settings = await sql`
             SELECT key, value 
             FROM settings
-            WHERE key IN ('about_image', 'hero_image', 'profile_image')
+            WHERE language = ${lang}
         `;
         
         const settingsObj: Record<string, string> = {};
         
-        // Add translated settings
-        translatedSettings.forEach((setting) => {
-            settingsObj[setting.setting_key as string] = setting.value as string;
-        });
-        
-        // Add shared settings with image URL conversion
-        sharedSettings.forEach((setting) => {
+        // Process settings with image URL conversion
+        settings.forEach((setting) => {
             let value = setting.value as string;
             
             // Convert image URLs to assets domain

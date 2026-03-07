@@ -15,11 +15,10 @@ export async function GET(
         }
 
         const projects = await sql`
-            SELECT a.id, at.title as project_title, at.content as description, a.image_url, a.images, at.slug, a.published_at 
-            FROM articles a
-            JOIN article_translations at ON a.id = at.article_id
-            WHERE a.is_portfolio = TRUE AND at.language = ${lang}
-            ORDER BY a.published_at DESC
+            SELECT id, title as project_title, content as description, image_url, images, slug, published_at 
+            FROM articles
+            WHERE is_portfolio = TRUE AND language = ${lang}
+            ORDER BY published_at DESC
         `;
         
         // Process image URLs to use assets domain

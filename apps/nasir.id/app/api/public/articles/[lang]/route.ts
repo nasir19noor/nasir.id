@@ -15,11 +15,10 @@ export async function GET(
         }
 
         const articles = await sql`
-            SELECT a.id, at.title, at.slug, at.summary, a.image_url, a.images, a.published_at 
-            FROM articles a
-            JOIN article_translations at ON a.id = at.article_id
-            WHERE a.is_portfolio = FALSE AND at.language = ${lang}
-            ORDER BY a.published_at DESC 
+            SELECT id, title, slug, summary, image_url, images, published_at 
+            FROM articles
+            WHERE is_portfolio = FALSE AND language = ${lang}
+            ORDER BY published_at DESC 
             LIMIT 4
         `;
         

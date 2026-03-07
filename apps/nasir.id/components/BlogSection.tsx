@@ -15,14 +15,18 @@ interface Article {
     published_at: string;
 }
 
-export default function BlogSection() {
+interface BlogSectionProps {
+    language?: string;
+}
+
+export default function BlogSection({ language = 'en' }: BlogSectionProps) {
     const [articles, setArticles] = useState<Article[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         async function fetchArticles() {
             try {
-                const res = await fetch('/api/public/articles');
+                const res = await fetch(`/api/public/articles/${language}`);
                 if (res.ok) {
                     const data = await res.json();
                     setArticles(data);
@@ -34,7 +38,7 @@ export default function BlogSection() {
             }
         }
         fetchArticles();
-    }, []);
+    }, [language]);
 
     // Helper function to get the best image URL for an article
     const getArticleImageUrl = (article: Article): string | null => {

@@ -10,7 +10,11 @@ interface Settings {
     tech_stack?: string;
 }
 
-export default function AboutSection() {
+interface AboutSectionProps {
+    language?: string;
+}
+
+export default function AboutSection({ language = 'en' }: AboutSectionProps) {
     const [settings, setSettings] = useState<Settings>({});
     const [imageKey, setImageKey] = useState(Date.now());
     const [techStack, setTechStack] = useState<string[]>([]);
@@ -18,7 +22,7 @@ export default function AboutSection() {
     useEffect(() => {
         async function fetchSettings() {
             try {
-                const res = await fetch('/api/settings', {
+                const res = await fetch(`/api/settings/${language}`, {
                     cache: 'no-store',
                     headers: {
                         'Cache-Control': 'no-cache',
@@ -52,7 +56,7 @@ export default function AboutSection() {
             }
         }
         fetchSettings();
-    }, []);
+    }, [language]);
 
     return (
         <section id="about" className="py-16 px-6 bg-gradient-to-br from-blue-50 to-emerald-50">
