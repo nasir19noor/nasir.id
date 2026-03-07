@@ -16,7 +16,7 @@ interface PortfolioItem {
     published_at: string;
 }
 
-export default function PortfolioPage() {
+export default function PortfolioPageID() {
     const [projects, setProjects] = useState<PortfolioItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -25,7 +25,7 @@ export default function PortfolioPage() {
     useEffect(() => {
         async function fetchPortfolio() {
             try {
-                const res = await fetch('/api/public/portfolio/en');
+                const res = await fetch('/api/public/portfolio/id');
                 if (res.ok) {
                     const data = await res.json();
                     setProjects(data);
@@ -80,24 +80,24 @@ export default function PortfolioPage() {
                 <div className="max-w-6xl mx-auto px-6 py-12">
                     <div className="text-center">
                         <h1 className="text-4xl md:text-5xl font-bold mb-4 gradient-text-secondary font-serif">
-                            Portfolio & Projects
+                            Portfolio & Proyek
                         </h1>
                         <p className="text-slate-600 text-lg max-w-2xl mx-auto mb-8">
-                            Cloud infrastructure, DevOps automation, and innovative solutions
-                            that drive business transformation and technical excellence.
+                            Infrastruktur cloud, otomasi DevOps, dan solusi inovatif
+                            yang mendorong transformasi bisnis dan keunggulan teknis.
                         </p>
                         
                         {/* Language Toggle */}
                         <div className="flex justify-center gap-2 mb-8">
                             <Link
                                 href="/portfolio"
-                                className="px-4 py-2 bg-emerald-500 text-white rounded-lg font-medium"
+                                className="px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg font-medium transition-colors"
                             >
                                 🇺🇸 English
                             </Link>
                             <Link
                                 href="/id/portfolio"
-                                className="px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg font-medium transition-colors"
+                                className="px-4 py-2 bg-emerald-500 text-white rounded-lg font-medium"
                             >
                                 🇮🇩 Bahasa Indonesia
                             </Link>
@@ -108,7 +108,7 @@ export default function PortfolioPage() {
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                             <input
                                 type="text"
-                                placeholder="Search projects..."
+                                placeholder="Cari proyek..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
@@ -122,7 +122,7 @@ export default function PortfolioPage() {
             <div className="max-w-6xl mx-auto px-6 py-12">
                 {loading ? (
                     <div className="text-center py-12">
-                        <p className="text-slate-500">Loading projects...</p>
+                        <p className="text-slate-500">Memuat proyek...</p>
                     </div>
                 ) : filteredProjects.length === 0 ? (
                     <div className="text-center py-12">
@@ -131,16 +131,16 @@ export default function PortfolioPage() {
                                 {searchTerm ? (
                                     <>
                                         <Filter className="mx-auto mb-4 text-gray-400" size={48} />
-                                        <h3 className="text-lg font-semibold text-gray-900 mb-2">No projects found</h3>
+                                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Proyek tidak ditemukan</h3>
                                         <p className="text-gray-500">
-                                            No projects match your search for "{searchTerm}". Try different keywords.
+                                            Tidak ada proyek yang cocok dengan pencarian "{searchTerm}". Coba kata kunci lain.
                                         </p>
                                     </>
                                 ) : (
                                     <>
                                         <Briefcase className="mx-auto mb-4 text-gray-400" size={48} />
-                                        <h3 className="text-lg font-semibold text-gray-900 mb-2">No projects yet</h3>
-                                        <p className="text-gray-500">Check back soon for new projects!</p>
+                                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Belum ada proyek</h3>
+                                        <p className="text-gray-500">Segera hadir proyek baru!</p>
                                     </>
                                 )}
                             </div>
@@ -152,9 +152,9 @@ export default function PortfolioPage() {
                         <div className="mb-8">
                             <p className="text-slate-600">
                                 {searchTerm ? (
-                                    <>Showing {filteredProjects.length} result{filteredProjects.length !== 1 ? 's' : ''} for "{searchTerm}"</>
+                                    <>Menampilkan {filteredProjects.length} hasil untuk "{searchTerm}"</>
                                 ) : (
-                                    <>{filteredProjects.length} project{filteredProjects.length !== 1 ? 's' : ''} available</>
+                                    <>{filteredProjects.length} proyek tersedia</>
                                 )}
                             </p>
                         </div>
@@ -164,7 +164,7 @@ export default function PortfolioPage() {
                             {filteredProjects.map((project) => (
                                 <Link
                                     key={project.id}
-                                    href={`/${project.slug}`}
+                                    href={`/id/${project.slug}`}
                                     className="group card card-hover"
                                 >
                                     {/* Image */}
@@ -191,7 +191,7 @@ export default function PortfolioPage() {
                                         <div className="flex items-center gap-4 text-xs text-slate-500 mb-3">
                                             <span className="flex items-center gap-1">
                                                 <Calendar size={12} />
-                                                {new Date(project.published_at).toLocaleDateString('en-US', {
+                                                {new Date(project.published_at).toLocaleDateString('id-ID', {
                                                     month: 'short',
                                                     day: 'numeric',
                                                     year: 'numeric'
@@ -207,7 +207,7 @@ export default function PortfolioPage() {
                                         )}
 
                                         <div className="inline-flex items-center gap-2 text-emerald-600 hover:text-emerald-700 transition-colors group/link font-medium text-sm">
-                                            View Project
+                                            Lihat Proyek
                                             <ArrowRight
                                                 size={14}
                                                 className="group-hover/link:translate-x-1 transition-transform"
