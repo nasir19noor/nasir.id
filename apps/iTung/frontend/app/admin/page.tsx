@@ -75,21 +75,6 @@ export default function AdminPage() {
       setAnalyticsLoading(false)
     }
   }
-  async function loadAnalytics() {
-    setAnalyticsLoading(true)
-    try {
-      const [summary, recent] = await Promise.all([
-        adminGetAnalyticsSummary(),
-        adminGetAnalytics(0, 50)
-      ])
-      setAnalyticsSummary(summary)
-      setAnalytics(recent)
-    } catch (error) {
-      console.error('Error loading analytics:', error)
-    } finally {
-      setAnalyticsLoading(false)
-    }
-  }
 
   async function handleDelete(userId: number) {
     setSaving(userId)
