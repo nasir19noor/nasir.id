@@ -190,7 +190,7 @@ resource "cloudflare_record" "assets_nasir_id" {
 resource "cloudflare_record" "assets_itung_nasir_id_acm_validation" {
   zone_id = data.cloudflare_zones.nasir_id.zones[0].id
   name    = "_29d6c835fd191be3716253e244d8deb0.assets.itung.nasir.id."
-  content = "__560eb90962018716368bbce1a5db9d7c.jkddzztszm.acm-validations.aws."
+  content = "_560eb90962018716368bbce1a5db9d7c.jkddzztszm.acm-validations.aws."
   type    = "CNAME"
   proxied = false
   ttl     = 3600
