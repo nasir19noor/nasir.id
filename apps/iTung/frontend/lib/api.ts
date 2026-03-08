@@ -267,6 +267,8 @@ export interface UserAnalytics {
   city: string | null
   latitude: string | null
   longitude: string | null
+  referrer: string | null
+  source: string | null
   endpoint: string | null
   method: string | null
   status_code: number | null
@@ -282,6 +284,9 @@ export interface AnalyticsSummary {
   top_devices: Array<{ name: string; count: number }>
   top_os: Array<{ name: string; count: number }>
   top_browsers: Array<{ name: string; count: number }>
+  top_sources: Array<{ name: string; count: number }>
+  top_countries: Array<{ name: string; count: number }>
+  top_cities: Array<{ name: string; count: number }>
   avg_response_time: number
   status_codes: Record<string, number>
 }

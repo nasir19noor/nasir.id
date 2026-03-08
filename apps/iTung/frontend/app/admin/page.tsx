@@ -350,6 +350,19 @@ export default function AdminPage() {
                     </div>
                   </div>
 
+                  {/* Top Sources */}
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4">
+                    <h3 className="font-semibold text-gray-800 mb-4">🌍 Traffic Sources</h3>
+                    <div className="space-y-2">
+                      {analyticsSummary.top_sources.slice(0, 5).map((item, idx) => (
+                        <div key={idx} className="flex justify-between text-sm">
+                          <span className="text-gray-600">{item.name || 'Direct'}</span>
+                          <span className="font-medium text-gray-800">{item.count.toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
                   {/* Top Endpoints */}
                   <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4">
                     <h3 className="font-semibold text-gray-800 mb-4">📍 Top Endpoints</h3>
@@ -358,6 +371,32 @@ export default function AdminPage() {
                         <div key={idx} className="flex justify-between text-sm">
                           <span className="text-gray-600 truncate">{item.name || '/'}</span>
                           <span className="font-medium text-gray-800 flex-shrink-0 ml-2">{item.count.toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Top Countries */}
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4">
+                    <h3 className="font-semibold text-gray-800 mb-4">🌏 Top Countries</h3>
+                    <div className="space-y-2">
+                      {analyticsSummary.top_countries.slice(0, 5).map((item, idx) => (
+                        <div key={idx} className="flex justify-between text-sm">
+                          <span className="text-gray-600">{item.name || 'Unknown'}</span>
+                          <span className="font-medium text-gray-800">{item.count.toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Top Cities */}
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4">
+                    <h3 className="font-semibold text-gray-800 mb-4">🏙️ Top Cities</h3>
+                    <div className="space-y-2">
+                      {analyticsSummary.top_cities.slice(0, 5).map((item, idx) => (
+                        <div key={idx} className="flex justify-between text-sm">
+                          <span className="text-gray-600">{item.name || 'Unknown'}</span>
+                          <span className="font-medium text-gray-800">{item.count.toLocaleString()}</span>
                         </div>
                       ))}
                     </div>
@@ -375,17 +414,18 @@ export default function AdminPage() {
                         <tr>
                           <th className="px-4 py-3 text-left">Time</th>
                           <th className="px-4 py-3 text-left">IP Address</th>
+                          <th className="px-4 py-3 text-left">Location</th>
                           <th className="px-4 py-3 text-left">Device</th>
                           <th className="px-4 py-3 text-left">OS</th>
                           <th className="px-4 py-3 text-left">Browser</th>
-                          <th className="px-4 py-3 text-left">Endpoint</th>
+                          <th className="px-4 py-3 text-left">Source</th>
                           <th className="px-4 py-3 text-center">Status</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
                         {analytics.length === 0 ? (
                           <tr>
-                            <td colSpan={7} className="text-center py-8 text-gray-400">
+                            <td colSpan={8} className="text-center py-8 text-gray-400">
                               Tidak ada analytics tersedia.
                             </td>
                           </tr>
@@ -403,10 +443,20 @@ export default function AdminPage() {
                                 })}
                               </td>
                               <td className="px-4 py-3 text-gray-600 text-xs font-mono">{a.ip_address || '-'}</td>
+                              <td className="px-4 py-3 text-gray-600 text-xs">
+                                <div className="flex flex-col">
+                                  <span>{a.country || 'Unknown'}</span>
+                                  <span className="text-gray-400 text-xs">{a.city || '-'}</span>
+                                </div>
+                              </td>
                               <td className="px-4 py-3 text-gray-600 text-xs">{a.device || '-'}</td>
                               <td className="px-4 py-3 text-gray-600 text-xs">{a.os || '-'}</td>
                               <td className="px-4 py-3 text-gray-600 text-xs">{a.browser || '-'}</td>
-                              <td className="px-4 py-3 text-gray-600 text-xs truncate">{a.endpoint || '-'}</td>
+                              <td className="px-4 py-3 text-gray-600 text-xs">
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                  {a.source || 'direct'}
+                                </span>
+                              </td>
                               <td className="px-4 py-3 text-center">
                                 <span className={`text-xs font-medium px-2 py-1 rounded ${
                                   a.status_code && a.status_code < 400 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'

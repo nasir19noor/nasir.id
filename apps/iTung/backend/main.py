@@ -6,6 +6,9 @@ from sqlalchemy import text
 import os
 import time
 from user_agents import parse as parse_user_agent
+import requests
+from functools import lru_cache
+from threading import Thread
 
 Base.metadata.create_all(bind=engine)
 
@@ -47,6 +50,8 @@ def run_migrations():
         ("user_analytics", "city",          "VARCHAR"),
         ("user_analytics", "latitude",      "VARCHAR"),
         ("user_analytics", "longitude",     "VARCHAR"),
+        ("user_analytics", "referrer",      "VARCHAR"),
+        ("user_analytics", "source",        "VARCHAR"),
         ("user_analytics", "endpoint",      "VARCHAR"),
         ("user_analytics", "method",        "VARCHAR"),
         ("user_analytics", "status_code",   "INTEGER"),
@@ -114,7 +119,53 @@ def seed_admin():
 
 seed_admin()
 
-# Analytics middleware
+# GeoIP caching
+@lru_cache(maxsize=1000)
+def get_geoip_data(ip: str) -> dict:
+    """Get geolocation data from IP address using ip-api.com."""
+    try:
+        # Skip for localhost
+        if ip in ['127.0.0.1', 'localhost', '::1']:
+            return {'country': 'Local', 'city': 'Localhost', 'latitude': '0', 'longitude': '0'}
+        
+        response = requests.get(
+            f'http://ip-api.com/json/{ip}',
+            timeout=3,
+            params={'fields': 'country,city,lat,lon,status'}
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('status') == 'success':
+                return {
+                    'country': data.get('country', 'Unknown'),
+                    'city': data.get('city', 'Unknown'),
+                    'latitude': str(data.get('lat', '0')),
+                    'longitude': str(data.get('lon', '0'))
+                }
+    except Exception as e:
+        print(f"GeoIP lookup error for {ip}: {e}")
+    
+    return {'country': 'Unknown', 'city': 'Unknown', 'latitude': '0', 'longitude': '0'}
+
+
+def update_analytics_with_location(analytics_id: int):
+    """Background task to update analytics with geolocation data."""
+    from models import UserAnalytics
+    db = SessionLocal()
+    try:
+        analytics = db.query(UserAnalytics).filter(UserAnalytics.id == analytics_id).first()
+        if analytics and analytics.ip_address:
+            geo_data = get_geoip_data(analytics.ip_address)
+            analytics.country = geo_data['country']
+            analytics.city = geo_data['city']
+            analytics.latitude = geo_data['latitude']
+            analytics.longitude = geo_data['longitude']
+            db.commit()
+    except Exception as e:
+        print(f"Error updating location for analytics {analytics_id}: {e}")
+    finally:
+        db.close()
 async def analytics_middleware(request: Request, call_next):
     """Middleware to track user analytics."""
     start_time = time.time()
@@ -133,6 +184,10 @@ async def analytics_middleware(request: Request, call_next):
         os_name = user_agent.os.family if user_agent.os else None
         device = user_agent.device.family if user_agent.device else None
         browser = user_agent.browser.family if user_agent.browser else None
+        
+        # Get referrer
+        referrer = request.headers.get("referer", "")
+        source = extract_source_from_referrer(referrer)
         
         # Get user_id from token if available
         user_id = None
@@ -163,6 +218,8 @@ async def analytics_middleware(request: Request, call_next):
                     os=os_name,
                     device=device,
                     browser=browser,
+                    referrer=referrer if referrer else None,
+                    source=source,
                     endpoint=request.url.path,
                     method=request.method,
                     status_code=response.status_code,
@@ -170,6 +227,13 @@ async def analytics_middleware(request: Request, call_next):
                 )
                 db.add(analytics)
                 db.commit()
+                db.refresh(analytics)
+                analytics_id = analytics.id
+                
+                # Update location in background
+                if ip and ip not in ['127.0.0.1', 'localhost', '::1']:
+                    thread = Thread(target=update_analytics_with_location, args=(analytics_id,), daemon=True)
+                    thread.start()
             finally:
                 db.close()
         except Exception as e:
@@ -179,6 +243,57 @@ async def analytics_middleware(request: Request, call_next):
     except Exception as e:
         print(f"Analytics middleware error: {e}")
         return await call_next(request)
+
+
+def extract_source_from_referrer(referrer: str) -> str | None:
+    """Extract source platform from referrer URL."""
+    if not referrer:
+        return None
+    
+    referrer_lower = referrer.lower()
+    
+    # Social media and popular platforms
+    sources = {
+        'twitter': 'twitter.com',
+        'x.com': 'twitter.com',
+        'facebook': 'facebook.com',
+        'fb.com': 'facebook.com',
+        'instagram': 'instagram.com',
+        'tiktok': 'tiktok.com',
+        'linkedin': 'linkedin.com',
+        'reddit': 'reddit.com',
+        'youtube': 'youtube.com',
+        'whatsapp': 'whatsapp',
+        'telegram': 'telegram',
+        'discord': 'discord.com',
+        'pinterest': 'pinterest.com',
+        'snapchat': 'snapchat.com',
+        'viber': 'viber',
+        'signal': 'signal',
+        'google': 'google.com',
+        'bing': 'bing.com',
+        'baidu': 'baidu.com',
+        'github': 'github.com',
+        'stackoverflow': 'stackoverflow.com',
+        'medium': 'medium.com',
+        'dev.to': 'dev.to',
+        'hashnode': 'hashnode.com',
+    }
+    
+    for platform, domain in sources.items():
+        if domain in referrer_lower:
+            return platform
+    
+    # If not a known platform, try to extract domain name
+    try:
+        from urllib.parse import urlparse
+        parsed = urlparse(referrer)
+        domain = parsed.netloc.replace('www.', '')
+        return domain if domain else 'direct'
+    except:
+        pass
+    
+    return 'direct'
 
 app = FastAPI(title='iTung API', version='1.0.0')
 

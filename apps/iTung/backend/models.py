@@ -125,6 +125,8 @@ class UserAnalytics(Base):
     city            = Column(String, nullable=True)
     latitude        = Column(String, nullable=True)
     longitude       = Column(String, nullable=True)
+    referrer        = Column(String, nullable=True, index=True)
+    source          = Column(String, nullable=True, index=True)
     endpoint        = Column(String, nullable=True)
     method          = Column(String, nullable=True)
     status_code     = Column(Integer, nullable=True)

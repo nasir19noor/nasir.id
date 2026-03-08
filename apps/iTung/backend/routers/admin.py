@@ -60,6 +60,8 @@ class UserAnalyticsView(BaseModel):
     city: Optional[str]
     latitude: Optional[str]
     longitude: Optional[str]
+    referrer: Optional[str]
+    source: Optional[str]
     endpoint: Optional[str]
     method: Optional[str]
     status_code: Optional[int]
@@ -78,6 +80,9 @@ class UserAnalyticsSummary(BaseModel):
     top_devices: list
     top_os: list
     top_browsers: list
+    top_sources: list
+    top_countries: list
+    top_cities: list
     avg_response_time: float
     status_codes: dict
 
@@ -136,6 +141,9 @@ def get_analytics_summary(admin: User = Depends(require_admin),
             top_devices=[],
             top_os=[],
             top_browsers=[],
+            top_sources=[],
+            top_countries=[],
+            top_cities=[],
             avg_response_time=0,
             status_codes={}
         )
@@ -172,6 +180,14 @@ def get_analytics_summary(admin: User = Depends(require_admin),
         UserAnalytics.browser
     ).order_by(desc(func.count(UserAnalytics.id))).limit(10).all()
     
+    # Top sources
+    top_sources = db.query(
+        UserAnalytics.source,
+        func.count(UserAnalytics.id).label('count')
+    ).filter(UserAnalytics.source.isnot(None)).group_by(
+        UserAnalytics.source
+    ).order_by(desc(func.count(UserAnalytics.id))).limit(10).all()
+    
     # Status codes
     status_codes_data = db.query(
         UserAnalytics.status_code,
@@ -189,6 +205,22 @@ def get_analytics_summary(admin: User = Depends(require_admin),
     
     avg_response_time = float(avg_response) if avg_response else 0
     
+    # Top countries
+    top_countries = db.query(
+        UserAnalytics.country,
+        func.count(UserAnalytics.id).label('count')
+    ).filter(UserAnalytics.country.isnot(None)).group_by(
+        UserAnalytics.country
+    ).order_by(desc(func.count(UserAnalytics.id))).limit(10).all()
+    
+    # Top cities
+    top_cities = db.query(
+        UserAnalytics.city,
+        func.count(UserAnalytics.id).label('count')
+    ).filter(UserAnalytics.city.isnot(None)).group_by(
+        UserAnalytics.city
+    ).order_by(desc(func.count(UserAnalytics.id))).limit(10).all()
+    
     return UserAnalyticsSummary(
         total_requests=len(analytics),
         unique_ips=len(set(a.ip_address for a in analytics if a.ip_address)),
@@ -197,6 +229,9 @@ def get_analytics_summary(admin: User = Depends(require_admin),
         top_devices=[{"name": dev, "count": cnt} for dev, cnt in top_devices],
         top_os=[{"name": os_name, "count": cnt} for os_name, cnt in top_os],
         top_browsers=[{"name": br, "count": cnt} for br, cnt in top_browsers],
+        top_sources=[{"name": src, "count": cnt} for src, cnt in top_sources],
+        top_countries=[{"name": cnt, "count": c} for cnt, c in top_countries],
+        top_cities=[{"name": city, "count": c} for city, c in top_cities],
         avg_response_time=avg_response_time,
         status_codes=status_codes
     )
