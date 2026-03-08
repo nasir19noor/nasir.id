@@ -198,7 +198,7 @@ resource "cloudflare_record" "assets_itung_nasir_id_acm_validation" {
 
 resource "cloudflare_record" "assets_itung_nasir_id" {
   zone_id = data.cloudflare_zones.nasir_id.zones[0].id
-  name    = "assets.nasir.id"
+  name    = "assets.itung.nasir.id"
   content = "d1tpxmhy8067t0.cloudfront.net"
   type    = "CNAME"
   proxied = false
