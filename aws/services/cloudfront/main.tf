@@ -48,6 +48,7 @@ module "cloudfront_nasir" {
     restriction_type = "none"
     locations        = []
   }
+  web_acl_id = "arn:aws:wafv2:us-east-1:647459380434:global/webacl/CreatedByCloudFront-5f0bc3d6/145321c3-fd37-479f-b520-595248a53f0f"
 }
 
 module "cloudfront_itung" {
@@ -100,6 +101,7 @@ module "cloudfront_itung" {
     restriction_type = "none"
     locations        = []
   }
+  web_acl_id = "arn:aws:wafv2:us-east-1:647459380434:global/webacl/CreatedByCloudFront-b0d05f91/2ff953c7-42db-4dee-af26-1d933ea236b0"
 }
 
 
