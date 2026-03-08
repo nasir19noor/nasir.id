@@ -19,6 +19,7 @@ aws:
     bucket_name_nasir: "nasir.id"
   acm:
     domain_name_nasir: "assets.nasir.id" 
+    domain_name_itung_nasir: "assets.itung.nasir.id" 
     create_route53_records: false
     validation_method: "DNS"
   cloudfront:
