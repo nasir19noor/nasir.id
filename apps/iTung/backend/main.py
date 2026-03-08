@@ -1,8 +1,11 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine, Base, SessionLocal
 from routers import users, quiz, admin
+from sqlalchemy import text
 import os
+import time
+from user_agents import parse as parse_user_agent
 
 Base.metadata.create_all(bind=engine)
 
@@ -33,18 +36,34 @@ def run_migrations():
         ("users",         "avatar_url",     "VARCHAR"),
         ("users",         "cartoon_url",    "VARCHAR"),
         ("users",         "birth_date",     "DATE"),
+        ("user_analytics", "user_id",       "INTEGER"),
+        ("user_analytics", "ip_address",    "VARCHAR"),
+        ("user_analytics", "user_agent",    "VARCHAR"),
+        ("user_analytics", "os",            "VARCHAR"),
+        ("user_analytics", "device",        "VARCHAR"),
+        ("user_analytics", "browser",       "VARCHAR"),
+        ("user_analytics", "location",      "VARCHAR"),
+        ("user_analytics", "country",       "VARCHAR"),
+        ("user_analytics", "city",          "VARCHAR"),
+        ("user_analytics", "latitude",      "VARCHAR"),
+        ("user_analytics", "longitude",     "VARCHAR"),
+        ("user_analytics", "endpoint",      "VARCHAR"),
+        ("user_analytics", "method",        "VARCHAR"),
+        ("user_analytics", "status_code",   "INTEGER"),
+        ("user_analytics", "response_time_ms", "INTEGER"),
+        ("user_analytics", "created_at",    "TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP"),
     ]
     with engine.connect() as conn:
         for table, column, col_type in migrations:
             exists = conn.execute(
-                __import__('sqlalchemy').text(
+                text(
                     "SELECT 1 FROM information_schema.columns "
                     "WHERE table_name = :t AND column_name = :c"
                 ),
                 {"t": table, "c": column},
             ).fetchone()
             if not exists:
-                conn.execute(__import__('sqlalchemy').text(
+                conn.execute(text(
                     f'ALTER TABLE "{table}" ADD COLUMN IF NOT EXISTS {column} {col_type}'
                 ))
                 print(f"  Migration: added {column} to {table}")
@@ -60,14 +79,14 @@ def run_migrations():
         for table, column, sql in constraint_changes:
             # Only run if column is currently NOT NULL
             is_not_null = conn.execute(
-                __import__('sqlalchemy').text(
+                text(
                     "SELECT 1 FROM information_schema.columns "
                     "WHERE table_name = :t AND column_name = :c AND is_nullable = 'NO'"
                 ),
                 {"t": table, "c": column},
             ).fetchone()
             if is_not_null:
-                conn.execute(__import__('sqlalchemy').text(sql))
+                conn.execute(text(sql))
                 print(f"  Migration: dropped NOT NULL on {table}.{column}")
         conn.commit()
 
@@ -95,8 +114,76 @@ def seed_admin():
 
 seed_admin()
 
+# Analytics middleware
+async def analytics_middleware(request: Request, call_next):
+    """Middleware to track user analytics."""
+    start_time = time.time()
+    
+    try:
+        # Get IP address
+        ip = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+        if not ip:
+            ip = request.client.host if request.client else None
+        
+        # Get User-Agent
+        user_agent_str = request.headers.get("user-agent", "")
+        user_agent = parse_user_agent(user_agent_str)
+        
+        # Parse UA info
+        os_name = user_agent.os.family if user_agent.os else None
+        device = user_agent.device.family if user_agent.device else None
+        browser = user_agent.browser.family if user_agent.browser else None
+        
+        # Get user_id from token if available
+        user_id = None
+        try:
+            auth_header = request.headers.get("authorization", "")
+            if auth_header.startswith("Bearer "):
+                from auth import decode_token
+                token_data = decode_token(auth_header[7:])
+                user_id = token_data.user_id
+        except:
+            pass
+        
+        # Proceed with request
+        response = await call_next(request)
+        
+        # Calculate response time
+        response_time_ms = int((time.time() - start_time) * 1000)
+        
+        # Store analytics in background
+        try:
+            from models import UserAnalytics
+            db = SessionLocal()
+            try:
+                analytics = UserAnalytics(
+                    user_id=user_id,
+                    ip_address=ip,
+                    user_agent=user_agent_str,
+                    os=os_name,
+                    device=device,
+                    browser=browser,
+                    endpoint=request.url.path,
+                    method=request.method,
+                    status_code=response.status_code,
+                    response_time_ms=response_time_ms
+                )
+                db.add(analytics)
+                db.commit()
+            finally:
+                db.close()
+        except Exception as e:
+            print(f"Analytics tracking error: {e}")
+        
+        return response
+    except Exception as e:
+        print(f"Analytics middleware error: {e}")
+        return await call_next(request)
+
 app = FastAPI(title='iTung API', version='1.0.0')
 
+# Add analytics middleware
+app.middleware("http")(analytics_middleware)
 
 app.add_middleware(CORSMiddleware,
                    allow_origins=[

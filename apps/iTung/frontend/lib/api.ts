@@ -254,6 +254,38 @@ export async function getUserStats(): Promise<UserStats> {
 
 // ─── Admin endpoints ──────────────────────────────────────────────────────────
 
+export interface UserAnalytics {
+  id: number
+  user_id: number | null
+  ip_address: string | null
+  user_agent: string | null
+  os: string | null
+  device: string | null
+  browser: string | null
+  location: string | null
+  country: string | null
+  city: string | null
+  latitude: string | null
+  longitude: string | null
+  endpoint: string | null
+  method: string | null
+  status_code: number | null
+  response_time_ms: number | null
+  created_at: string
+}
+
+export interface AnalyticsSummary {
+  total_requests: number
+  unique_ips: number
+  unique_users: number
+  top_endpoints: Array<{ name: string; count: number }>
+  top_devices: Array<{ name: string; count: number }>
+  top_os: Array<{ name: string; count: number }>
+  top_browsers: Array<{ name: string; count: number }>
+  avg_response_time: number
+  status_codes: Record<string, number>
+}
+
 export async function adminGetUsers(): Promise<User[]> {
   const res = await api.get<User[]>('/api/admin/users')
   return res.data
@@ -269,6 +301,32 @@ export async function adminUpdateUser(
 
 export async function adminDeleteUser(userId: number): Promise<void> {
   await api.delete(`/api/admin/users/${userId}`)
+}
+
+export async function adminGetAnalyticsSummary(): Promise<AnalyticsSummary> {
+  const res = await api.get<AnalyticsSummary>('/api/admin/analytics/summary')
+  return res.data
+}
+
+export async function adminGetAnalytics(
+  skip?: number,
+  limit?: number,
+  user_id?: number,
+  ip_address?: string
+): Promise<UserAnalytics[]> {
+  const params = new URLSearchParams()
+  if (skip !== undefined) params.append('skip', String(skip))
+  if (limit !== undefined) params.append('limit', String(limit))
+  if (user_id !== undefined) params.append('user_id', String(user_id))
+  if (ip_address !== undefined) params.append('ip_address', ip_address)
+  
+  const res = await api.get<UserAnalytics[]>(`/api/admin/analytics?${params.toString()}`)
+  return res.data
+}
+
+export async function adminGetUserAnalytics(userId: number): Promise<UserAnalytics[]> {
+  const res = await api.get<UserAnalytics[]>(`/api/admin/analytics/user/${userId}`)
+  return res.data
 }
 
 export default api

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
-import { adminGetUsers, adminUpdateUser, adminDeleteUser, User } from '@/lib/api'
+import { adminGetUsers, adminUpdateUser, adminDeleteUser, User, adminGetAnalyticsSummary, adminGetAnalytics, AnalyticsSummary, UserAnalytics } from '@/lib/api'
 import Navbar from '@/components/Navbar'
 
 function calcAge(birthDate: string): number {
@@ -36,11 +36,15 @@ function Toggle({
 export default function AdminPage() {
   const router = useRouter()
   const { user: me, loading } = useAuth()
+  const [tab, setTab] = useState<'users' | 'analytics'>('users')
   const [users, setUsers] = useState<User[]>([])
   const [fetching, setFetching] = useState(true)
   const [search, setSearch] = useState('')
   const [saving, setSaving] = useState<number | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null)
+  const [analyticsSummary, setAnalyticsSummary] = useState<AnalyticsSummary | null>(null)
+  const [analytics, setAnalytics] = useState<UserAnalytics[]>([])
+  const [analyticsLoading, setAnalyticsLoading] = useState(false)
 
   useEffect(() => {
     if (loading) return
@@ -49,6 +53,43 @@ export default function AdminPage() {
       .then(setUsers)
       .finally(() => setFetching(false))
   }, [loading, me, router])
+
+  useEffect(() => {
+    if (tab === 'analytics' && !analyticsSummary) {
+      loadAnalytics()
+    }
+  }, [tab, analyticsSummary])
+
+  async function loadAnalytics() {
+    setAnalyticsLoading(true)
+    try {
+      const [summary, recent] = await Promise.all([
+        adminGetAnalyticsSummary(),
+        adminGetAnalytics(0, 50)
+      ])
+      setAnalyticsSummary(summary)
+      setAnalytics(recent)
+    } catch (error) {
+      console.error('Error loading analytics:', error)
+    } finally {
+      setAnalyticsLoading(false)
+    }
+  }
+  async function loadAnalytics() {
+    setAnalyticsLoading(true)
+    try {
+      const [summary, recent] = await Promise.all([
+        adminGetAnalyticsSummary(),
+        adminGetAnalytics(0, 50)
+      ])
+      setAnalyticsSummary(summary)
+      setAnalytics(recent)
+    } catch (error) {
+      console.error('Error loading analytics:', error)
+    } finally {
+      setAnalyticsLoading(false)
+    }
+  }
 
   async function handleDelete(userId: number) {
     setSaving(userId)
@@ -71,7 +112,7 @@ export default function AdminPage() {
     }
   }
 
-  if (loading || fetching) {
+  if (loading || (fetching && tab === 'users')) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <p className="text-gray-500">Memuat...</p>
@@ -97,138 +138,308 @@ export default function AdminPage() {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      <main className="max-w-6xl mx-auto px-4 py-8 space-y-6">
+      <main className="max-w-7xl mx-auto px-4 py-8 space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">⚙️ Admin Dashboard</h1>
-          <p className="text-sm text-gray-500 mt-1">Kelola pengguna dan hak akses</p>
+          <p className="text-sm text-gray-500 mt-1">Kelola pengguna, hak akses, dan analytics</p>
         </div>
 
-        {/* Summary */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {[
-            { label: 'Total Pengguna', value: stats.total,    color: 'bg-blue-50 text-blue-700' },
-            { label: 'Aktif',          value: stats.active,   color: 'bg-emerald-50 text-emerald-700' },
-            { label: 'Akses AI',       value: stats.aiAccess, color: 'bg-purple-50 text-purple-700' },
-            { label: 'Admin',          value: stats.admins,   color: 'bg-orange-50 text-orange-700' },
-          ].map(({ label, value, color }) => (
-            <div key={label} className={`rounded-xl p-4 ${color}`}>
-              <p className="text-2xl font-bold">{value}</p>
-              <p className="text-xs mt-0.5 opacity-80">{label}</p>
+        {/* Tabs */}
+        <div className="flex gap-2 border-b border-gray-200">
+          <button
+            onClick={() => setTab('users')}
+            className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors ${
+              tab === 'users'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-600 hover:text-gray-800'
+            }`}
+          >
+            👥 Pengguna
+          </button>
+          <button
+            onClick={() => setTab('analytics')}
+            className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors ${
+              tab === 'analytics'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-600 hover:text-gray-800'
+            }`}
+          >
+            📊 Analytics
+          </button>
+        </div>
+
+        {/* Users Tab */}
+        {tab === 'users' && (
+          <>
+            {/* Summary */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {[
+                { label: 'Total Pengguna', value: stats.total,    color: 'bg-blue-50 text-blue-700' },
+                { label: 'Aktif',          value: stats.active,   color: 'bg-emerald-50 text-emerald-700' },
+                { label: 'Akses AI',       value: stats.aiAccess, color: 'bg-purple-50 text-purple-700' },
+                { label: 'Admin',          value: stats.admins,   color: 'bg-orange-50 text-orange-700' },
+              ].map(({ label, value, color }) => (
+                <div key={label} className={`rounded-xl p-4 ${color}`}>
+                  <p className="text-2xl font-bold">{value}</p>
+                  <p className="text-xs mt-0.5 opacity-80">{label}</p>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
 
-        {/* Table */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="p-4 border-b border-gray-100 flex items-center justify-between gap-3">
-            <h2 className="font-semibold text-gray-800">Daftar Pengguna</h2>
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Cari nama / email..."
-              className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 w-52"
-            />
-          </div>
+            {/* Users Table */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="p-4 border-b border-gray-100 flex items-center justify-between gap-3">
+                <h2 className="font-semibold text-gray-800">Daftar Pengguna</h2>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Cari nama / email..."
+                  className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-52"
+                />
+              </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
-                <tr>
-                  <th className="px-4 py-3 text-left">ID</th>
-                  <th className="px-4 py-3 text-left">Pengguna</th>
-                  <th className="px-4 py-3 text-left">Email</th>
-                  <th className="px-4 py-3 text-center">Aktif</th>
-                  <th className="px-4 py-3 text-center">Akses AI</th>
-                  <th className="px-4 py-3 text-center">Admin</th>
-                  <th className="px-4 py-3 text-center">Hapus</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="text-center py-8 text-gray-400">
-                      Tidak ada pengguna ditemukan.
-                    </td>
-                  </tr>
-                ) : (
-                  filtered.map((u) => (
-                    <tr
-                      key={u.id}
-                      className={`hover:bg-gray-50 transition-colors ${saving === u.id ? 'opacity-50' : ''}`}
-                    >
-                      <td className="px-4 py-3 text-gray-400">#{u.id}</td>
-                      <td className="px-4 py-3">
-                        <p className="font-medium text-gray-800">{u.full_name ?? u.username}</p>
-                        {u.full_name && (
-                          <p className="text-xs text-gray-400">@{u.username}</p>
-                        )}
-                        {u.birth_date && (
-                          <p className="text-xs text-blue-500">{calcAge(u.birth_date)} tahun</p>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-gray-600">{u.email}</td>
-                      <td className="px-4 py-3 text-center">
-                        <div className="flex justify-center">
-                          <Toggle
-                            checked={u.is_active}
-                            onChange={(v) => toggle(u.id, 'is_active', v)}
-                            label="Toggle aktif"
-                          />
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <div className="flex justify-center">
-                          <Toggle
-                            checked={u.ai_access}
-                            onChange={(v) => toggle(u.id, 'ai_access', v)}
-                            label="Toggle akses AI"
-                          />
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <div className="flex justify-center">
-                          <Toggle
-                            checked={u.is_admin}
-                            onChange={(v) => u.id !== me?.id && toggle(u.id, 'is_admin', v)}
-                            label={u.id === me?.id ? 'Tidak bisa mengubah diri sendiri' : 'Toggle admin'}
-                          />
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        {u.id !== me?.id && (
-                          confirmDelete === u.id ? (
-                            <div className="flex items-center justify-center gap-1">
-                              <button
-                                onClick={() => handleDelete(u.id)}
-                                className="text-xs bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded-lg"
-                              >
-                                Ya
-                              </button>
-                              <button
-                                onClick={() => setConfirmDelete(null)}
-                                className="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1 rounded-lg"
-                              >
-                                Batal
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => setConfirmDelete(u.id)}
-                              className="text-xs text-red-500 hover:text-red-700 hover:underline"
-                            >
-                              Hapus
-                            </button>
-                          )
-                        )}
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
+                    <tr>
+                      <th className="px-4 py-3 text-left">ID</th>
+                      <th className="px-4 py-3 text-left">Pengguna</th>
+                      <th className="px-4 py-3 text-left">Email</th>
+                      <th className="px-4 py-3 text-center">Aktif</th>
+                      <th className="px-4 py-3 text-center">Akses AI</th>
+                      <th className="px-4 py-3 text-center">Admin</th>
+                      <th className="px-4 py-3 text-center">Hapus</th>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {filtered.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="text-center py-8 text-gray-400">
+                          Tidak ada pengguna ditemukan.
+                        </td>
+                      </tr>
+                    ) : (
+                      filtered.map((u) => (
+                        <tr
+                          key={u.id}
+                          className={`hover:bg-gray-50 transition-colors ${saving === u.id ? 'opacity-50' : ''}`}
+                        >
+                          <td className="px-4 py-3 text-gray-400">#{u.id}</td>
+                          <td className="px-4 py-3">
+                            <p className="font-medium text-gray-800">{u.full_name ?? u.username}</p>
+                            {u.full_name && (
+                              <p className="text-xs text-gray-400">@{u.username}</p>
+                            )}
+                            {u.birth_date && (
+                              <p className="text-xs text-blue-500">{calcAge(u.birth_date)} tahun</p>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-gray-600">{u.email}</td>
+                          <td className="px-4 py-3 text-center">
+                            <div className="flex justify-center">
+                              <Toggle
+                                checked={u.is_active}
+                                onChange={(v) => toggle(u.id, 'is_active', v)}
+                                label="Toggle aktif"
+                              />
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <div className="flex justify-center">
+                              <Toggle
+                                checked={u.ai_access}
+                                onChange={(v) => toggle(u.id, 'ai_access', v)}
+                                label="Toggle akses AI"
+                              />
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <div className="flex justify-center">
+                              <Toggle
+                                checked={u.is_admin}
+                                onChange={(v) => u.id !== me?.id && toggle(u.id, 'is_admin', v)}
+                                label={u.id === me?.id ? 'Tidak bisa mengubah diri sendiri' : 'Toggle admin'}
+                              />
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            {u.id !== me?.id && (
+                              confirmDelete === u.id ? (
+                                <div className="flex items-center justify-center gap-1">
+                                  <button
+                                    onClick={() => handleDelete(u.id)}
+                                    className="text-xs bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded-lg"
+                                  >
+                                    Ya
+                                  </button>
+                                  <button
+                                    onClick={() => setConfirmDelete(null)}
+                                    className="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1 rounded-lg"
+                                  >
+                                    Batal
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setConfirmDelete(u.id)}
+                                  className="text-xs text-red-500 hover:text-red-700 hover:underline"
+                                >
+                                  Hapus
+                                </button>
+                              )
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Analytics Tab */}
+        {tab === 'analytics' && (
+          <>
+            {analyticsLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <p className="text-gray-500">Memuat analytics...</p>
+              </div>
+            ) : analyticsSummary ? (
+              <>
+                {/* Summary Stats */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  {[
+                    { label: 'Total Requests', value: analyticsSummary.total_requests.toLocaleString(), color: 'bg-blue-50 text-blue-700', icon: '📈' },
+                    { label: 'Unique IPs', value: analyticsSummary.unique_ips, color: 'bg-purple-50 text-purple-700', icon: '🌐' },
+                    { label: 'Unique Users', value: analyticsSummary.unique_users, color: 'bg-green-50 text-green-700', icon: '👥' },
+                    { label: 'Avg Response', value: `${Math.round(analyticsSummary.avg_response_time)}ms`, color: 'bg-orange-50 text-orange-700', icon: '⚡' },
+                  ].map(({ label, value, color, icon }) => (
+                    <div key={label} className={`rounded-xl p-4 ${color}`}>
+                      <p className="text-2xl font-bold">{value}</p>
+                      <p className="text-xs mt-0.5 opacity-80">{icon} {label}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Top Data */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Top Devices */}
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4">
+                    <h3 className="font-semibold text-gray-800 mb-4">📱 Top Devices</h3>
+                    <div className="space-y-2">
+                      {analyticsSummary.top_devices.slice(0, 5).map((item, idx) => (
+                        <div key={idx} className="flex justify-between text-sm">
+                          <span className="text-gray-600">{item.name || 'Other'}</span>
+                          <span className="font-medium text-gray-800">{item.count.toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Top OS */}
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4">
+                    <h3 className="font-semibold text-gray-800 mb-4">💻 Top OS</h3>
+                    <div className="space-y-2">
+                      {analyticsSummary.top_os.slice(0, 5).map((item, idx) => (
+                        <div key={idx} className="flex justify-between text-sm">
+                          <span className="text-gray-600">{item.name || 'Other'}</span>
+                          <span className="font-medium text-gray-800">{item.count.toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Top Browsers */}
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4">
+                    <h3 className="font-semibold text-gray-800 mb-4">🔗 Top Browsers</h3>
+                    <div className="space-y-2">
+                      {analyticsSummary.top_browsers.slice(0, 5).map((item, idx) => (
+                        <div key={idx} className="flex justify-between text-sm">
+                          <span className="text-gray-600">{item.name || 'Other'}</span>
+                          <span className="font-medium text-gray-800">{item.count.toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Top Endpoints */}
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4">
+                    <h3 className="font-semibold text-gray-800 mb-4">📍 Top Endpoints</h3>
+                    <div className="space-y-2">
+                      {analyticsSummary.top_endpoints.slice(0, 5).map((item, idx) => (
+                        <div key={idx} className="flex justify-between text-sm">
+                          <span className="text-gray-600 truncate">{item.name || '/'}</span>
+                          <span className="font-medium text-gray-800 flex-shrink-0 ml-2">{item.count.toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Recent Analytics */}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                  <div className="p-4 border-b border-gray-100">
+                    <h2 className="font-semibold text-gray-800">Recent Activity</h2>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
+                        <tr>
+                          <th className="px-4 py-3 text-left">Time</th>
+                          <th className="px-4 py-3 text-left">IP Address</th>
+                          <th className="px-4 py-3 text-left">Device</th>
+                          <th className="px-4 py-3 text-left">OS</th>
+                          <th className="px-4 py-3 text-left">Browser</th>
+                          <th className="px-4 py-3 text-left">Endpoint</th>
+                          <th className="px-4 py-3 text-center">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {analytics.length === 0 ? (
+                          <tr>
+                            <td colSpan={7} className="text-center py-8 text-gray-400">
+                              Tidak ada analytics tersedia.
+                            </td>
+                          </tr>
+                        ) : (
+                          analytics.map((a) => (
+                            <tr key={a.id} className="hover:bg-gray-50 transition-colors">
+                              <td className="px-4 py-3 text-gray-600 text-xs">
+                                {new Date(a.created_at).toLocaleString('id-ID', {
+                                  year: 'numeric',
+                                  month: '2-digit',
+                                  day: '2-digit',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  second: '2-digit',
+                                })}
+                              </td>
+                              <td className="px-4 py-3 text-gray-600 text-xs font-mono">{a.ip_address || '-'}</td>
+                              <td className="px-4 py-3 text-gray-600 text-xs">{a.device || '-'}</td>
+                              <td className="px-4 py-3 text-gray-600 text-xs">{a.os || '-'}</td>
+                              <td className="px-4 py-3 text-gray-600 text-xs">{a.browser || '-'}</td>
+                              <td className="px-4 py-3 text-gray-600 text-xs truncate">{a.endpoint || '-'}</td>
+                              <td className="px-4 py-3 text-center">
+                                <span className={`text-xs font-medium px-2 py-1 rounded ${
+                                  a.status_code && a.status_code < 400 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                }`}>
+                                  {a.status_code || '-'}
+                                </span>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
+            ) : null}
+          </>
+        )}
       </main>
     </div>
   )

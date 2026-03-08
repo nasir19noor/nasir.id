@@ -108,3 +108,25 @@ class UserAnswer(Base):
     time_seconds = Column(Integer)
     created_at   = Column(DateTime, default=datetime.utcnow)
     question     = relationship('Question', back_populates="answer")
+
+
+class UserAnalytics(Base):
+    __tablename__ = "user_analytics"
+
+    id              = Column(Integer, primary_key=True, index=True)
+    user_id         = Column(Integer, ForeignKey('users.id'), nullable=True, index=True)
+    ip_address      = Column(String, nullable=True, index=True)
+    user_agent      = Column(String, nullable=True)
+    os              = Column(String, nullable=True)
+    device          = Column(String, nullable=True)
+    browser         = Column(String, nullable=True)
+    location        = Column(String, nullable=True)
+    country         = Column(String, nullable=True)
+    city            = Column(String, nullable=True)
+    latitude        = Column(String, nullable=True)
+    longitude       = Column(String, nullable=True)
+    endpoint        = Column(String, nullable=True)
+    method          = Column(String, nullable=True)
+    status_code     = Column(Integer, nullable=True)
+    response_time_ms = Column(Integer, nullable=True)
+    created_at      = Column(DateTime(timezone=True), server_default=func.now(), index=True)
