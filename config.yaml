@@ -24,6 +24,7 @@ aws:
     validation_method: "DNS"
   cloudfront:
     domain_name_nasir: "assets.nasir.id"
+    domain_name_itung: "assets.itung.nasir.id"
   ec2:
     kafka: 
       name: "management-eks"
