@@ -24,6 +24,7 @@ def _get_s3():
 BUCKET   = os.getenv('S3_BUCKET_NAME')
 CDN_BASE = os.getenv('S3_CDN_BASE', '')
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
+GEMINI_IMAGE_MODEL = os.getenv('GEMINI_IMAGE_MODEL', 'gemini-3-pro-image-preview')
 
 _genai_client = genai.Client(api_key=GOOGLE_API_KEY) if GOOGLE_API_KEY else None
 
@@ -67,7 +68,7 @@ def _generate_with_gemini(prompt: str) -> bytes | None:
 
     try:
         response = _genai_client.models.generate_content(
-            model='gemini-3.1-flash-image-preview',
+            model=GEMINI_IMAGE_MODEL,
             contents=prompt,
             config=genai_types.GenerateContentConfig(
                 response_modalities=['IMAGE', 'TEXT'],
@@ -88,50 +89,57 @@ def _generate_with_gemini(prompt: str) -> bytes | None:
 def _create_prompt(image_type: str, params: dict) -> str:
     """Create a detailed prompt for Gemini to generate the appropriate math diagram."""
     prompts = {
-        'number_line': f"""Create a clean, educational math visual showing a number line diagram.
-        Range: from {params.get('start', 0)} to {params.get('end', 20)}
-        Mark these numbers with red dots: {params.get('marked', [])}
-        Style: Simple, clear, white background, professional educational style.
-        Use black lines and numbers, red dots for marked points.""",
-        
-        'rectangle': f"""Create a clean, educational math visual showing a rectangle diagram.
-        Width: {params.get('width', 4)} cm
-        Height: {params.get('height', 3)} cm
-        Show dimensions labeled on the sides.
-        Style: Simple, clear, white background, professional educational style.
-        Use blue outline, light blue fill, with clear dimension labels.""",
-        
-        'square': f"""Create a clean, educational math visual showing a square diagram.
-        Side length: {params.get('side', 4)} cm
-        Show dimension labeled on the bottom.
-        Style: Simple, clear, white background, professional educational style.
-        Use blue outline, light blue fill, with clear labels.""",
-        
-        'triangle': f"""Create a clean, educational math visual showing a triangle diagram.
-        Make it a clear triangle with three vertices.
-        Style: Simple, clear, white background, professional educational style.
-        Use blue outline, light blue fill.""",
-        
-        'circle': f"""Create a clean, educational math visual showing a circle diagram.
-        Radius: {params.get('radius', 2)} cm
-        Draw a line from center to edge labeled as radius.
-        Style: Simple, clear, white background, professional educational style.
-        Use blue outline, light blue fill, red radius line.""",
-        
-        'angle': f"""Create a clean, educational math visual showing an angle diagram.
-        Angle: {params.get('degrees', 60)} degrees
-        Show two rays forming the angle with arc indicating the degrees.
-        Style: Simple, clear, white background, professional educational style.
-        Use blue rays, red arc, with degree label.""",
-        
-        'fraction': f"""Create a clean, educational math visual showing a fraction diagram.
-        Fraction: {params.get('numerator', 3)}/{params.get('denominator', 4)}
-        Show a bar divided into {params.get('denominator', 4)} parts with {params.get('numerator', 3)} parts shaded.
-        Style: Simple, clear, white background, professional educational style.
-        Use blue outline, blue shading for filled parts, with fraction label.""",
+        'number_line': f"""Buat ilustrasi matematika yang bersih dan edukatif berupa diagram garis bilangan.
+        Rentang: dari {params.get('start', 0)} sampai {params.get('end', 20)}
+        Tandai angka-angka berikut dengan titik merah: {params.get('marked', [])}
+        Gaya: Sederhana, jelas, latar putih, gaya edukatif profesional.
+        Gunakan garis dan angka hitam, titik merah untuk angka yang ditandai.
+        Label dalam Bahasa Indonesia.""",
+
+        'rectangle': f"""Buat ilustrasi matematika yang bersih dan edukatif berupa diagram persegi panjang.
+        Lebar: {params.get('width', 4)} cm
+        Tinggi: {params.get('height', 3)} cm
+        Tampilkan ukuran berlabel di setiap sisi.
+        Gaya: Sederhana, jelas, latar putih, gaya edukatif profesional.
+        Gunakan garis luar biru, isi biru muda, dengan label ukuran yang jelas.
+        Label dalam Bahasa Indonesia.""",
+
+        'square': f"""Buat ilustrasi matematika yang bersih dan edukatif berupa diagram persegi.
+        Panjang sisi: {params.get('side', 4)} cm
+        Tampilkan ukuran berlabel di bagian bawah.
+        Gaya: Sederhana, jelas, latar putih, gaya edukatif profesional.
+        Gunakan garis luar biru, isi biru muda, dengan label yang jelas.
+        Label dalam Bahasa Indonesia.""",
+
+        'triangle': f"""Buat ilustrasi matematika yang bersih dan edukatif berupa diagram segitiga.
+        Tampilkan segitiga yang jelas dengan tiga titik sudut.
+        Gaya: Sederhana, jelas, latar putih, gaya edukatif profesional.
+        Gunakan garis luar biru, isi biru muda.
+        Label dalam Bahasa Indonesia.""",
+
+        'circle': f"""Buat ilustrasi matematika yang bersih dan edukatif berupa diagram lingkaran.
+        Jari-jari: {params.get('radius', 2)} cm
+        Gambar garis dari pusat ke tepi berlabel "jari-jari".
+        Gaya: Sederhana, jelas, latar putih, gaya edukatif profesional.
+        Gunakan garis luar biru, isi biru muda, garis jari-jari merah.
+        Label dalam Bahasa Indonesia.""",
+
+        'angle': f"""Buat ilustrasi matematika yang bersih dan edukatif berupa diagram sudut.
+        Sudut: {params.get('degrees', 60)} derajat
+        Tampilkan dua sinar yang membentuk sudut dengan busur penanda derajat.
+        Gaya: Sederhana, jelas, latar putih, gaya edukatif profesional.
+        Gunakan sinar biru, busur merah, dengan label derajat.
+        Label dalam Bahasa Indonesia.""",
+
+        'fraction': f"""Buat ilustrasi matematika yang bersih dan edukatif berupa diagram pecahan.
+        Pecahan: {params.get('numerator', 3)}/{params.get('denominator', 4)}
+        Tampilkan kotak/batang yang dibagi menjadi {params.get('denominator', 4)} bagian dengan {params.get('numerator', 3)} bagian diarsir.
+        Gaya: Sederhana, jelas, latar putih, gaya edukatif profesional.
+        Gunakan garis luar biru, arsiran biru untuk bagian terisi, dengan label pecahan.
+        Label dalam Bahasa Indonesia.""",
     }
-    
-    return prompts.get(image_type, "Create a simple, educational math diagram in professional style.")
+
+    return prompts.get(image_type, "Buat diagram matematika yang sederhana dan edukatif dengan gaya profesional, label dalam Bahasa Indonesia.")
 
 
 _GENERATORS = {
