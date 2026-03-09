@@ -21,7 +21,7 @@ security = HTTPBearer()
 
 class CreateSessionRequest(BaseModel):
     topic: str
-    total_questions: int = 10
+    total_questions: int = 3
     use_ai: bool = True
     include_images: bool = False
     client: str = "web"

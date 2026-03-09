@@ -66,15 +66,14 @@ def _generate_with_gemini(prompt: str) -> bytes | None:
         return None
     
     try:
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        model = genai.ImageGenerationModel('imagen-3.0-generate-002')
         response = model.generate_images(
             prompt=prompt,
             number_of_images=1,
-            model='imagen-3.0-generate-002',
         )
-        
-        if response and response.generated_images:
-            return response.generated_images[0]._image_bytes
+
+        if response and response.images:
+            return response.images[0]._image_bytes
         else:
             print(f"[image_service] No image generated for prompt: {prompt[:100]}")
             return None
