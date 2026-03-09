@@ -8,7 +8,7 @@ from constants import VISUAL_TOPICS, STORY_TOPICS, SYMBOLIC_TOPICS
 _system_claude = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
 CLAUDE_MODEL      = os.getenv("CLAUDE_MODEL", "claude-haiku-4-5-20251001")
-CLAUDE_MAX_TOKENS = int(os.getenv("CLAUDE_MAX_TOKENS", "1024"))
+CLAUDE_MAX_TOKENS = int(os.getenv("CLAUDE_MAX_TOKENS", "2048"))
 
 # ─── Difficulty Levels ─────────────────────────────────────────────
 
@@ -227,6 +227,28 @@ Balas HANYA dengan JSON ini (tanpa markdown, tanpa teks lain):
     elif raw.startswith("javascript\n"):
         raw = raw[11:]
     
+    # Escape literal newlines/tabs inside JSON string values (AI sometimes forgets to escape them)
+    def _escape_in_strings(s: str) -> str:
+        out, in_str, esc = [], False, False
+        for ch in s:
+            if esc:
+                out.append(ch); esc = False
+            elif ch == '\\':
+                out.append(ch); esc = True
+            elif ch == '"':
+                out.append(ch); in_str = not in_str
+            elif in_str and ch == '\n':
+                out.append('\\n')
+            elif in_str and ch == '\r':
+                out.append('\\r')
+            elif in_str and ch == '\t':
+                out.append('\\t')
+            else:
+                out.append(ch)
+        return ''.join(out)
+
+    raw = _escape_in_strings(raw)
+
     # Find and extract only the JSON object (in case AI adds extra text)
     try:
         result = json.loads(raw)
