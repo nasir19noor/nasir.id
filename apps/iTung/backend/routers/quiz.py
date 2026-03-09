@@ -203,9 +203,11 @@ def create_session(req: CreateSessionRequest,
                                            age=age,
                                            fixed_difficulty=fixed_diff)
         except (_anthropic.RateLimitError, _anthropic.APIError) as e:
+            print(f"[create_session] Anthropic API error: {type(e).__name__}: {e}")
             raise HTTPException(status_code=503,
                                 detail="Server AI sedang sibuk. Coba lagi dalam beberapa saat.")
         except Exception as e:
+            print(f"[create_session] Unexpected error generating question: {type(e).__name__}: {e}")
             raise HTTPException(status_code=502,
                                 detail=f"Gagal menghasilkan soal AI: {str(e)}")
         bq = _save_to_bank(q, req.topic, db)
@@ -311,10 +313,12 @@ async def submit_answer(req: SubmitAnswerRequest,
                                                    gemini_api_key=user_gemini,
                                                    age=age,
                                                    fixed_difficulty=fixed_diff)
-                except (_anthropic.RateLimitError, _anthropic.APIError):
+                except (_anthropic.RateLimitError, _anthropic.APIError) as e:
+                    print(f"[submit_answer] Anthropic API error: {type(e).__name__}: {e}")
                     raise HTTPException(status_code=503,
                                         detail="Server AI sedang sibuk. Coba lagi dalam beberapa saat.")
                 except Exception as e:
+                    print(f"[submit_answer] Unexpected error generating question: {type(e).__name__}: {e}")
                     raise HTTPException(status_code=502,
                                         detail=f"Gagal menghasilkan soal AI: {str(e)}")
                 bq = _save_to_bank(q, question.topic, db)
