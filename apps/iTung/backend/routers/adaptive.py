@@ -1,4 +1,4 @@
-import anthropic, json, os
+import anthropic, json, os, re
 from datetime import date
 from typing import Optional
 from sqlalchemy.orm import Session
@@ -166,30 +166,29 @@ def generate_adaptive_question(topic: str, performance: dict,
     story_hint    = "\n    - Sajikan sebagai soal cerita kontekstual (gunakan situasi nyata, bukan abstrak)." if needs_story else ""
     symbolic_hint = "\n    - Fokus pada manipulasi aljabar/ekspresi simbolik; sertakan langkah penyelesaian singkat di penjelasan." if needs_symbolic else ""
 
-    prompt = f"""
-    Kamu adalah guru matematika. Buat SATU soal matematika dalam Bahasa Indonesia.
+    prompt = f"""Kamu adalah guru matematika. Buat SATU soal matematika dalam Bahasa Indonesia.
 
-    PROFIL SISWA:
-    - {_age_context(age)}
-    - Akurasi keseluruhan : {accuracy_pct}%
-    - Topik lemah         : {weak}
-    - Target kesulitan    : {difficulty_label}
-    - 10 jawaban terakhir : {history}
+PROFIL SISWA:
+- {_age_context(age)}
+- Akurasi keseluruhan : {accuracy_pct}%
+- Topik lemah         : {weak}
+- Target kesulitan    : {difficulty_label}
+- 10 jawaban terakhir : {history}
 
-    ATURAN:
-    - Topik   : {topic}
-    - Tingkat kesulitan HARUS: {difficulty_label}
-    - Sesuaikan kompleksitas angka dan kalimat dengan usia/tingkat siswa di atas
-    - Tulis soal, pilihan, dan penjelasan dalam Bahasa Indonesia{story_hint}{symbolic_hint}{image_instruction}
+ATURAN:
+- Topik   : {topic}
+- Tingkat kesulitan HARUS: {difficulty_label}
+- Sesuaikan kompleksitas angka dan kalimat dengan usia/tingkat siswa di atas
+- Tulis soal, pilihan, dan penjelasan dalam Bahasa Indonesia{story_hint}{symbolic_hint}{image_instruction}
 
-    Balas HANYA dengan JSON ini (tanpa teks lain):
-    {{{image_schema}
-        "soal": "teks soal dalam Bahasa Indonesia",
-        "pilihan": ["A. ...", "B. ...", "C. ...", "D. ..."],
-        "jawaban_benar": "A",
-        "penjelasan": "penjelasan singkat dalam Bahasa Indonesia",
-        "difficulty": "{difficulty}"
-    }}
+Balas HANYA dengan JSON ini (tanpa teks lain, tanpa markdown code fences):
+{{
+{image_schema}    "soal": "teks soal dalam Bahasa Indonesia",
+    "pilihan": ["A. pilihan pertama", "B. pilihan kedua", "C. pilihan ketiga", "D. pilihan keempat"],
+    "jawaban_benar": "A",
+    "penjelasan": "penjelasan singkat dalam Bahasa Indonesia",
+    "difficulty": "{difficulty}"
+}}
 """
 
     if gemini_api_key:
@@ -213,12 +212,37 @@ def generate_adaptive_question(topic: str, performance: dict,
         if raw.startswith("json"):
             raw = raw[4:]
         raw = raw.rsplit("```", 1)[0].strip()
-    result = json.loads(raw)
+    
+    # Find and extract only the JSON object (in case AI adds extra text)
+    try:
+        result = json.loads(raw)
+    except json.JSONDecodeError as e:
+        # Try to find JSON object within the response
+        json_match = re.search(r'\{.*\}', raw, re.DOTALL)
+        if json_match:
+            try:
+                result = json.loads(json_match.group())
+            except json.JSONDecodeError:
+                print(f"[adaptive] Failed to parse JSON: {e}")
+                print(f"[adaptive] Raw response: {raw[:500]}")
+                raise
+        else:
+            print(f"[adaptive] Failed to parse JSON: {e}")
+            print(f"[adaptive] Raw response: {raw[:500]}")
+            raise
 
     if needs_image and 'image' in result:
         from services.image_service import generate as gen_image
         img      = result.pop('image')
         img_url  = gen_image(img.get('type', ''), img.get('params', {}), topic=topic)
         result['image_url'] = img_url
+    
+    # Ensure all required fields exist
+    required_fields = ['soal', 'pilihan', 'jawaban_benar', 'penjelasan', 'difficulty']
+    for field in required_fields:
+        if field not in result:
+            print(f"[adaptive] Missing required field: {field}")
+            print(f"[adaptive] Response keys: {list(result.keys())}")
+            result[field] = result.get(field, "")
 
     return result
