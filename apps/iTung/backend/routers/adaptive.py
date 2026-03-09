@@ -138,7 +138,7 @@ def generate_adaptive_question(topic: str, performance: dict,
     weak         = performance.get('weak_topics', [])
     difficulty   = performance.get('next_difficulty', get_base_difficulty(age))
     history      = performance.get('recent_history', [])
-    needs_image    = include_image and topic in VISUAL_TOPICS
+    needs_image    = include_image  # Generate image if checkbox is checked, regardless of topic
     needs_story    = topic in STORY_TOPICS
     needs_symbolic = topic in SYMBOLIC_TOPICS
 
@@ -156,9 +156,8 @@ def generate_adaptive_question(topic: str, performance: dict,
     image_schema      = ""
     if needs_image:
         image_instruction = """
-    - Sertakan field "image" HANYA jika gambar benar-benar membantu memvisualisasikan soal yang kamu buat (bukan hanya karena topiknya).
-    - Jika soal yang kamu hasilkan tidak memerlukan gambar (misalnya soal cerita atau perhitungan murni), JANGAN sertakan field "image".
-    - Jika gambar diperlukan, pilih tipe yang paling sesuai dengan ISI SOAL (bukan topiknya):
+    - Sertakan SELALU field "image" untuk membantu visualisasi soal yang kamu buat.
+    - Pilih tipe gambar yang paling sesuai dengan ISI SOAL (bukan topiknya):
         number_line : {"type": "number_line", "params": {"start": 0, "end": 20, "marked": [7]}, "given_info": "Garis bilangan dari 0 sampai 20, titik pada 7"}
         rectangle   : {"type": "rectangle",   "params": {"width": 5, "height": 3}, "given_info": "Persegi panjang lebar 5 cm, tinggi 3 cm"}
         square      : {"type": "square",       "params": {"side": 4}, "given_info": "Persegi dengan sisi 4 cm"}
@@ -168,7 +167,7 @@ def generate_adaptive_question(topic: str, performance: dict,
         fraction    : {"type": "fraction",     "params": {"numerator": 3, "denominator": 4}, "given_info": "Pecahan 3/4"}
     - PENTING untuk "given_info": Tulis HANYA informasi yang SECARA EKSPLISIT diberikan dalam soal. Jangan sertakan nilai yang dihitung, atau informasi turunan.
     - PENTING: Gambar hanya menampilkan informasi dari "given_info" - TIDAK lebih, TIDAK kurang. Jangan tambahkan sudut yang dihitung, panjang yang tidak disebutkan, atau informasi apapun di luar "given_info"."""
-        image_schema = '\n        "image": {"type": "...", "params": {...}, "given_info": "..."},  // opsional, hanya jika benar-benar membantu'
+        image_schema = '\n        "image": {"type": "...", "params": {...}, "given_info": "..."},  // WAJIB untuk visualisasi soal'
 
     story_hint    = "\n    - Sajikan sebagai soal cerita kontekstual (gunakan situasi nyata, bukan abstrak)." if needs_story else ""
     symbolic_hint = "\n    - Fokus pada manipulasi aljabar/ekspresi simbolik; sertakan langkah penyelesaian singkat di penjelasan." if needs_symbolic else ""
