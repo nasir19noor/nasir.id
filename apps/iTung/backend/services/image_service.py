@@ -1,8 +1,9 @@
 """
-Generates math diagram images using Google Gemini and uploads them to Amazon S3.
+Generates math diagram images using Google Gemini (primary) or OpenRouter (fallback),
+then uploads them to Amazon S3.
 Supported types: number_line, rectangle, square, triangle, circle, angle, fraction
 """
-import io, os, uuid
+import io, os, uuid, base64, requests as _requests
 from datetime import datetime
 import boto3
 from google import genai
@@ -21,10 +22,12 @@ def _get_s3():
         )
     return _s3
 
-BUCKET   = os.getenv('S3_BUCKET_NAME')
-CDN_BASE = os.getenv('S3_CDN_BASE', '')
-GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
-GEMINI_IMAGE_MODEL = os.getenv('GEMINI_IMAGE_MODEL', 'gemini-3-pro-image-preview')
+BUCKET               = os.getenv('S3_BUCKET_NAME')
+CDN_BASE             = os.getenv('S3_CDN_BASE', '')
+GOOGLE_API_KEY       = os.getenv('GOOGLE_API_KEY')
+GEMINI_IMAGE_MODEL   = os.getenv('GEMINI_IMAGE_MODEL', 'gemini-2.0-flash-exp')
+OPENROUTER_API_KEY   = os.getenv('OPENROUTER_API_KEY')
+OPENROUTER_IMAGE_MODEL = os.getenv('OPENROUTER_IMAGE_MODEL', 'google/gemini-2.0-flash-exp:free')
 
 _genai_client = genai.Client(api_key=GOOGLE_API_KEY) if GOOGLE_API_KEY else None
 
@@ -193,15 +196,58 @@ Spesifikasi:
 {only_given_info}""")
 
 
+def _generate_with_openrouter(prompt: str) -> bytes | None:
+    """Generate image via OpenRouter as fallback. Returns image bytes or None."""
+    if not OPENROUTER_API_KEY:
+        return None
+    try:
+        resp = _requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": OPENROUTER_IMAGE_MODEL,
+                "messages": [{"role": "user", "content": prompt}],
+                "modalities": ["image", "text"],
+            },
+            timeout=60,
+        )
+        resp.raise_for_status()
+        for choice in resp.json().get("choices", []):
+            content = choice.get("message", {}).get("content", "")
+            if isinstance(content, list):
+                for part in content:
+                    if part.get("type") == "image_url":
+                        url = part["image_url"]["url"]
+                        if url.startswith("data:image/"):
+                            return base64.b64decode(url.split(",", 1)[1])
+        print("[image_service] OpenRouter returned no image data")
+        return None
+    except Exception as e:
+        print(f"[image_service] OpenRouter image generation failed: {e}")
+        return None
+
+
+def _generate_image(prompt: str) -> bytes | None:
+    """Try Gemini first; fall back to OpenRouter if Gemini fails or returns nothing."""
+    result = _generate_with_gemini(prompt)
+    if result is None and OPENROUTER_API_KEY:
+        print("[image_service] Gemini returned no image, trying OpenRouter fallback")
+        result = _generate_with_openrouter(prompt)
+    return result
+
+
 _GENERATORS = {
-    'number_line': lambda p, t, q: _upload(_generate_with_gemini(_create_prompt('number_line', p, q)), t),
-    'rectangle':   lambda p, t, q: _upload(_generate_with_gemini(_create_prompt('rectangle', p, q)), t),
-    'square':      lambda p, t, q: _upload(_generate_with_gemini(_create_prompt('square', p, q)), t),
-    'triangle':    lambda p, t, q: _upload(_generate_with_gemini(_create_prompt('triangle', p, q)), t),
-    'circle':      lambda p, t, q: _upload(_generate_with_gemini(_create_prompt('circle', p, q)), t),
-    'angle':       lambda p, t, q: _upload(_generate_with_gemini(_create_prompt('angle', p, q)), t),
-    'fraction':    lambda p, t, q: _upload(_generate_with_gemini(_create_prompt('fraction', p, q)), t),
-    'custom':      lambda p, t, q: _upload(_generate_with_gemini(p.get('prompt', '')), t),
+    'number_line': lambda p, t, q: _upload(_generate_image(_create_prompt('number_line', p, q)), t),
+    'rectangle':   lambda p, t, q: _upload(_generate_image(_create_prompt('rectangle', p, q)), t),
+    'square':      lambda p, t, q: _upload(_generate_image(_create_prompt('square', p, q)), t),
+    'triangle':    lambda p, t, q: _upload(_generate_image(_create_prompt('triangle', p, q)), t),
+    'circle':      lambda p, t, q: _upload(_generate_image(_create_prompt('circle', p, q)), t),
+    'angle':       lambda p, t, q: _upload(_generate_image(_create_prompt('angle', p, q)), t),
+    'fraction':    lambda p, t, q: _upload(_generate_image(_create_prompt('fraction', p, q)), t),
+    'custom':      lambda p, t, q: _upload(_generate_image(p.get('prompt', '')), t),
 }
 
 
