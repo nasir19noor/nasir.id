@@ -197,12 +197,17 @@ Balas HANYA dengan JSON ini (tanpa markdown, tanpa teks lain):
 """
 
     if gemini_api_key:
+        print(f"[adaptive] Using Gemini (user key) | topic={topic} difficulty={difficulty}")
         import google.generativeai as genai
         genai.configure(api_key=gemini_api_key)
         model = genai.GenerativeModel("gemini-1.5-flash")
         response = model.generate_content(prompt)
         raw = response.text.strip()
     else:
+        if claude_api_key:
+            print(f"[adaptive] Using Claude (user key) | model={CLAUDE_MODEL} topic={topic} difficulty={difficulty}")
+        else:
+            print(f"[adaptive] Using Claude (system key) | model={CLAUDE_MODEL} topic={topic} difficulty={difficulty}")
         client = anthropic.Anthropic(api_key=claude_api_key) if claude_api_key else _system_claude
         msg = client.messages.create(
             model=CLAUDE_MODEL,
