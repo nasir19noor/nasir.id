@@ -117,7 +117,7 @@ resource "aws_s3_bucket_policy" "nasir_itung_cloudfront_only" {
           "${module.s3_itung.s3_bucket_arn}/questions/*"]
         Condition = {
           StringEquals = {
-            "AWS:SourceArn" = data.terraform_remote_state.cloudfront.outputs.cloudfront_distribution_arn
+            "AWS:SourceArn" = data.terraform_remote_state.cloudfront.outputs.cloudfront_itung_distribution_arn
           }
         }
       }
