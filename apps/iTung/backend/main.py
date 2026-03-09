@@ -1,5 +1,7 @@
 from fastapi import FastAPI, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from database import engine, Base, SessionLocal
 from routers import users, quiz, admin
 from sqlalchemy import text
@@ -301,6 +303,28 @@ def extract_source_from_referrer(referrer: str) -> str | None:
 
 app = FastAPI(title='iTung API', version='1.0.0')
 
+# Add middleware to log and handle large uploads
+class LoggingMiddleware:
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http":
+            print(f"[HTTP] {scope['method']} {scope['path']}")
+            if "avatar" in scope['path']:
+                print(f"[AVATAR_UPLOAD] Method: {scope['method']}, Headers: {dict(scope.get('headers', []))[:500]}")
+        
+        async def send_with_logging(message):
+            if message["type"] == "http.response.start":
+                if "avatar" in scope['path']:
+                    print(f"[AVATAR_UPLOAD] Response status: {message['status']}")
+            await send(message)
+        
+        await self.app(scope, receive, send_with_logging)
+
+
+app.add_middleware(LoggingMiddleware)
+
 # Add analytics middleware
 app.middleware("http")(analytics_middleware)
 
@@ -320,6 +344,31 @@ app.add_middleware(CORSMiddleware,
 app.include_router(users.router,  prefix="/api/users",  tags=["users"])
 app.include_router(quiz.router,   prefix="/api/quiz",   tags=["quiz"])
 app.include_router(admin.router,  prefix="/api/admin",  tags=["admin"])
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Catch validation errors and log them."""
+    print(f"[VALIDATION_ERROR] {request.method} {request.url.path}")
+    print(f"[VALIDATION_ERROR] Errors: {exc.errors()}")
+    return JSONResponse(
+        status_code=422,
+        content={"detail": str(exc)},
+    )
+
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    """Catch all exceptions and log them."""
+    print(f"[GENERAL_ERROR] {request.method} {request.url.path}")
+    print(f"[GENERAL_ERROR] {type(exc).__name__}: {exc}")
+    import traceback
+    traceback.print_exc()
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+    )
+
 
 @app.get("/")
 def root():

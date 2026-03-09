@@ -405,18 +405,27 @@ async def upload_avatar(
     db: Session = Depends(get_db),
 ):
     """Upload a profile photo and generate an AI cartoon version."""
+    print(f"[ENDPOINT] upload_avatar called for user {current_user.user_id}")
+    print(f"[FILE] filename={file.filename}, content_type={file.content_type}, size=unknown")
+    
     try:
         if not file.content_type or not file.content_type.startswith("image/"):
+            print(f"[VALIDATION] Invalid content type: {file.content_type}")
             raise HTTPException(status_code=400, detail="File must be an image")
 
         user = db.query(User).filter(User.id == current_user.user_id).first()
         if not user:
+            print(f"[DB] User not found: {current_user.user_id}")
             raise HTTPException(status_code=404, detail="User not found")
 
+        print(f"[FILE_READ] Reading file bytes...")
         file_bytes = await file.read()
+        print(f"[FILE_READ] Success, size: {len(file_bytes)} bytes")
+        
         print(f"[avatar] Starting upload for user {user.id}, file size: {len(file_bytes)} bytes")
 
         # Upload original to S3
+        print(f"[S3] Uploading original image...")
         original_url = avatar_service.upload_original(file_bytes, user.id, file.content_type)
         if not original_url:
             print("[avatar] upload_original returned None")
@@ -446,12 +455,15 @@ async def upload_avatar(
             print("[avatar] Cartoon generation returned None (skipped)")
 
         db.refresh(user)
-        return {"avatar_url": user.avatar_url, "cartoon_url": user.cartoon_url}
+        result = {"avatar_url": user.avatar_url, "cartoon_url": user.cartoon_url}
+        print(f"[RESPONSE] Success: {result}")
+        return result
     
-    except HTTPException:
+    except HTTPException as e:
+        print(f"[ERROR] HTTPException: {e.status_code} - {e.detail}")
         raise
     except Exception as e:
-        print(f"[avatar] Error: {e}")
+        print(f"[ERROR] Unexpected error: {type(e).__name__}: {e}")
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Gagal mengunggah foto. Coba lagi.")
