@@ -221,9 +221,68 @@ Balas HANYA dengan JSON ini (tanpa markdown, tanpa teks lain):
         elif len(parts) == 2:
             raw = parts[1]
     
+    # Strip language identifier if present without backticks (e.g., "json\n{...}")
+    if raw.startswith("json\n"):
+        raw = raw[5:]
+    elif raw.startswith("javascript\n"):
+        raw = raw[11:]
+    
     # Find and extract only the JSON object (in case AI adds extra text)
     try:
         result = json.loads(raw)
+    except json.JSONDecodeError as e:
+        # Try to find JSON object within the response using bracket matching
+        start_idx = raw.find('{')
+        if start_idx != -1:
+            # Find the matching closing brace
+            brace_count = 0
+            end_idx = start_idx
+            in_string = False
+            escape = False
+            
+            for i in range(start_idx, len(raw)):
+                char = raw[i]
+                
+                if escape:
+                    escape = False
+                    continue
+                
+                if char == '\\':
+                    escape = True
+                    continue
+                
+                if char == '"' and not escape:
+                    in_string = not in_string
+                    continue
+                
+                if not in_string:
+                    if char == '{':
+                        brace_count += 1
+                    elif char == '}':
+                        brace_count -= 1
+                        if brace_count == 0:
+                            end_idx = i + 1
+                            break
+            
+            if end_idx > start_idx:
+                json_str = raw[start_idx:end_idx]
+                try:
+                    result = json.loads(json_str)
+                except json.JSONDecodeError as parse_err:
+                    print(f"[adaptive] Failed to parse extracted JSON: {parse_err}")
+                    print(f"[adaptive] Extracted JSON (first 500 chars): {json_str[:500]}")
+                    raise
+            else:
+                print(f"[adaptive] Could not find matching closing brace: {e}")
+                print(f"[adaptive] Raw response length: {len(raw)}")
+                print(f"[adaptive] Raw response (first 1000 chars): {raw[:1000]}")
+                print(f"[adaptive] Raw response (last 200 chars): {raw[-200:]}")
+                raise
+        else:
+            print(f"[adaptive] No opening brace found: {e}")
+            print(f"[adaptive] Raw response length: {len(raw)}")
+            print(f"[adaptive] Raw response (first 1000 chars): {raw[:1000]}")
+            raise
     except json.JSONDecodeError as e:
         # Try to find JSON object within the response
         json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', raw, re.DOTALL)
