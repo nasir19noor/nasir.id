@@ -312,7 +312,8 @@ class LoggingMiddleware:
         if scope["type"] == "http":
             print(f"[HTTP] {scope['method']} {scope['path']}")
             if "avatar" in scope['path']:
-                print(f"[AVATAR_UPLOAD] Method: {scope['method']}, Headers: {dict(scope.get('headers', []))[:500]}")
+                headers_str = str(dict(scope.get('headers', [])))[:300]
+                print(f"[AVATAR_UPLOAD] Method: {scope['method']}, Path: {scope['path']}, Headers: {headers_str}")
         
         async def send_with_logging(message):
             if message["type"] == "http.response.start":
