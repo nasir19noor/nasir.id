@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine, Base, SessionLocal
 from routers import users, quiz, admin
@@ -170,6 +170,10 @@ async def analytics_middleware(request: Request, call_next):
     """Middleware to track user analytics."""
     start_time = time.time()
     
+    # Log all requests for debugging
+    if "/me/avatar" in request.url.path:
+        print(f"[middleware] {request.method} {request.url.path} - Content-Type: {request.headers.get('content-type')}")
+    
     try:
         # Get IP address
         ip = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
@@ -320,3 +324,13 @@ app.include_router(admin.router,  prefix="/api/admin",  tags=["admin"])
 @app.get("/")
 def root():
     return {'app': 'iTung API', 'status': 'running'}
+
+@app.post("/test-upload")
+async def test_upload(file: UploadFile = None):
+    """Test endpoint to verify file upload works."""
+    print(f"[test-upload] Received POST request")
+    if file:
+        content = await file.read()
+        print(f"[test-upload] File: {file.filename}, Size: {len(content)} bytes, Content-Type: {file.content_type}")
+        return {"filename": file.filename, "size": len(content), "content_type": file.content_type}
+    return {"message": "No file received"}
