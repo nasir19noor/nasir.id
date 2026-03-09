@@ -228,7 +228,7 @@ def create_session(req: CreateSessionRequest,
         bq = _next_bank_question(session.id, req.topic, base_difficulty, db)
         if not bq:
             raise HTTPException(status_code=404,
-                                detail="No questions available in bank for this topic")
+                                detail="Belum tersedia soal untuk topik ini. Coba pilih topik lain atau aktifkan AI untuk soal adaptif.")
         new_q = _bank_question_to_model(bq, session.id, user_id, 1)
 
     db.add(new_q); db.commit(); db.refresh(new_q)

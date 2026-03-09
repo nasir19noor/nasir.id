@@ -3,7 +3,7 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: 'iTung — Belajar Matematika',
-  description: 'Platform latihan matematika adaptif untuk siswa SD',
+  description: 'Latihan matematika adaptif dan seru untuk siswa SD - SMA',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
