@@ -49,6 +49,7 @@ export default function AdminPage() {
   const [questionsLoading, setQuestionsLoading] = useState(false)
   const [confirmDeleteQuestion, setConfirmDeleteQuestion] = useState<number | null>(null)
   const [deletingQuestion, setDeletingQuestion] = useState<number | null>(null)
+  const [selectedTopic, setSelectedTopic] = useState<string>('all')
 
   useEffect(() => {
     if (loading) return
@@ -110,6 +111,14 @@ export default function AdminPage() {
       setConfirmDeleteQuestion(null)
     }
   }
+
+  // Get unique topics from questions
+  const uniqueTopics = Array.from(new Set(questions.map((q) => q.topic))).sort()
+
+  // Filter questions by selected topic
+  const filteredQuestions = selectedTopic === 'all' 
+    ? questions 
+    : questions.filter((q) => q.topic === selectedTopic)
 
   async function handleDelete(userId: number) {
     setSaving(userId)
@@ -563,15 +572,32 @@ export default function AdminPage() {
                   </div>
                 )}
 
+                {/* Topic Filter Dropdown */}
+                <div className="flex items-center gap-3 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                  <label className="font-medium text-gray-700">Filter Topik:</label>
+                  <select
+                    value={selectedTopic}
+                    onChange={(e) => setSelectedTopic(e.target.value)}
+                    className="border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  >
+                    <option value="all">Semua Topik ({questions.length})</option>
+                    {uniqueTopics.map((topic) => (
+                      <option key={topic} value={topic}>
+                        {topic} ({questions.filter((q) => q.topic === topic).length})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 {/* Questions by Topic */}
                 <div className="space-y-6">
-                  {questions.length === 0 ? (
+                  {filteredQuestions.length === 0 ? (
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center">
                       <p className="text-gray-500">Tidak ada pertanyaan ditemukan.</p>
                     </div>
                   ) : (
                     Object.entries(
-                      questions.reduce(
+                      filteredQuestions.reduce(
                         (acc, q) => {
                           if (!acc[q.topic]) acc[q.topic] = []
                           acc[q.topic].push(q)
