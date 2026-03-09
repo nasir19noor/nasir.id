@@ -27,7 +27,7 @@ CDN_BASE             = os.getenv('S3_CDN_BASE', '')
 GOOGLE_API_KEY       = os.getenv('GOOGLE_API_KEY')
 GEMINI_IMAGE_MODEL   = os.getenv('GEMINI_IMAGE_MODEL', 'gemini-2.0-flash-exp')
 OPENROUTER_API_KEY   = os.getenv('OPENROUTER_API_KEY')
-OPENROUTER_IMAGE_MODEL = os.getenv('OPENROUTER_IMAGE_MODEL', 'google/gemini-2.0-flash-exp:free')
+OPENROUTER_IMAGE_MODEL = os.getenv('OPENROUTER_IMAGE_MODEL', 'black-forest-labs/flux-schnell')
 
 _genai_client = genai.Client(api_key=GOOGLE_API_KEY) if GOOGLE_API_KEY else None
 
@@ -197,32 +197,33 @@ Spesifikasi:
 
 
 def _generate_with_openrouter(prompt: str) -> bytes | None:
-    """Generate image via OpenRouter as fallback. Returns image bytes or None."""
+    """Generate image via OpenRouter images/generations endpoint as fallback."""
     if not OPENROUTER_API_KEY:
         return None
     try:
         resp = _requests.post(
-            "https://openrouter.ai/api/v1/chat/completions",
+            "https://openrouter.ai/api/v1/images/generations",
             headers={
                 "Authorization": f"Bearer {OPENROUTER_API_KEY}",
                 "Content-Type": "application/json",
             },
             json={
                 "model": OPENROUTER_IMAGE_MODEL,
-                "messages": [{"role": "user", "content": prompt}],
-                "modalities": ["image", "text"],
+                "prompt": prompt,
+                "n": 1,
+                "response_format": "b64_json",
             },
             timeout=60,
         )
         resp.raise_for_status()
-        for choice in resp.json().get("choices", []):
-            content = choice.get("message", {}).get("content", "")
-            if isinstance(content, list):
-                for part in content:
-                    if part.get("type") == "image_url":
-                        url = part["image_url"]["url"]
-                        if url.startswith("data:image/"):
-                            return base64.b64decode(url.split(",", 1)[1])
+        data = resp.json()
+        item = data["data"][0]
+        if item.get("b64_json"):
+            return base64.b64decode(item["b64_json"])
+        if item.get("url"):
+            img_resp = _requests.get(item["url"], timeout=30)
+            img_resp.raise_for_status()
+            return img_resp.content
         print("[image_service] OpenRouter returned no image data")
         return None
     except Exception as e:

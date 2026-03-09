@@ -14,7 +14,3 @@ RUN echo '#!/bin/bash\nset -e\necho "Running migrations..."\npython migrate_add_
 
 ENTRYPOINT ["/app/entrypoint.sh"]
 
-
-
-
-
