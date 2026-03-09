@@ -250,7 +250,13 @@ Balas HANYA dengan JSON ini (tanpa markdown, tanpa teks lain):
     if needs_image and 'image' in result:
         from services.image_service import generate as gen_image
         img      = result.pop('image')
-        img_url  = gen_image(img.get('type', ''), img.get('params', {}), topic=topic)
+        # Pass the full question for context so Gemini can generate accurate diagrams
+        img_url  = gen_image(
+            img.get('type', ''), 
+            img.get('params', {}), 
+            topic=topic,
+            question=result.get('soal', '')  # Pass full question for context
+        )
         result['image_url'] = img_url
     
     # Ensure all required fields exist

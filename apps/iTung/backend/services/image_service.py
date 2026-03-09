@@ -86,105 +86,127 @@ def _generate_with_gemini(prompt: str) -> bytes | None:
         return None
 
 
-def _create_prompt(image_type: str, params: dict) -> str:
+def _create_prompt(image_type: str, params: dict, question: str = "") -> str:
     """Create a detailed prompt for Gemini to generate the appropriate math diagram."""
     
     # Critical instructions - ONLY show explicitly provided information
     only_given_info = """
-PENTING: Hanya tampilkan INFORMASI YANG DIBERIKAN dalam soal saja.
-JANGAN tampilkan:
-- Nilai yang harus dihitung/dicari (jawaban)
-- Sudut atau panjang yang bukan bagian dari pertanyaan awal
-- Hasil perhitungan atau turunan dari informasi yang diberikan
-- Dekorasi atau informasi tambahan apapun
+PENTING: Buat diagram yang akurat berdasarkan informasi dalam soal.
+- Tampilkan SEMUA informasi penting yang disebutkan dalam soal
+- Label dengan jelas semua ukuran, sudut, dan nilai yang diberikan
+- Pastikan diagram AKURAT dan SESUAI dengan deskripsi soal
+- Gaya profesional: bersih, terang, latar putih, mudah dibaca
+- Jangan menambahkan informasi yang tidak ada atau kesalahan
 
-Hanya tampilkan label, ukuran, dan sudut yang SECARA EKSPLISIT diberikan dalam soal.
-TIDAK ada informasi lain, hasil perhitungan, atau nilai yang dapat diketahui dari soal.
+Konteks soal: {question}
 """
 
     prompts = {
-        'number_line': f"""Buat diagram garis bilangan yang bersih dan profesional.
-Rentang: dari {params.get('start', 0)} sampai {params.get('end', 20)}
-Tandai dengan titik dan label angka-angka: {params.get('marked', [])}
-Gaya: hitam dan putih, terang, sederhana, latar putih bersih.
+        'number_line': f"""Buat diagram garis bilangan yang akurat berdasarkan soal ini:
+{question}
+
+Spesifikasi:
+- Rentang: dari {params.get('start', 0)} sampai {params.get('end', 20)}
+- Tandai angka-angka: {params.get('marked', [])} dengan titik dan label jelas
+- Informasi: {params.get('given_info', 'Garis bilangan dengan angka-angka tertanda')}
+
 {only_given_info}""",
 
-        'rectangle': f"""Buat diagram persegi panjang yang bersih dan profesional.
-Dimensi: Lebar {params.get('width', 4)} cm, Tinggi {params.get('height', 3)} cm
-Label HANYA ukuran di sisi-sisi: lebar dan tinggi.
-Jangan tampilkan luas, keliling, atau nilai apapun yang bukan dimensi yang diberikan.
-Gaya: garis biru, latar putih bersih, terang, sederhana.
+        'rectangle': f"""Buat diagram persegi panjang yang akurat berdasarkan soal ini:
+{question}
+
+Spesifikasi:
+- Lebar: {params.get('width', 4)} cm
+- Tinggi: {params.get('height', 3)} cm
+- Informasi: {params.get('given_info', 'Persegi panjang dengan dimensi')}
+- Label SEMUA ukuran di sisi-sisinya dengan jelas
+
 {only_given_info}""",
 
-        'square': f"""Buat diagram persegi yang bersih dan profesional.
-Panjang sisi: {params.get('side', 4)} cm
-Label HANYA satu sisi saja dengan panjangnya.
-Jangan tampilkan luas, keliling, atau informasi yang dihitung.
-Gaya: garis biru tua, latar putih bersih, terang, sederhana.
+        'square': f"""Buat diagram persegi yang akurat berdasarkan soal ini:
+{question}
+
+Spesifikasi:
+- Sisi: {params.get('side', 4)} cm
+- Informasi: {params.get('given_info', 'Persegi dengan sisi tertentu')}
+- Label sisi dengan jelas
+
 {only_given_info}""",
 
-        'triangle': f"""Buat diagram segitiga yang bersih dan profesional.
-Informasi yang diberikan dalam soal:
-{params.get('given_info', 'Segitiga ABC dengan titik sudut berlabel A, B, C')}
+        'triangle': f"""Buat diagram segitiga yang AKURAT berdasarkan soal ini:
+{question}
 
-Label HANYA informasi yang diberikan di atas. Tidak boleh ada:
-- Sudut yang dihitung
-- Panjang sisi yang tidak disebutkan
-- Tinggi atau garis bantu yang tidak diminta
-- Nilai apapun selain yang EKSPLISIT dalam daftar informasi
+Informasi yang harus ditampilkan:
+{params.get('given_info', 'Segitiga ABC')}
 
-Jika ada garis khusus (seperti tinggi/median/garis bagi), tampilkan HANYA jika diberikan dalam soal.
-Gaya: garis biru tua, latar putih bersih, terang, sederhana, hanya apa yang perlu.
+PENTING:
+- Tampilkan SEMUA sisi dan sudut yang disebutkan dalam soal
+- Label titik sudut: A, B, C
+- Tulis panjang sisi dan sudut di dekat garis/sudut yang sesuai
+- Pastikan proporsi dan akurasi diagram sesuai soal
+- Jika ada tinggi/median/garis bagi, tampilkan JIKA disebutkan dalam soal
+
 {only_given_info}""",
 
-        'circle': f"""Buat diagram lingkaran yang bersih dan profesional.
-Informasi yang diberikan:
-{params.get('given_info', f'Lingkaran dengan jari-jari {params.get("radius", 2)} cm')}
+        'circle': f"""Buat diagram lingkaran yang akurat berdasarkan soal ini:
+{question}
 
-Label HANYA informasi di atas. Jangan tampilkan luas, keliling, atau perhitungan lain.
-Gaya: garis biru tua, latar putih bersih, terang, sederhana.
+Spesifikasi:
+- Informasi: {params.get('given_info', f'Lingkaran dengan jari-jari {params.get("radius", 2)} cm')}
+- Jari-jari: {params.get('radius', 2)} cm
+- Tampilkan dan label semua elemen yang disebutkan dalam soal
+
 {only_given_info}""",
 
-        'angle': f"""Buat diagram sudut yang bersih dan profesional.
-Informasi yang diberikan:
-{params.get('given_info', f'Sudut {params.get("degrees", 60)} derajat')}
+        'angle': f"""Buat diagram sudut yang AKURAT berdasarkan soal ini:
+{question}
 
-Label HANYA informasi di atas. Tampilkan dua sinar yang membentuk sudut dengan busur dan label derajat.
-Jangan tambahkan informasi lain.
-Gaya: sinar biru tua, busur merah, latar putih bersih, terang, sederhana.
+Spesifikasi:
+- Sudut: {params.get('degrees', 60)}°
+- Informasi: {params.get('given_info', f'Sudut {params.get("degrees", 60)} derajat')}
+- Tampilkan dua sinar membentuk sudut dengan busur
+- Label sudut dengan nilai derajatnya
+
 {only_given_info}""",
 
-        'fraction': f"""Buat diagram pecahan yang bersih dan profesional.
-Pecahan: {params.get('numerator', 3)}/{params.get('denominator', 4)}
+        'fraction': f"""Buat diagram pecahan yang akurat berdasarkan soal ini:
+{question}
 
-Tampilkan persegi/kotak yang dibagi menjadi {params.get('denominator', 4)} bagian dengan {params.get('numerator', 3)} bagian diarsir/berwarna.
-Label pecahan. Jangan tampilkan desimal, persen, atau informasi lain.
-Gaya: garis biru tua, area terisi biru muda, latar putih bersih, terang, sederhana.
+Spesifikasi:
+- Pecahan: {params.get('numerator', 3)}/{params.get('denominator', 4)}
+- Informasi: {params.get('given_info', f'Pecahan {params.get("numerator", 3)}/{params.get("denominator", 4)}')}
+- Bagi persegi/kotak menjadi {params.get('denominator', 4)} bagian
+- Arsir/warnai {params.get('numerator', 3)} bagian
+- Label pecahan dengan jelas
+
 {only_given_info}""",
     }
 
-    return prompts.get(image_type, f"Buat diagram matematika yang sederhana dan profesional. Hanya tampilkan informasi yang diberikan dalam soal. {only_given_info}")
+    return prompts.get(image_type, f"""Buat diagram matematika akurat berdasarkan soal ini:
+{question}
+
+{only_given_info}""")
 
 
 _GENERATORS = {
-    'number_line': lambda p, t: _upload(_generate_with_gemini(_create_prompt('number_line', p)), t),
-    'rectangle':   lambda p, t: _upload(_generate_with_gemini(_create_prompt('rectangle', p)), t),
-    'square':      lambda p, t: _upload(_generate_with_gemini(_create_prompt('square', p)), t),
-    'triangle':    lambda p, t: _upload(_generate_with_gemini(_create_prompt('triangle', p)), t),
-    'circle':      lambda p, t: _upload(_generate_with_gemini(_create_prompt('circle', p)), t),
-    'angle':       lambda p, t: _upload(_generate_with_gemini(_create_prompt('angle', p)), t),
-    'fraction':    lambda p, t: _upload(_generate_with_gemini(_create_prompt('fraction', p)), t),
-    'custom':      lambda p, t: _upload(_generate_with_gemini(p.get('prompt', '')), t),
+    'number_line': lambda p, t, q: _upload(_generate_with_gemini(_create_prompt('number_line', p, q)), t),
+    'rectangle':   lambda p, t, q: _upload(_generate_with_gemini(_create_prompt('rectangle', p, q)), t),
+    'square':      lambda p, t, q: _upload(_generate_with_gemini(_create_prompt('square', p, q)), t),
+    'triangle':    lambda p, t, q: _upload(_generate_with_gemini(_create_prompt('triangle', p, q)), t),
+    'circle':      lambda p, t, q: _upload(_generate_with_gemini(_create_prompt('circle', p, q)), t),
+    'angle':       lambda p, t, q: _upload(_generate_with_gemini(_create_prompt('angle', p, q)), t),
+    'fraction':    lambda p, t, q: _upload(_generate_with_gemini(_create_prompt('fraction', p, q)), t),
+    'custom':      lambda p, t, q: _upload(_generate_with_gemini(p.get('prompt', '')), t),
 }
 
 
-def generate(image_type: str, params: dict, topic: str = "general") -> str | None:
+def generate(image_type: str, params: dict, topic: str = "general", question: str = "") -> str | None:
     """Generate a math diagram image using Gemini and upload to S3. Returns the public URL or None on failure."""
     gen = _GENERATORS.get(image_type)
     if gen is None:
         return None
     try:
-        return gen(params, topic)
+        return gen(params, topic, question)
     except Exception as e:
         print(f"[image_service] Failed to generate '{image_type}': {e}")
         return None
