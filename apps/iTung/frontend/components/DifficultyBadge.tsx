@@ -4,10 +4,6 @@ const labels: Record<string, string> = {
   sedang:       'Sedang',
   sulit:        'Sulit',
   sangat_sulit: 'Sangat Sulit',
-  // legacy fallbacks
-  easy:   'Mudah',
-  medium: 'Sedang',
-  hard:   'Sulit',
 }
 
 const colors: Record<string, string> = {
@@ -16,10 +12,6 @@ const colors: Record<string, string> = {
   sedang:       'bg-yellow-100 text-yellow-700',
   sulit:        'bg-orange-100 text-orange-700',
   sangat_sulit: 'bg-red-100 text-red-700',
-  // legacy fallbacks
-  easy:   'bg-green-100 text-green-700',
-  medium: 'bg-yellow-100 text-yellow-700',
-  hard:   'bg-red-100 text-red-700',
 }
 
 export default function DifficultyBadge({ difficulty }: { difficulty: string }) {
