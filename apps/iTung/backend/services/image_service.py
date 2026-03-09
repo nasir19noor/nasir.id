@@ -200,6 +200,28 @@ _GENERATORS = {
 }
 
 
+def delete_from_s3(image_url: str) -> bool:
+    """Delete an image from S3 given its full URL. Returns True if successful."""
+    if not image_url:
+        return False
+    
+    try:
+        base = CDN_BASE.rstrip('/') or f"https://{BUCKET}.s3.amazonaws.com"
+        # Remove CDN base URL to get the S3 key
+        if image_url.startswith(base):
+            key = image_url[len(base):].lstrip('/')
+        else:
+            # Handle case where URL has different format
+            key = image_url.split(BUCKET)[-1].lstrip('/')
+        
+        _get_s3().delete_object(Bucket=BUCKET, Key=key)
+        print(f"[image_service] Deleted S3 object: {key}")
+        return True
+    except Exception as e:
+        print(f"[image_service] S3 delete failed for {image_url}: {e}")
+        return False
+
+
 def generate(image_type: str, params: dict, topic: str = "general", question: str = "") -> str | None:
     """Generate a math diagram image using Gemini and upload to S3. Returns the public URL or None on failure."""
     gen = _GENERATORS.get(image_type)

@@ -334,4 +334,26 @@ export async function adminGetUserAnalytics(userId: number): Promise<UserAnalyti
   return res.data
 }
 
+export interface QuestionBankItem {
+  id: number
+  topic: string
+  difficulty: Difficulty
+  question_text: string
+  choices: string[]
+  correct_answer: string
+  explanation: string | null
+  image_url: string | null
+  is_active: boolean
+  created_at: string
+}
+
+export async function adminGetQuestions(): Promise<QuestionBankItem[]> {
+  const res = await api.get<QuestionBankItem[]>('/api/admin/questions')
+  return res.data
+}
+
+export async function adminDeleteQuestion(questionId: number): Promise<void> {
+  await api.delete(`/api/admin/questions/${questionId}`)
+}
+
 export default api

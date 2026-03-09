@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
-import { adminGetUsers, adminUpdateUser, adminDeleteUser, User, adminGetAnalyticsSummary, adminGetAnalytics, AnalyticsSummary, UserAnalytics } from '@/lib/api'
+import { adminGetUsers, adminUpdateUser, adminDeleteUser, User, adminGetAnalyticsSummary, adminGetAnalytics, AnalyticsSummary, UserAnalytics, adminGetQuestions, adminDeleteQuestion, QuestionBankItem, DIFFICULTY_LABELS } from '@/lib/api'
 import Navbar from '@/components/Navbar'
 
 function calcAge(birthDate: string): number {
@@ -36,7 +36,7 @@ function Toggle({
 export default function AdminPage() {
   const router = useRouter()
   const { user: me, loading } = useAuth()
-  const [tab, setTab] = useState<'users' | 'analytics'>('users')
+  const [tab, setTab] = useState<'users' | 'analytics' | 'questions'>('users')
   const [users, setUsers] = useState<User[]>([])
   const [fetching, setFetching] = useState(true)
   const [search, setSearch] = useState('')
@@ -45,6 +45,10 @@ export default function AdminPage() {
   const [analyticsSummary, setAnalyticsSummary] = useState<AnalyticsSummary | null>(null)
   const [analytics, setAnalytics] = useState<UserAnalytics[]>([])
   const [analyticsLoading, setAnalyticsLoading] = useState(false)
+  const [questions, setQuestions] = useState<QuestionBankItem[]>([])
+  const [questionsLoading, setQuestionsLoading] = useState(false)
+  const [confirmDeleteQuestion, setConfirmDeleteQuestion] = useState<number | null>(null)
+  const [deletingQuestion, setDeletingQuestion] = useState<number | null>(null)
 
   useEffect(() => {
     if (loading) return
@@ -60,6 +64,12 @@ export default function AdminPage() {
     }
   }, [tab, analyticsSummary])
 
+  useEffect(() => {
+    if (tab === 'questions' && questions.length === 0) {
+      loadQuestions()
+    }
+  }, [tab, questions.length])
+
   async function loadAnalytics() {
     setAnalyticsLoading(true)
     try {
@@ -73,6 +83,31 @@ export default function AdminPage() {
       console.error('Error loading analytics:', error)
     } finally {
       setAnalyticsLoading(false)
+    }
+  }
+
+  async function loadQuestions() {
+    setQuestionsLoading(true)
+    try {
+      const data = await adminGetQuestions()
+      setQuestions(data)
+    } catch (error) {
+      console.error('Error loading questions:', error)
+    } finally {
+      setQuestionsLoading(false)
+    }
+  }
+
+  async function handleDeleteQuestion(questionId: number) {
+    setDeletingQuestion(questionId)
+    try {
+      await adminDeleteQuestion(questionId)
+      setQuestions((prev) => prev.filter((q) => q.id !== questionId))
+    } catch (error) {
+      console.error('Error deleting question:', error)
+    } finally {
+      setDeletingQuestion(null)
+      setConfirmDeleteQuestion(null)
     }
   }
 
@@ -150,6 +185,16 @@ export default function AdminPage() {
             }`}
           >
             📊 Analytics
+          </button>
+          <button
+            onClick={() => setTab('questions')}
+            className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors ${
+              tab === 'questions'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-600 hover:text-gray-800'
+            }`}
+          >
+            ❓ Pertanyaan
           </button>
         </div>
 
@@ -473,6 +518,190 @@ export default function AdminPage() {
                 </div>
               </>
             ) : null}
+          </>
+        )}
+
+        {/* Questions Tab */}
+        {tab === 'questions' && (
+          <>
+            {questionsLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <p className="text-gray-500">Memuat pertanyaan...</p>
+              </div>
+            ) : (
+              <>
+                {/* Summary */}
+                {questions.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    {[
+                      {
+                        label: 'Total Pertanyaan',
+                        value: questions.length,
+                        color: 'bg-blue-50 text-blue-700',
+                      },
+                      {
+                        label: 'Aktif',
+                        value: questions.filter((q) => q.is_active).length,
+                        color: 'bg-emerald-50 text-emerald-700',
+                      },
+                      {
+                        label: 'Topik Unik',
+                        value: new Set(questions.map((q) => q.topic)).size,
+                        color: 'bg-purple-50 text-purple-700',
+                      },
+                      {
+                        label: 'Dengan Gambar',
+                        value: questions.filter((q) => q.image_url).length,
+                        color: 'bg-orange-50 text-orange-700',
+                      },
+                    ].map(({ label, value, color }) => (
+                      <div key={label} className={`rounded-xl p-4 ${color}`}>
+                        <p className="text-2xl font-bold">{value}</p>
+                        <p className="text-xs mt-0.5 opacity-80">{label}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Questions by Topic */}
+                <div className="space-y-6">
+                  {questions.length === 0 ? (
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center">
+                      <p className="text-gray-500">Tidak ada pertanyaan ditemukan.</p>
+                    </div>
+                  ) : (
+                    Object.entries(
+                      questions.reduce(
+                        (acc, q) => {
+                          if (!acc[q.topic]) acc[q.topic] = []
+                          acc[q.topic].push(q)
+                          return acc
+                        },
+                        {} as Record<string, QuestionBankItem[]>
+                      )
+                    )
+                      .sort(([topicA], [topicB]) => topicA.localeCompare(topicB))
+                      .map(([topic, topicQuestions]) => (
+                        <div
+                          key={topic}
+                          className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden"
+                        >
+                          <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
+                            <div className="flex items-center justify-between">
+                              <h3 className="font-semibold text-gray-800 text-lg">📚 {topic}</h3>
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-white text-gray-700 border border-gray-200">
+                                {topicQuestions.length} soal
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="divide-y divide-gray-100">
+                            {topicQuestions.map((q) => (
+                              <div
+                                key={q.id}
+                                className={`p-4 hover:bg-gray-50 transition-colors ${
+                                  deletingQuestion === q.id ? 'opacity-50' : ''
+                                }`}
+                              >
+                                <div className="space-y-3">
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2 mb-2">
+                                        <span className="text-xs font-medium inline-flex items-center px-2 py-1 rounded-full bg-gray-100 text-gray-700">
+                                          ID: {q.id}
+                                        </span>
+                                        <span
+                                          className={`text-xs font-medium inline-flex items-center px-2 py-1 rounded-full ${
+                                            q.difficulty === 'sangat_mudah'
+                                              ? 'bg-green-100 text-green-700'
+                                              : q.difficulty === 'mudah'
+                                                ? 'bg-emerald-100 text-emerald-700'
+                                                : q.difficulty === 'sedang'
+                                                  ? 'bg-yellow-100 text-yellow-700'
+                                                  : q.difficulty === 'sulit'
+                                                    ? 'bg-orange-100 text-orange-700'
+                                                    : 'bg-red-100 text-red-700'
+                                          }`}
+                                        >
+                                          {DIFFICULTY_LABELS[q.difficulty]}
+                                        </span>
+                                        {!q.is_active && (
+                                          <span className="text-xs font-medium inline-flex items-center px-2 py-1 rounded-full bg-gray-200 text-gray-700">
+                                            Tidak Aktif
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className="text-sm text-gray-700 font-medium mb-2">{q.question_text}</p>
+                                      <div className="space-y-1">
+                                        {q.choices.map((choice, idx) => (
+                                          <p
+                                            key={idx}
+                                            className={`text-sm ${
+                                              choice.startsWith(q.correct_answer)
+                                                ? 'text-green-600 font-medium'
+                                                : 'text-gray-600'
+                                            }`}
+                                          >
+                                            {choice}
+                                          </p>
+                                        ))}
+                                      </div>
+                                      {q.explanation && (
+                                        <div className="mt-2 p-2 bg-blue-50 rounded border border-blue-200">
+                                          <p className="text-xs text-blue-700">
+                                            <span className="font-medium">Penjelasan:</span> {q.explanation}
+                                          </p>
+                                        </div>
+                                      )}
+                                      {q.image_url && (
+                                        <div className="mt-2">
+                                          <a
+                                            href={q.image_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                                          >
+                                            🖼️ Lihat Gambar
+                                          </a>
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="flex-shrink-0">
+                                      {confirmDeleteQuestion === q.id ? (
+                                        <div className="flex items-center gap-2">
+                                          <button
+                                            onClick={() => handleDeleteQuestion(q.id)}
+                                            className="text-xs bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded-lg transition-colors"
+                                          >
+                                            Ya
+                                          </button>
+                                          <button
+                                            onClick={() => setConfirmDeleteQuestion(null)}
+                                            className="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1 rounded-lg transition-colors"
+                                          >
+                                            Batal
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <button
+                                          onClick={() => setConfirmDeleteQuestion(q.id)}
+                                          className="text-xs text-red-500 hover:text-red-700 hover:underline transition-colors"
+                                        >
+                                          🗑️ Hapus
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))
+                  )}
+                </div>
+              </>
+            )}
           </>
         )}
       </main>

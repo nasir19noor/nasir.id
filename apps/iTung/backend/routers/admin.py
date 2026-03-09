@@ -7,8 +7,9 @@ from sqlalchemy import func, desc
 from typing import Optional
 
 from database import get_db
-from models import User, UserAnalytics
+from models import User, UserAnalytics, QuestionBank
 from auth import decode_token
+from services.image_service import delete_from_s3
 
 router   = APIRouter()
 security = HTTPBearer()
@@ -85,6 +86,22 @@ class UserAnalyticsSummary(BaseModel):
     top_cities: list
     avg_response_time: float
     status_codes: dict
+
+
+class QuestionBankView(BaseModel):
+    id: int
+    topic: str
+    difficulty: str
+    question_text: str
+    choices: list
+    correct_answer: str
+    explanation: Optional[str]
+    image_url: Optional[str]
+    is_active: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
 
 
 # ─── Endpoints ────────────────────────────────────────────────────
@@ -263,3 +280,32 @@ def get_user_analytics(user_id: int,
     return db.query(UserAnalytics).filter(
         UserAnalytics.user_id == user_id
     ).order_by(desc(UserAnalytics.created_at)).limit(100).all()
+
+
+# ─── Question Bank Endpoints ────────────────────────────────────────
+
+@router.get("/questions", response_model=list[QuestionBankView])
+def list_questions(admin: User = Depends(require_admin),
+                   db: Session = Depends(get_db)):
+    """Get all questions in the question bank, ordered by topic and creation date."""
+    return db.query(QuestionBank).order_by(
+        QuestionBank.topic,
+        desc(QuestionBank.created_at)
+    ).all()
+
+
+@router.delete("/questions/{question_id}", status_code=204)
+def delete_question(question_id: int,
+                   admin: User = Depends(require_admin),
+                   db: Session = Depends(get_db)):
+    """Delete a question from the question bank. Also deletes the associated image from S3."""
+    question = db.query(QuestionBank).filter(QuestionBank.id == question_id).first()
+    if not question:
+        raise HTTPException(status_code=404, detail="Question not found")
+    
+    # Delete image from S3 if it exists
+    if question.image_url:
+        delete_from_s3(question.image_url)
+    
+    db.delete(question)
+    db.commit()
