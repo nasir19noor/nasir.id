@@ -122,7 +122,7 @@ function QuizSetupForm() {
   const hasAiAccess = user?.ai_access ?? false
   const canUseAi = hasAiAccess || hasClaudeKey || hasGeminiKey
 
-  const [totalQuestions, setTotalQuestions] = useState(10)
+  const [totalQuestions, setTotalQuestions] = useState(3)
   const [useAi, setUseAi] = useState(false)
   const [includeImages, setIncludeImages] = useState(false)
   const [submitting, setSubmitting] = useState(false)
