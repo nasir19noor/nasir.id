@@ -153,7 +153,7 @@ def generate_adaptive_question(topic: str, performance: dict,
     image_schema      = ""
     if needs_image:
         image_instruction = """
-    - Include an "image" field describing the diagram to render. Use one of these types:
+    - Include an "image" field describing the diagram to render. Use any of these types:
         number_line : {"type": "number_line", "params": {"start": 0, "end": 20, "marked": [7]}}
         rectangle   : {"type": "rectangle",   "params": {"width": 5, "height": 3}}
         square      : {"type": "square",       "params": {"side": 4}}
@@ -161,7 +161,7 @@ def generate_adaptive_question(topic: str, performance: dict,
         circle      : {"type": "circle",       "params": {"radius": 3}}
         angle       : {"type": "angle",        "params": {"degrees": 60}}
         fraction    : {"type": "fraction",     "params": {"numerator": 3, "denominator": 4}}
-    - Choose the type that best matches the question."""
+    - Choose the most appropriate type for visualizing this concept."""
         image_schema = '\n        "image": {"type": "...", "params": {...}},'
 
     story_hint    = "\n    - Sajikan sebagai soal cerita kontekstual (gunakan situasi nyata, bukan abstrak)." if needs_story else ""

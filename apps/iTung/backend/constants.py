@@ -125,29 +125,9 @@ TOPICS = TOPICS_DASAR + TOPICS_MENENGAH + TOPICS_ATAS
 
 # ----------------------------------------------------------
 # TOPIK VISUAL — topik yang diuntungkan oleh diagram/gambar
-# (Hanya topik yang dapat direpresentasikan dengan tipe diagram tersedia:
-#  number_line, rectangle, square, triangle, circle, angle, fraction)
+# (Semua topik dapat membuat gambar menggunakan Gemini)
 # ----------------------------------------------------------
-VISUAL_TOPICS = {
-    "mengenal bangun datar",
-    "keliling bangun datar",
-    "luas bangun datar",
-    "luas persegi dan persegi panjang",
-    "luas lingkaran",
-    "keliling lingkaran",
-    "volume kubus dan balok",
-    "volume prisma dan tabung",
-    "sifat bangun ruang",
-    "bangun ruang sisi datar",
-    "sudut dan jenis sudut",
-    "garis dan sudut",
-    "garis bilangan",
-    "bilangan pecahan",
-    "segitiga",
-    "segiempat",
-    "lingkaran",
-    "skala dan denah",
-}
+VISUAL_TOPICS = set(TOPICS)  # All topics can have images generated via Gemini
 
 # ----------------------------------------------------------
 # TOPIK CERITA — topik yang cocok dibungkus soal cerita

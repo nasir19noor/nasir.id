@@ -1,15 +1,11 @@
 """
-Generates math diagram images with matplotlib and uploads them to Amazon S3.
+Generates math diagram images using Google Gemini and uploads them to Amazon S3.
 Supported types: number_line, rectangle, square, triangle, circle, angle, fraction
 """
 import io, os, uuid
 from datetime import datetime
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-import numpy as np
 import boto3
+import google.generativeai as genai
 
 _s3 = None
 
@@ -26,138 +22,129 @@ def _get_s3():
 
 BUCKET   = os.getenv('S3_BUCKET_NAME')
 CDN_BASE = os.getenv('S3_CDN_BASE', '')
+GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
+
+if GOOGLE_API_KEY:
+    genai.configure(api_key=GOOGLE_API_KEY)
 
 
-def _upload(fig, topic: str = "general") -> str:
-    buf = io.BytesIO()
-    fig.savefig(buf, format='png', bbox_inches='tight', dpi=100)
-    buf.seek(0)
-    plt.close(fig)
+def _upload(image_bytes: bytes, topic: str = "general") -> str | None:
+    """Upload image bytes to S3 and return the public URL."""
+    if not image_bytes:
+        print("[image_service] No image bytes to upload")
+        return None
     
-    # Create URL-safe topic slug (replace spaces with hyphens)
-    topic_slug = topic.replace(" ", "-").lower()
+    try:
+        buf = io.BytesIO(image_bytes)
+        
+        # Create URL-safe topic slug (replace spaces with hyphens)
+        topic_slug = topic.replace(" ", "-").lower()
+        
+        # Create path with topic/year/month/day structure
+        now = datetime.now()
+        year = now.strftime('%Y')
+        month = now.strftime('%m')
+        day = now.strftime('%d')
+        filename = f"{uuid.uuid4()}.png"
+        key = f"questions/{topic_slug}/{year}/{month}/{day}/{filename}"
+        
+        _get_s3().upload_fileobj(
+            buf, BUCKET, key,
+            ExtraArgs={'ContentType': 'image/png'},
+        )
+        base = CDN_BASE.rstrip('/') or f"https://{BUCKET}.s3.amazonaws.com"
+        return f"{base}/{key}"
+    except Exception as e:
+        print(f"[image_service] S3 upload failed: {e}")
+        return None
+
+
+def _generate_with_gemini(prompt: str) -> bytes | None:
+    """Generate image using Google Gemini and return image bytes."""
+    if not GOOGLE_API_KEY:
+        print("[image_service] GOOGLE_API_KEY not set")
+        return None
     
-    # Create path with topic/year/month/day structure
-    now = datetime.now()
-    year = now.strftime('%Y')
-    month = now.strftime('%m')
-    day = now.strftime('%d')
-    filename = f"{uuid.uuid4()}.png"
-    key = f"questions/{topic_slug}/{year}/{month}/{day}/{filename}"
+    try:
+        model = genai.GenerativeModel('gemini-2.0-flash')
+        response = model.generate_images(
+            prompt=prompt,
+            number_of_images=1,
+            model='imagen-3.0-generate-002',
+        )
+        
+        if response and response.generated_images:
+            return response.generated_images[0]._image_bytes
+        else:
+            print(f"[image_service] No image generated for prompt: {prompt[:100]}")
+            return None
+    except Exception as e:
+        print(f"[image_service] Gemini image generation failed: {e}")
+        return None
+
+
+def _create_prompt(image_type: str, params: dict) -> str:
+    """Create a detailed prompt for Gemini to generate the appropriate math diagram."""
+    prompts = {
+        'number_line': f"""Create a clean, educational math visual showing a number line diagram.
+        Range: from {params.get('start', 0)} to {params.get('end', 20)}
+        Mark these numbers with red dots: {params.get('marked', [])}
+        Style: Simple, clear, white background, professional educational style.
+        Use black lines and numbers, red dots for marked points.""",
+        
+        'rectangle': f"""Create a clean, educational math visual showing a rectangle diagram.
+        Width: {params.get('width', 4)} cm
+        Height: {params.get('height', 3)} cm
+        Show dimensions labeled on the sides.
+        Style: Simple, clear, white background, professional educational style.
+        Use blue outline, light blue fill, with clear dimension labels.""",
+        
+        'square': f"""Create a clean, educational math visual showing a square diagram.
+        Side length: {params.get('side', 4)} cm
+        Show dimension labeled on the bottom.
+        Style: Simple, clear, white background, professional educational style.
+        Use blue outline, light blue fill, with clear labels.""",
+        
+        'triangle': f"""Create a clean, educational math visual showing a triangle diagram.
+        Make it a clear triangle with three vertices.
+        Style: Simple, clear, white background, professional educational style.
+        Use blue outline, light blue fill.""",
+        
+        'circle': f"""Create a clean, educational math visual showing a circle diagram.
+        Radius: {params.get('radius', 2)} cm
+        Draw a line from center to edge labeled as radius.
+        Style: Simple, clear, white background, professional educational style.
+        Use blue outline, light blue fill, red radius line.""",
+        
+        'angle': f"""Create a clean, educational math visual showing an angle diagram.
+        Angle: {params.get('degrees', 60)} degrees
+        Show two rays forming the angle with arc indicating the degrees.
+        Style: Simple, clear, white background, professional educational style.
+        Use blue rays, red arc, with degree label.""",
+        
+        'fraction': f"""Create a clean, educational math visual showing a fraction diagram.
+        Fraction: {params.get('numerator', 3)}/{params.get('denominator', 4)}
+        Show a bar divided into {params.get('denominator', 4)} parts with {params.get('numerator', 3)} parts shaded.
+        Style: Simple, clear, white background, professional educational style.
+        Use blue outline, blue shading for filled parts, with fraction label.""",
+    }
     
-    _get_s3().upload_fileobj(
-        buf, BUCKET, key,
-        ExtraArgs={'ContentType': 'image/png'},
-    )
-    base = CDN_BASE.rstrip('/') or f"https://{BUCKET}.s3.amazonaws.com"
-    return f"{base}/{key}"
-
-
-def _number_line(start: int, end: int, marked: list | None = None, topic: str = "general") -> str:
-    fig, ax = plt.subplots(figsize=(8, 2))
-    ax.set_xlim(start - 1, end + 1)
-    ax.set_ylim(-0.6, 0.6)
-    ax.axhline(0, color='black', linewidth=2)
-    for i in range(start, end + 1):
-        ax.plot(i, 0, 'k|', markersize=12, markeredgewidth=2)
-        ax.text(i, -0.3, str(i), ha='center', fontsize=11)
-    if marked:
-        for m in marked:
-            ax.plot(m, 0, 'ro', markersize=14, zorder=5)
-    ax.axis('off')
-    return _upload(fig, topic)
-
-
-def _shape(shape_type: str, topic: str = "general", **p) -> str:
-    fig, ax = plt.subplots(figsize=(5, 5))
-    ax.set_aspect('equal')
-    BLUE, FILL = '#1565C0', '#BBDEFB'
-
-    if shape_type == 'rectangle':
-        w, h = p.get('width', 4), p.get('height', 3)
-        ax.add_patch(patches.Rectangle((0.5, 1), w, h, linewidth=2,
-                                        edgecolor=BLUE, facecolor=FILL, alpha=0.7))
-        ax.text(0.5 + w / 2, 0.6, f"{w} cm", ha='center', fontsize=13, color=BLUE)
-        ax.text(0.15, 1 + h / 2, f"{h} cm", ha='center', va='center',
-                rotation=90, fontsize=13, color=BLUE)
-        ax.set_xlim(0, w + 1); ax.set_ylim(0, h + 2)
-
-    elif shape_type == 'square':
-        s = p.get('side', 4)
-        ax.add_patch(patches.Rectangle((0.5, 0.5), s, s, linewidth=2,
-                                        edgecolor=BLUE, facecolor=FILL, alpha=0.7))
-        ax.text(0.5 + s / 2, 0.1, f"{s} cm", ha='center', fontsize=13, color=BLUE)
-        ax.set_xlim(0, s + 1); ax.set_ylim(0, s + 1)
-
-    elif shape_type == 'triangle':
-        pts = p.get('points', [[0.5, 0.5], [4.5, 0.5], [2.5, 4.0]])
-        ax.add_patch(plt.Polygon(pts, linewidth=2, edgecolor=BLUE,
-                                  facecolor=FILL, alpha=0.7))
-        ax.set_xlim(0, 5); ax.set_ylim(0, 5)
-
-    elif shape_type == 'circle':
-        r = p.get('radius', 2)
-        ax.add_patch(patches.Circle((2.5, 2.5), r, linewidth=2,
-                                     edgecolor=BLUE, facecolor=FILL, alpha=0.7))
-        ax.plot([2.5, 2.5 + r], [2.5, 2.5], color='#E53935', linewidth=2)
-        ax.text(2.5 + r / 2, 2.7, f"r = {r} cm", ha='center',
-                fontsize=12, color='#E53935')
-        ax.set_xlim(0, 5); ax.set_ylim(0, 5)
-
-    ax.axis('off')
-    return _upload(fig, topic)
-
-
-def _angle(degrees: int, topic: str = "general") -> str:
-    fig, ax = plt.subplots(figsize=(5, 5))
-    ax.set_aspect('equal')
-    length = 3
-    ax.annotate('', xy=(length, 0), xytext=(0, 0),
-                arrowprops=dict(arrowstyle='->', color='#1565C0', lw=2))
-    rad = np.radians(degrees)
-    ax.annotate('', xy=(length * np.cos(rad), length * np.sin(rad)),
-                xytext=(0, 0),
-                arrowprops=dict(arrowstyle='->', color='#1565C0', lw=2))
-    ax.add_patch(patches.Arc((0, 0), 1.2, 1.2, angle=0,
-                              theta1=0, theta2=degrees,
-                              color='#E53935', lw=2))
-    mid = np.radians(degrees / 2)
-    ax.text(0.9 * np.cos(mid), 0.9 * np.sin(mid), f"{degrees}°",
-            fontsize=14, color='#E53935', ha='center')
-    ax.set_xlim(-0.5, length + 0.5)
-    ax.set_ylim(-0.5, length + 0.5)
-    ax.axis('off')
-    return _upload(fig, topic)
-
-
-def _fraction(numerator: int, denominator: int, topic: str = "general") -> str:
-    fig, ax = plt.subplots(figsize=(6, 2))
-    w = 1 / denominator
-    for i in range(denominator):
-        color = '#1565C0' if i < numerator else '#E3F2FD'
-        ax.add_patch(patches.Rectangle((i * w + 0.002, 0.2), w - 0.004, 0.6,
-                                        linewidth=1.5, edgecolor='#1565C0',
-                                        facecolor=color, alpha=0.85))
-    ax.text(0.5, -0.05, f"{numerator}/{denominator}",
-            ha='center', fontsize=16, fontweight='bold', color='#1565C0')
-    ax.set_xlim(0, 1); ax.set_ylim(-0.2, 1)
-    ax.axis('off')
-    return _upload(fig, topic)
+    return prompts.get(image_type, "Create a simple, educational math diagram in professional style.")
 
 
 _GENERATORS = {
-    'number_line': lambda p, t: _number_line(**p, topic=t),
-    'rectangle':   lambda p, t: _shape('rectangle', topic=t, **p),
-    'square':      lambda p, t: _shape('square', topic=t, **p),
-    'triangle':    lambda p, t: _shape('triangle', topic=t, **p),
-    'circle':      lambda p, t: _shape('circle', topic=t, **p),
-    'angle':       lambda p, t: _angle(**p, topic=t),
-    'fraction':    lambda p, t: _fraction(**p, topic=t),
+    'number_line': lambda p, t: _upload(_generate_with_gemini(_create_prompt('number_line', p)), t),
+    'rectangle':   lambda p, t: _upload(_generate_with_gemini(_create_prompt('rectangle', p)), t),
+    'square':      lambda p, t: _upload(_generate_with_gemini(_create_prompt('square', p)), t),
+    'triangle':    lambda p, t: _upload(_generate_with_gemini(_create_prompt('triangle', p)), t),
+    'circle':      lambda p, t: _upload(_generate_with_gemini(_create_prompt('circle', p)), t),
+    'angle':       lambda p, t: _upload(_generate_with_gemini(_create_prompt('angle', p)), t),
+    'fraction':    lambda p, t: _upload(_generate_with_gemini(_create_prompt('fraction', p)), t),
 }
 
 
 def generate(image_type: str, params: dict, topic: str = "general") -> str | None:
-    """Generate a math diagram image and upload to S3. Returns the public URL or None on failure."""
+    """Generate a math diagram image using Gemini and upload to S3. Returns the public URL or None on failure."""
     gen = _GENERATORS.get(image_type)
     if gen is None:
         return None
