@@ -405,34 +405,53 @@ async def upload_avatar(
     db: Session = Depends(get_db),
 ):
     """Upload a profile photo and generate an AI cartoon version."""
-    if not file.content_type or not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="File must be an image")
+    try:
+        if not file.content_type or not file.content_type.startswith("image/"):
+            raise HTTPException(status_code=400, detail="File must be an image")
 
-    user = db.query(User).filter(User.id == current_user.user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        user = db.query(User).filter(User.id == current_user.user_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
 
-    file_bytes = await file.read()
+        file_bytes = await file.read()
+        print(f"[avatar] Starting upload for user {user.id}, file size: {len(file_bytes)} bytes")
 
-    # Upload original to S3
-    original_url = avatar_service.upload_original(file_bytes, user.id, file.content_type)
-    user.avatar_url = original_url
-    db.commit()
-
-    # Calculate age from birth_date
-    age = None
-    if user.birth_date:
-        from datetime import date
-        today = date.today()
-        age = today.year - user.birth_date.year
-        if (today.month, today.day) < (user.birth_date.month, user.birth_date.day):
-            age -= 1
-
-    # Generate cartoon using Gemini with user age info
-    cartoon_url = avatar_service.generate_cartoon(file_bytes, user.id, age=age, race="Asian")
-    if cartoon_url:
-        user.cartoon_url = cartoon_url
+        # Upload original to S3
+        original_url = avatar_service.upload_original(file_bytes, user.id, file.content_type)
+        if not original_url:
+            print("[avatar] upload_original returned None")
+            raise HTTPException(status_code=500, detail="Failed to upload original image")
+        
+        user.avatar_url = original_url
         db.commit()
+        print(f"[avatar] Original uploaded: {original_url}")
 
-    db.refresh(user)
-    return {"avatar_url": user.avatar_url, "cartoon_url": user.cartoon_url}
+        # Calculate age from birth_date
+        age = None
+        if user.birth_date:
+            from datetime import date
+            today = date.today()
+            age = today.year - user.birth_date.year
+            if (today.month, today.day) < (user.birth_date.month, user.birth_date.day):
+                age -= 1
+
+        # Generate cartoon using Gemini with user age info
+        print(f"[avatar] Generating cartoon for user {user.id}, age={age}")
+        cartoon_url = avatar_service.generate_cartoon(file_bytes, user.id, age=age, race="Asian")
+        if cartoon_url:
+            user.cartoon_url = cartoon_url
+            db.commit()
+            print(f"[avatar] Cartoon generated: {cartoon_url}")
+        else:
+            print("[avatar] Cartoon generation returned None (skipped)")
+
+        db.refresh(user)
+        return {"avatar_url": user.avatar_url, "cartoon_url": user.cartoon_url}
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[avatar] Error: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Gagal mengunggah foto. Coba lagi.")

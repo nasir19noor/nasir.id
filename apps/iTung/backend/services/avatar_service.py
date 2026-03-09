@@ -1,7 +1,7 @@
 """
 Handles profile photo upload to S3 and cartoon generation via Google Gemini.
 S3 paths:
-  avatars/{user_id}/{date}-original.jpg     — uploaded photo
+  avatars/{user_id}/{date}-original.{ext}    — uploaded photo
   avatars/{user_id}/{date}-avatar.jpg       — cartoon-style version (Gemini generated)
 """
 import io, os
@@ -43,21 +43,30 @@ def _get_date_string() -> str:
 
 def upload_original(file_bytes: bytes, user_id: int, content_type: str) -> str:
     """Upload original image to S3 with date prefix."""
-    ext = 'jpg' if 'jpeg' in content_type.lower() else content_type.split('/')[-1] if '/' in content_type else 'jpg'
-    date_str = _get_date_string()
-    key = f"avatars/{user_id}/{date_str}-original.{ext}"
-    
-    _get_s3().upload_fileobj(
-        io.BytesIO(file_bytes), BUCKET, key,
-        ExtraArgs={'ContentType': content_type},
-    )
-    return _s3_url(key)
+    try:
+        ext = 'jpg' if 'jpeg' in content_type.lower() else content_type.split('/')[-1] if '/' in content_type else 'jpg'
+        date_str = _get_date_string()
+        key = f"avatars/{user_id}/{date_str}-original.{ext}"
+        
+        print(f"[avatar_service.upload_original] Uploading to S3: {key}")
+        _get_s3().upload_fileobj(
+            io.BytesIO(file_bytes), BUCKET, key,
+            ExtraArgs={'ContentType': content_type},
+        )
+        url = _s3_url(key)
+        print(f"[avatar_service.upload_original] Success: {url}")
+        return url
+    except Exception as e:
+        print(f"[avatar_service.upload_original] Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
 
 
 def generate_cartoon(file_bytes: bytes, user_id: int, age: int = None, race: str = "Asian") -> str | None:
     """Generate a Pixar-style cartoon avatar using Google Gemini and upload to S3."""
     if not _genai_client:
-        print("[avatar_service] GOOGLE_API_KEY not set, skipping cartoon generation")
+        print("[avatar_service.generate_cartoon] GOOGLE_API_KEY not set, skipping cartoon generation")
         return None
     
     try:
@@ -67,6 +76,7 @@ def generate_cartoon(file_bytes: bytes, user_id: int, age: int = None, race: str
 The person is a {race} {age_str}. Make it cute, colorful, animated, and friendly with exaggerated 
 cartoon features like big expressive eyes. High quality, professional cartoon illustration style."""
         
+        print(f"[avatar_service.generate_cartoon] Starting Gemini call for user {user_id}")
         # Generate cartoon using Gemini with image generation
         response = _genai_client.models.generate_content(
             model=GEMINI_IMAGE_MODEL,
@@ -82,28 +92,35 @@ cartoon features like big expressive eyes. High quality, professional cartoon il
             ),
         )
         
+        print(f"[avatar_service.generate_cartoon] Gemini response received, extracting image")
         # Extract generated image
         cartoon_bytes = None
         for part in response.candidates[0].content.parts:
             if part.inline_data is not None:
                 cartoon_bytes = part.inline_data.data
+                print(f"[avatar_service.generate_cartoon] Image extracted: {len(cartoon_bytes)} bytes")
                 break
         
         if not cartoon_bytes:
-            print("[avatar_service] No cartoon image generated")
+            print("[avatar_service.generate_cartoon] No cartoon image generated (no inline_data found)")
             return None
         
         # Upload to S3
         date_str = _get_date_string()
         key = f"avatars/{user_id}/{date_str}-avatar.jpg"
         
+        print(f"[avatar_service.generate_cartoon] Uploading to S3: {key}")
         _get_s3().upload_fileobj(
             io.BytesIO(cartoon_bytes), BUCKET, key,
             ExtraArgs={'ContentType': 'image/jpeg'},
         )
         
-        return _s3_url(key)
+        url = _s3_url(key)
+        print(f"[avatar_service.generate_cartoon] Success: {url}")
+        return url
         
     except Exception as e:
-        print(f"[avatar_service] Cartoon generation failed: {e}")
+        print(f"[avatar_service.generate_cartoon] Error: {e}")
+        import traceback
+        traceback.print_exc()
         return None
