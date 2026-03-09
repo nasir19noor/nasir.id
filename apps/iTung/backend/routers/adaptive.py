@@ -133,10 +133,12 @@ def generate_adaptive_question(topic: str, performance: dict,
                                 include_image: bool = False,
                                 claude_api_key: Optional[str] = None,
                                 gemini_api_key: Optional[str] = None,
-                                age: Optional[int] = None) -> dict:
+                                age: Optional[int] = None,
+                                fixed_difficulty: Optional[str] = None) -> dict:
     accuracy_pct = round(performance.get('accuracy', 0) * 100)
     weak         = performance.get('weak_topics', [])
-    difficulty   = performance.get('next_difficulty', get_base_difficulty(age))
+    # Use fixed difficulty if provided, otherwise use adaptive difficulty
+    difficulty   = _normalize_difficulty(fixed_difficulty) if fixed_difficulty else performance.get('next_difficulty', get_base_difficulty(age))
     history      = performance.get('recent_history', [])
     needs_image    = include_image  # Generate image if checkbox is checked, regardless of topic
     needs_story    = topic in STORY_TOPICS

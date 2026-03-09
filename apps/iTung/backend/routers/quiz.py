@@ -120,7 +120,7 @@ def _pregen_questions(session_id: int, user_id: int, topic: str,
                       total: int, start_order: int,
                       performance: dict, include_images: bool,
                       claude_api_key, gemini_api_key, age,
-                      db_factory):
+                      db_factory, fixed_difficulty: Optional[str] = None):
     """Pre-generate questions start_order..total in a background thread."""
     from database import SessionLocal
     db = db_factory()
@@ -140,6 +140,7 @@ def _pregen_questions(session_id: int, user_id: int, topic: str,
                     claude_api_key=claude_api_key,
                     gemini_api_key=gemini_api_key,
                     age=age,
+                    fixed_difficulty=fixed_difficulty,
                 )
                 bq = _save_to_bank(q, topic, db)
                 new_q = Question(
@@ -194,11 +195,13 @@ def create_session(req: CreateSessionRequest,
             raise HTTPException(status_code=403,
                                 detail="Akses AI belum diaktifkan. Hubungi admin atau tambahkan API key sendiri di profil.")
         try:
+            fixed_diff = None if req.difficulty_level == "adaptif" else req.difficulty_level
             q = generate_adaptive_question(req.topic, performance,
                                            include_image=req.include_images,
                                            claude_api_key=user_claude,
                                            gemini_api_key=user_gemini,
-                                           age=age)
+                                           age=age,
+                                           fixed_difficulty=fixed_diff)
         except (_anthropic.RateLimitError, _anthropic.APIError) as e:
             raise HTTPException(status_code=503,
                                 detail="Server AI sedang sibuk. Coba lagi dalam beberapa saat.")
@@ -217,13 +220,14 @@ def create_session(req: CreateSessionRequest,
         # Pre-generate remaining questions in background
         if req.total_questions > 1:
             from database import SessionLocal
+            fixed_diff = None if req.difficulty_level == "adaptif" else req.difficulty_level
             threading.Thread(
                 target=_pregen_questions,
                 args=(session.id, user_id, req.topic,
                       req.total_questions, 2,
                       performance, req.include_images,
                       user_claude, user_gemini, age,
-                      SessionLocal),
+                      SessionLocal, fixed_diff),
                 daemon=True,
             ).start()
     else:
@@ -300,11 +304,13 @@ async def submit_answer(req: SubmitAnswerRequest,
             if not new_q:
                 # Not ready yet — generate synchronously as fallback
                 try:
+                    fixed_diff = None if session.difficulty_level == "adaptif" else session.difficulty_level
                     q = generate_adaptive_question(question.topic, performance,
                                                    include_image=session.include_images,
                                                    claude_api_key=user_claude,
                                                    gemini_api_key=user_gemini,
-                                                   age=age)
+                                                   age=age,
+                                                   fixed_difficulty=fixed_diff)
                 except (_anthropic.RateLimitError, _anthropic.APIError):
                     raise HTTPException(status_code=503,
                                         detail="Server AI sedang sibuk. Coba lagi dalam beberapa saat.")

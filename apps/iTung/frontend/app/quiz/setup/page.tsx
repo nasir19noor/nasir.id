@@ -156,7 +156,7 @@ function QuizSetupForm() {
         total_questions: totalQuestions,
         use_ai: useAi,
         include_images: includeImages,
-        difficulty_level: !useAi ? difficultyLevel : undefined,
+        difficulty_level: difficultyLevel,
         client: 'web',
       })
       // Pass first question to active quiz page via sessionStorage
@@ -283,11 +283,10 @@ function QuizSetupForm() {
             </div>
           </div>
 
-          {/* Difficulty level - Bank Soal only */}
-          {!useAi && (
-            <div>
-              <p className="text-sm font-semibold text-gray-700 mb-2">Tingkat Kesulitan</p>
-              <div className="grid grid-cols-2 gap-2">
+          {/* Difficulty level */}
+          <div>
+            <p className="text-sm font-semibold text-gray-700 mb-2">Tingkat Kesulitan</p>
+            <div className="grid grid-cols-2 gap-2">
                 {[
                   { value: 'sangat_mudah', label: '😊 Sangat Mudah' },
                   { value: 'mudah', label: '🙂 Mudah' },
@@ -310,7 +309,6 @@ function QuizSetupForm() {
                 ))}
               </div>
             </div>
-          )}
 
           {/* Include images */}
           {useAi && (
