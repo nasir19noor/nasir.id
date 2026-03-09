@@ -151,7 +151,7 @@ def create_session(req: CreateSessionRequest,
                                            claude_api_key=user_claude,
                                            gemini_api_key=user_gemini,
                                            age=age)
-        except _anthropic.OverloadedError:
+        except (_anthropic.RateLimitError, _anthropic.APIError) as e:
             raise HTTPException(status_code=503,
                                 detail="Server AI sedang sibuk. Coba lagi dalam beberapa saat.")
         except Exception as e:
@@ -229,7 +229,7 @@ async def submit_answer(req: SubmitAnswerRequest,
                                                claude_api_key=user_claude,
                                                gemini_api_key=user_gemini,
                                                age=age)
-            except _anthropic.OverloadedError:
+            except (_anthropic.RateLimitError, _anthropic.APIError) as e:
                 raise HTTPException(status_code=503,
                                     detail="Server AI sedang sibuk. Coba lagi dalam beberapa saat.")
             except Exception as e:
