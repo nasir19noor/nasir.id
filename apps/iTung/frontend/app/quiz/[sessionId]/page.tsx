@@ -241,7 +241,7 @@ export default function ActiveQuizPage() {
             <p className={`font-bold text-sm mb-1 ${isCorrect ? 'text-green-700' : 'text-red-700'}`}>
               {isCorrect ? '✅ Benar!' : '❌ Salah!'}
             </p>
-            <p className="text-sm text-gray-700">{explanation}</p>
+            <p className="text-sm text-gray-700 whitespace-pre-line">{explanation}</p>
             {performance && (
               <p className="text-xs text-gray-400 mt-2">
                 Akurasi sesi: {Math.round(performance.accuracy * 100)}% · Kesulitan berikutnya:{' '}

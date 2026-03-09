@@ -179,7 +179,7 @@ TINGKAT KESULITAN: {difficulty_label}
 ATURAN:
 - Soal harus sesuai tingkat kesulitan dan usia siswa
 - Tulis dalam Bahasa Indonesia{story_hint}{symbolic_hint}{image_instruction}
-- Penjelasan singkat saja (1-2 kalimat)
+- Penjelasan: tulis langkah-langkah penyelesaian singkat, pisahkan setiap langkah dengan "\n" (contoh: "Langkah 1: ...\nLangkah 2: ...\nJadi jawabannya ...")
 
 Balas HANYA dengan JSON ini (tanpa markdown, tanpa teks lain):
 {{
