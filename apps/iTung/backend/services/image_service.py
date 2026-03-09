@@ -96,7 +96,14 @@ PENTING: Buat diagram yang akurat berdasarkan informasi dalam soal.
 - Label dengan jelas semua ukuran, sudut, dan nilai yang diberikan
 - Pastikan diagram AKURAT dan SESUAI dengan deskripsi soal
 - Gaya profesional: bersih, terang, latar putih, mudah dibaca
-- Jangan menambahkan informasi yang tidak ada atau kesalahan
+
+⚠️ JANGAN TAMPILKAN:
+- JANGAN tunjukkan jawaban atau hasil akhir
+- JANGAN tunjukkan perhitungan atau rumus
+- JANGAN tunjukkan penjelasan atau langkah penyelesaian
+- Hanya tampilkan diagram dengan label informasi yang DIBERIKAN dalam soal
+- TIDAK ada kotak "Keliling =" atau "Luas =" atau rumus apapun
+- TIDAK ada hasil perhitungan
 
 Konteks soal: {question}
 """
@@ -112,72 +119,70 @@ Spesifikasi:
 
 {only_given_info}""",
 
-        'rectangle': f"""Buat diagram persegi panjang yang akurat berdasarkan soal ini:
+        'rectangle': f"""Buat diagram HANYA persegi panjang dengan ukuran yang diberikan dalam soal:
 {question}
 
 Spesifikasi:
 - Lebar: {params.get('width', 4)} cm
 - Tinggi: {params.get('height', 3)} cm
-- Informasi: {params.get('given_info', 'Persegi panjang dengan dimensi')}
-- Label SEMUA ukuran di sisi-sisinya dengan jelas
+- Label UKURAN di setiap sisi dengan jelas
+- JANGAN tampilkan perhitungan keliling atau luas
 
 {only_given_info}""",
 
-        'square': f"""Buat diagram persegi yang akurat berdasarkan soal ini:
+        'square': f"""Buat diagram HANYA persegi dengan ukuran yang diberikan:
 {question}
 
 Spesifikasi:
 - Sisi: {params.get('side', 4)} cm
-- Informasi: {params.get('given_info', 'Persegi dengan sisi tertentu')}
 - Label sisi dengan jelas
+- JANGAN tampilkan perhitungan keliling atau luas
 
 {only_given_info}""",
 
-        'triangle': f"""Buat diagram segitiga yang AKURAT berdasarkan soal ini:
+        'triangle': f"""Buat diagram HANYA segitiga dengan informasi dari soal:
 {question}
 
 Informasi yang harus ditampilkan:
 {params.get('given_info', 'Segitiga ABC')}
 
 PENTING:
-- Tampilkan SEMUA sisi dan sudut yang disebutkan dalam soal
-- Label titik sudut: A, B, C
-- Tulis panjang sisi dan sudut di dekat garis/sudut yang sesuai
-- Pastikan proporsi dan akurasi diagram sesuai soal
-- Jika ada tinggi/median/garis bagi, tampilkan JIKA disebutkan dalam soal
+- Tampilkan HANYA sisi dan sudut yang disebutkan dalam soal
+- Label titik sudut: A, B, C dan ukuran yang diberikan
+- JANGAN tampilkan perhitungan, keliing, luas, atau rumus
 
 {only_given_info}""",
 
-        'circle': f"""Buat diagram lingkaran yang akurat berdasarkan soal ini:
+        'circle': f"""Buat diagram HANYA lingkaran dengan informasi dari soal:
 {question}
 
 Spesifikasi:
-- Informasi: {params.get('given_info', f'Lingkaran dengan jari-jari {params.get("radius", 2)} cm')}
 - Jari-jari: {params.get('radius', 2)} cm
-- Tampilkan dan label semua elemen yang disebutkan dalam soal
+- Tampilkan dan label hanya elemen yang disebutkan dalam soal
+- JANGAN tampilkan perhitungan, keliling, luas, atau rumus
 
 {only_given_info}""",
 
-        'angle': f"""Buat diagram sudut yang AKURAT berdasarkan soal ini:
+        'angle': f"""Buat diagram HANYA sudut dengan informasi dari soal:
 {question}
 
 Spesifikasi:
 - Sudut: {params.get('degrees', 60)}°
-- Informasi: {params.get('given_info', f'Sudut {params.get("degrees", 60)} derajat')}
 - Tampilkan dua sinar membentuk sudut dengan busur
-- Label sudut dengan nilai derajatnya
+- Label sudut dengan nilai derajatnya SAJA
+- JANGAN tampilkan perhitungan atau penjelasan
 
 {only_given_info}""",
 
-        'fraction': f"""Buat diagram pecahan yang akurat berdasarkan soal ini:
+        'fraction': f"""Buat diagram HANYA pecahan tanpa hasil perhitungan:
 {question}
 
 Spesifikasi:
 - Pecahan: {params.get('numerator', 3)}/{params.get('denominator', 4)}
-- Informasi: {params.get('given_info', f'Pecahan {params.get("numerator", 3)}/{params.get("denominator", 4)}')}
 - Bagi persegi/kotak menjadi {params.get('denominator', 4)} bagian
 - Arsir/warnai {params.get('numerator', 3)} bagian
 - Label pecahan dengan jelas
+- JANGAN tampilkan perhitungan atau hasil
 
 {only_given_info}""",
     }
