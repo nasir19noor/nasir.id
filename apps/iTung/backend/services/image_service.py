@@ -88,58 +88,60 @@ def _generate_with_gemini(prompt: str) -> bytes | None:
 
 def _create_prompt(image_type: str, params: dict) -> str:
     """Create a detailed prompt for Gemini to generate the appropriate math diagram."""
+    no_answer = "JANGAN tampilkan jawaban, hasil perhitungan, atau penyelesaian — hanya tampilkan informasi yang ada pada soal."
+
     prompts = {
         'number_line': f"""Buat ilustrasi matematika yang bersih dan edukatif berupa diagram garis bilangan.
         Rentang: dari {params.get('start', 0)} sampai {params.get('end', 20)}
         Tandai angka-angka berikut dengan titik merah: {params.get('marked', [])}
         Gaya: Sederhana, jelas, latar putih, gaya edukatif profesional.
         Gunakan garis dan angka hitam, titik merah untuk angka yang ditandai.
-        Label dalam Bahasa Indonesia.""",
+        Label dalam Bahasa Indonesia. {no_answer}""",
 
         'rectangle': f"""Buat ilustrasi matematika yang bersih dan edukatif berupa diagram persegi panjang.
         Lebar: {params.get('width', 4)} cm
         Tinggi: {params.get('height', 3)} cm
-        Tampilkan ukuran berlabel di setiap sisi.
+        Tampilkan ukuran berlabel di setiap sisi. Biarkan area dalam kosong (tidak ada label luas atau nilai lain).
         Gaya: Sederhana, jelas, latar putih, gaya edukatif profesional.
         Gunakan garis luar biru, isi biru muda, dengan label ukuran yang jelas.
-        Label dalam Bahasa Indonesia.""",
+        Label dalam Bahasa Indonesia. {no_answer}""",
 
         'square': f"""Buat ilustrasi matematika yang bersih dan edukatif berupa diagram persegi.
         Panjang sisi: {params.get('side', 4)} cm
-        Tampilkan ukuran berlabel di bagian bawah.
+        Tampilkan ukuran berlabel di salah satu sisi saja. Biarkan area dalam kosong.
         Gaya: Sederhana, jelas, latar putih, gaya edukatif profesional.
         Gunakan garis luar biru, isi biru muda, dengan label yang jelas.
-        Label dalam Bahasa Indonesia.""",
+        Label dalam Bahasa Indonesia. {no_answer}""",
 
         'triangle': f"""Buat ilustrasi matematika yang bersih dan edukatif berupa diagram segitiga.
-        Tampilkan segitiga yang jelas dengan tiga titik sudut.
+        Tampilkan segitiga yang jelas dengan tiga titik sudut berlabel A, B, C.
         Gaya: Sederhana, jelas, latar putih, gaya edukatif profesional.
         Gunakan garis luar biru, isi biru muda.
-        Label dalam Bahasa Indonesia.""",
+        Label dalam Bahasa Indonesia. {no_answer}""",
 
         'circle': f"""Buat ilustrasi matematika yang bersih dan edukatif berupa diagram lingkaran.
         Jari-jari: {params.get('radius', 2)} cm
-        Gambar garis dari pusat ke tepi berlabel "jari-jari".
+        Gambar garis dari pusat ke tepi berlabel "r = {params.get('radius', 2)} cm". Tidak perlu tampilkan luas atau keliling.
         Gaya: Sederhana, jelas, latar putih, gaya edukatif profesional.
         Gunakan garis luar biru, isi biru muda, garis jari-jari merah.
-        Label dalam Bahasa Indonesia.""",
+        Label dalam Bahasa Indonesia. {no_answer}""",
 
         'angle': f"""Buat ilustrasi matematika yang bersih dan edukatif berupa diagram sudut.
         Sudut: {params.get('degrees', 60)} derajat
-        Tampilkan dua sinar yang membentuk sudut dengan busur penanda derajat.
+        Tampilkan dua sinar yang membentuk sudut dengan busur dan label derajatnya saja.
         Gaya: Sederhana, jelas, latar putih, gaya edukatif profesional.
         Gunakan sinar biru, busur merah, dengan label derajat.
-        Label dalam Bahasa Indonesia.""",
+        Label dalam Bahasa Indonesia. {no_answer}""",
 
         'fraction': f"""Buat ilustrasi matematika yang bersih dan edukatif berupa diagram pecahan.
         Pecahan: {params.get('numerator', 3)}/{params.get('denominator', 4)}
-        Tampilkan kotak/batang yang dibagi menjadi {params.get('denominator', 4)} bagian dengan {params.get('numerator', 3)} bagian diarsir.
+        Tampilkan kotak/batang yang dibagi menjadi {params.get('denominator', 4)} bagian dengan {params.get('numerator', 3)} bagian diarsir. Hanya tampilkan diagram, tidak perlu hasil desimal atau persen.
         Gaya: Sederhana, jelas, latar putih, gaya edukatif profesional.
         Gunakan garis luar biru, arsiran biru untuk bagian terisi, dengan label pecahan.
-        Label dalam Bahasa Indonesia.""",
+        Label dalam Bahasa Indonesia. {no_answer}""",
     }
 
-    return prompts.get(image_type, "Buat diagram matematika yang sederhana dan edukatif dengan gaya profesional, label dalam Bahasa Indonesia.")
+    return prompts.get(image_type, f"Buat diagram matematika yang sederhana dan edukatif dengan gaya profesional, label dalam Bahasa Indonesia. {no_answer}")
 
 
 _GENERATORS = {

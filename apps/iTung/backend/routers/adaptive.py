@@ -167,7 +167,8 @@ def generate_adaptive_question(topic: str, performance: dict,
         angle       : {"type": "angle",        "params": {"degrees": 60}}
         fraction    : {"type": "fraction",     "params": {"numerator": 3, "denominator": 4}}
         custom      : {"type": "custom",       "params": {"prompt": "deskripsi detail ilustrasi yang relevan dengan soal, latar putih, gaya edukatif profesional, label Bahasa Indonesia"}}
-    - Gunakan "custom" untuk ilustrasi kontekstual (grafik, tabel, diagram) yang sesuai konten soal secara spesifik."""
+    - Gunakan "custom" untuk ilustrasi kontekstual (grafik, tabel, diagram) yang sesuai konten soal secara spesifik.
+    - PENTING: Gambar hanya menampilkan informasi dari soal (data/konteks yang diberikan), BUKAN jawaban atau penyelesaiannya."""
         image_schema = '\n        "image": {"type": "...", "params": {...}},  // opsional, hanya jika benar-benar membantu'
 
     story_hint    = "\n    - Sajikan sebagai soal cerita kontekstual (gunakan situasi nyata, bukan abstrak)." if needs_story else ""
