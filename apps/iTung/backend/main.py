@@ -303,28 +303,7 @@ def extract_source_from_referrer(referrer: str) -> str | None:
 
 app = FastAPI(title='iTung API', version='1.0.0')
 
-# Add middleware to log and handle large uploads
-class LoggingMiddleware:
-    def __init__(self, app):
-        self.app = app
 
-    async def __call__(self, scope, receive, send):
-        if scope["type"] == "http":
-            print(f"[HTTP] {scope['method']} {scope['path']}")
-            if "avatar" in scope['path']:
-                headers_str = str(dict(scope.get('headers', [])))[:300]
-                print(f"[AVATAR_UPLOAD] Method: {scope['method']}, Path: {scope['path']}, Headers: {headers_str}")
-        
-        async def send_with_logging(message):
-            if message["type"] == "http.response.start":
-                if "avatar" in scope['path']:
-                    print(f"[AVATAR_UPLOAD] Response status: {message['status']}")
-            await send(message)
-        
-        await self.app(scope, receive, send_with_logging)
-
-
-app.add_middleware(LoggingMiddleware)
 
 # Add analytics middleware
 app.middleware("http")(analytics_middleware)
@@ -332,6 +311,7 @@ app.middleware("http")(analytics_middleware)
 app.add_middleware(CORSMiddleware,
                    allow_origins=[
                        "https://itung.nasir.id",
+                       "https://api.itung.nasir.id",
                        "http://207.180.248.214",
                        "http://118.99.110.211",
                        "http://localhost:5000",
@@ -345,6 +325,27 @@ app.add_middleware(CORSMiddleware,
 app.include_router(users.router,  prefix="/api/users",  tags=["users"])
 app.include_router(quiz.router,   prefix="/api/quiz",   tags=["quiz"])
 app.include_router(admin.router,  prefix="/api/admin",  tags=["admin"])
+
+
+@app.post("/debug-avatar-upload")
+async def debug_avatar_upload(file: UploadFile = File(...)):
+    """Debug avatar upload without auth to isolate the issue."""
+    print(f"[DEBUG_AVATAR] Request received")
+    print(f"[DEBUG_AVATAR] File: {file.filename}, Content-Type: {file.content_type}")
+    try:
+        file_bytes = await file.read()
+        print(f"[DEBUG_AVATAR] Read {len(file_bytes)} bytes")
+        return {
+            "status": "ok",
+            "filename": file.filename,
+            "size": len(file_bytes),
+            "content_type": file.content_type,
+        }
+    except Exception as e:
+        print(f"[DEBUG_AVATAR] ERROR: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.exception_handler(RequestValidationError)
@@ -375,12 +376,14 @@ async def general_exception_handler(request: Request, exc: Exception):
 def root():
     return {'app': 'iTung API', 'status': 'running'}
 
-@app.post("/test-upload")
-async def test_upload(file: UploadFile = None):
-    """Test endpoint to verify file upload works."""
-    print(f"[test-upload] Received POST request")
-    if file:
+@app.post("/test-upload-simple")
+async def test_upload_simple(file: UploadFile = File(...)):
+    """Simple test endpoint without auth to debug."""
+    print(f"[TEST_UPLOAD_SIMPLE] File received: {file.filename}")
+    try:
         content = await file.read()
-        print(f"[test-upload] File: {file.filename}, Size: {len(content)} bytes, Content-Type: {file.content_type}")
-        return {"filename": file.filename, "size": len(content), "content_type": file.content_type}
-    return {"message": "No file received"}
+        print(f"[TEST_UPLOAD_SIMPLE] Size: {len(content)} bytes, Content-Type: {file.content_type}")
+        return {"status": "ok", "filename": file.filename, "size": len(content)}
+    except Exception as e:
+        print(f"[TEST_UPLOAD_SIMPLE] ERROR: {e}")
+        raise
