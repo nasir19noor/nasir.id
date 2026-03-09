@@ -7,6 +7,9 @@ from constants import VISUAL_TOPICS, STORY_TOPICS, SYMBOLIC_TOPICS
 
 _system_claude = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
+CLAUDE_MODEL      = os.getenv("CLAUDE_MODEL", "claude-haiku-4-5-20251001")
+CLAUDE_MAX_TOKENS = int(os.getenv("CLAUDE_MAX_TOKENS", "1024"))
+
 # ─── Difficulty Levels ─────────────────────────────────────────────
 
 DIFFICULTY_LEVELS = ["sangat_mudah", "mudah", "sedang", "sulit", "sangat_sulit"]
@@ -200,8 +203,8 @@ Balas HANYA dengan JSON ini (tanpa markdown, tanpa teks lain):
     else:
         client = anthropic.Anthropic(api_key=claude_api_key) if claude_api_key else _system_claude
         msg = client.messages.create(
-            model='claude-opus-4-6',
-            max_tokens=2048,
+            model=CLAUDE_MODEL,
+            max_tokens=CLAUDE_MAX_TOKENS,
             messages=[{"role": "user", "content": prompt}]
         )
         raw = msg.content[0].text.strip()

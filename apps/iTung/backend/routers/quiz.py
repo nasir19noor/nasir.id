@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 import anthropic as _anthropic
 from fastapi.security import HTTPBearer
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from pydantic import BaseModel
 from typing import Optional
+import threading
 
 from database import get_db
 from models import Question, UserAnswer, QuizSession, QuestionBank, User
@@ -112,10 +113,55 @@ def _next_bank_question(session_id: int, topic: str, difficulty: str,
     return None
 
 
+# ─── Background helpers ───────────────────────────────────────────
+
+def _pregen_questions(session_id: int, user_id: int, topic: str,
+                      total: int, start_order: int,
+                      performance: dict, include_images: bool,
+                      claude_api_key, gemini_api_key, age,
+                      db_factory):
+    """Pre-generate questions start_order..total in a background thread."""
+    from database import SessionLocal
+    db = db_factory()
+    try:
+        for order in range(start_order, total + 1):
+            # Skip if already generated (e.g. race condition)
+            exists = db.query(Question).filter(
+                Question.session_id == session_id,
+                Question.order_number == order,
+            ).first()
+            if exists:
+                continue
+            try:
+                q = generate_adaptive_question(
+                    topic, performance,
+                    include_image=include_images,
+                    claude_api_key=claude_api_key,
+                    gemini_api_key=gemini_api_key,
+                    age=age,
+                )
+                bq = _save_to_bank(q, topic, db)
+                new_q = Question(
+                    session_id=session_id, user_id=user_id,
+                    bank_question_id=bq.id, topic=topic,
+                    difficulty=q['difficulty'], question_text=q['soal'],
+                    choices=q['pilihan'], correct_answer=q['jawaban_benar'],
+                    explanation=q['penjelasan'], image_url=q.get('image_url'),
+                    source='ai', order_number=order,
+                )
+                db.add(new_q)
+                db.commit()
+            except Exception as e:
+                print(f"[pregen] Failed Q{order}: {e}")
+    finally:
+        db.close()
+
+
 # ─── Endpoints ────────────────────────────────────────────────────
 
 @router.post("/sessions")
 def create_session(req: CreateSessionRequest,
+                   background_tasks: BackgroundTasks,
                    creds=Depends(security),
                    db: Session = Depends(get_db)):
     if req.topic not in TOPICS:
@@ -166,6 +212,18 @@ def create_session(req: CreateSessionRequest,
             correct_answer=q['jawaban_benar'], explanation=q['penjelasan'],
             image_url=q.get('image_url'), source='ai', order_number=1,
         )
+        # Pre-generate remaining questions in background
+        if req.total_questions > 1:
+            from database import SessionLocal
+            threading.Thread(
+                target=_pregen_questions,
+                args=(session.id, user_id, req.topic,
+                      req.total_questions, 2,
+                      performance, req.include_images,
+                      user_claude, user_gemini, age,
+                      SessionLocal),
+                daemon=True,
+            ).start()
     else:
         bq = _next_bank_question(session.id, req.topic, base_difficulty, db)
         if not bq:
@@ -223,27 +281,36 @@ async def submit_answer(req: SubmitAnswerRequest,
         if session.use_ai:
             user_claude = decrypt_key(db_user.claude_api_key) if db_user and db_user.claude_api_key else None
             user_gemini = decrypt_key(db_user.gemini_api_key) if db_user and db_user.gemini_api_key else None
-            try:
-                q = generate_adaptive_question(question.topic, performance,
-                                               include_image=session.include_images,
-                                               claude_api_key=user_claude,
-                                               gemini_api_key=user_gemini,
-                                               age=age)
-            except (_anthropic.RateLimitError, _anthropic.APIError) as e:
-                raise HTTPException(status_code=503,
-                                    detail="Server AI sedang sibuk. Coba lagi dalam beberapa saat.")
-            except Exception as e:
-                raise HTTPException(status_code=502,
-                                    detail=f"Gagal menghasilkan soal AI: {str(e)}")
-            bq = _save_to_bank(q, question.topic, db)
-            new_q = Question(
-                session_id=req.session_id, user_id=user_id,
-                bank_question_id=bq.id,
-                topic=question.topic, difficulty=q['difficulty'],
-                question_text=q['soal'], choices=q['pilihan'],
-                correct_answer=q['jawaban_benar'], explanation=q['penjelasan'],
-                image_url=q.get('image_url'), source='ai', order_number=order,
-            )
+            # Check if next question was pre-generated
+            new_q = db.query(Question).filter(
+                Question.session_id == req.session_id,
+                Question.order_number == order,
+            ).first()
+            if not new_q:
+                # Not ready yet — generate synchronously as fallback
+                try:
+                    q = generate_adaptive_question(question.topic, performance,
+                                                   include_image=session.include_images,
+                                                   claude_api_key=user_claude,
+                                                   gemini_api_key=user_gemini,
+                                                   age=age)
+                except (_anthropic.RateLimitError, _anthropic.APIError):
+                    raise HTTPException(status_code=503,
+                                        detail="Server AI sedang sibuk. Coba lagi dalam beberapa saat.")
+                except Exception as e:
+                    raise HTTPException(status_code=502,
+                                        detail=f"Gagal menghasilkan soal AI: {str(e)}")
+                bq = _save_to_bank(q, question.topic, db)
+                new_q = Question(
+                    session_id=req.session_id, user_id=user_id,
+                    bank_question_id=bq.id,
+                    topic=question.topic, difficulty=q['difficulty'],
+                    question_text=q['soal'], choices=q['pilihan'],
+                    correct_answer=q['jawaban_benar'], explanation=q['penjelasan'],
+                    image_url=q.get('image_url'), source='ai', order_number=order,
+                )
+                db.add(new_q); db.commit(); db.refresh(new_q)
+            # else: pre-generated new_q already in DB, no add needed
         else:
             difficulty = performance.get('next_difficulty', 'medium')
             bq = _next_bank_question(req.session_id, question.topic, difficulty, db)
@@ -257,8 +324,7 @@ async def submit_answer(req: SubmitAnswerRequest,
                     'performance': performance,
                 }
             new_q = _bank_question_to_model(bq, req.session_id, user_id, order)
-
-        db.add(new_q); db.commit(); db.refresh(new_q)
+            db.add(new_q); db.commit(); db.refresh(new_q)
         next_question = _question_dict(new_q, order)
     else:
         session.completed = True
