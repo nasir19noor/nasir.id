@@ -67,7 +67,7 @@ def _generate_with_gemini(prompt: str) -> bytes | None:
 
     try:
         response = _genai_client.models.generate_content(
-            model='gemini-2.0-flash-exp',
+            model='gemini-3.1-flash-image-preview',
             contents=prompt,
             config=genai_types.GenerateContentConfig(
                 response_modalities=['IMAGE', 'TEXT'],
