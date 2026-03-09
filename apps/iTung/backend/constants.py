@@ -125,6 +125,8 @@ TOPICS = TOPICS_DASAR + TOPICS_MENENGAH + TOPICS_ATAS
 
 # ----------------------------------------------------------
 # TOPIK VISUAL — topik yang diuntungkan oleh diagram/gambar
+# (Hanya topik yang dapat direpresentasikan dengan tipe diagram tersedia:
+#  number_line, rectangle, square, triangle, circle, angle, fraction)
 # ----------------------------------------------------------
 VISUAL_TOPICS = {
     "mengenal bangun datar",
@@ -137,29 +139,13 @@ VISUAL_TOPICS = {
     "volume prisma dan tabung",
     "sifat bangun ruang",
     "bangun ruang sisi datar",
-    "bangun ruang sisi lengkung",
-    "geometri dimensi dua",
-    "geometri dimensi tiga",
-    "geometri analitik lingkaran",
     "sudut dan jenis sudut",
     "garis dan sudut",
-    "teorema pythagoras",
     "garis bilangan",
     "bilangan pecahan",
-    "koordinat kartesius sederhana",
-    "pengenalan waktu",
-    "pengukuran waktu",
-    "transformasi geometri",
-    "persamaan garis lurus",
-    "fungsi kuadrat",
-    "fungsi",
-    "vektor 2D",
-    "vektor 3D",
-    "statistika",
-    "mean median modus",
-    "trigonometri dasar",
-    "aturan sinus dan kosinus",
-    "program linear",
+    "segitiga",
+    "segiempat",
+    "lingkaran",
     "skala dan denah",
 }
 
