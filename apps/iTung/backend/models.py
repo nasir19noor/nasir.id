@@ -49,6 +49,7 @@ class QuizSession(Base):
     completed       = Column(Boolean, default=False)
     use_ai          = Column(Boolean, default=True)
     include_images  = Column(Boolean, default=False)
+    difficulty_level = Column(String, default="adaptif")  # sangat_mudah | mudah | sedang | sulit | sangat_sulit | adaptif
     client          = Column(String, default="web")
     created_at      = Column(DateTime, default=datetime.utcnow)
     user            = relationship('User', back_populates="sessions")

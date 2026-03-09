@@ -226,6 +226,7 @@ export async function createSession(data: {
   total_questions: number
   use_ai: boolean
   include_images: boolean
+  difficulty_level?: string
   client: string
 }): Promise<CreateSessionResponse> {
   const res = await api.post<CreateSessionResponse>('/api/quiz/sessions', data)

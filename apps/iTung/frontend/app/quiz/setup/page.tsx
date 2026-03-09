@@ -124,6 +124,7 @@ function QuizSetupForm() {
 
   const [totalQuestions, setTotalQuestions] = useState(3)
   const [useAi, setUseAi] = useState(false)
+  const [difficultyLevel, setDifficultyLevel] = useState('adaptif')
   const [includeImages, setIncludeImages] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -155,6 +156,7 @@ function QuizSetupForm() {
         total_questions: totalQuestions,
         use_ai: useAi,
         include_images: includeImages,
+        difficulty_level: !useAi ? difficultyLevel : undefined,
         client: 'web',
       })
       // Pass first question to active quiz page via sessionStorage
@@ -281,6 +283,35 @@ function QuizSetupForm() {
             </div>
           </div>
 
+          {/* Difficulty level - Bank Soal only */}
+          {!useAi && (
+            <div>
+              <p className="text-sm font-semibold text-gray-700 mb-2">Tingkat Kesulitan</p>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { value: 'sangat_mudah', label: '😊 Sangat Mudah' },
+                  { value: 'mudah', label: '🙂 Mudah' },
+                  { value: 'sedang', label: '😐 Sedang' },
+                  { value: 'sulit', label: '😰 Sulit' },
+                  { value: 'sangat_sulit', label: '😱 Sangat Sulit' },
+                  { value: 'adaptif', label: '🎯 Adaptif' },
+                ].map((level) => (
+                  <button
+                    key={level.value}
+                    onClick={() => setDifficultyLevel(level.value)}
+                    className={`text-left p-3 rounded-xl border-2 transition-all text-sm font-semibold ${
+                      difficultyLevel === level.value
+                        ? 'border-primary-500 bg-primary-50 text-primary-700'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-primary-300'
+                    }`}
+                  >
+                    {level.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Include images */}
           {useAi && (
             <label className="flex items-center gap-3 cursor-pointer select-none">
@@ -291,7 +322,7 @@ function QuizSetupForm() {
                 className="w-4 h-4 accent-primary-600"
               />
               <span className="text-sm text-gray-700">
-                🖼️ Tampilkan gambar/diagram (untuk topik visual)
+                🖼️ Tampilkan gambar/diagram
               </span>
             </label>
           )}

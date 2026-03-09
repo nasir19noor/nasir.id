@@ -25,6 +25,7 @@ class CreateSessionRequest(BaseModel):
     total_questions: int = 3
     use_ai: bool = True
     include_images: bool = False
+    difficulty_level: str = "adaptif"  # sangat_mudah | mudah | sedang | sulit | sangat_sulit | adaptif
     client: str = "web"
 
 
@@ -179,6 +180,7 @@ def create_session(req: CreateSessionRequest,
         user_id=user_id, topic=req.topic,
         total_questions=req.total_questions,
         use_ai=req.use_ai, include_images=req.include_images,
+        difficulty_level=req.difficulty_level,
         client=req.client,
     )
     db.add(session); db.commit(); db.refresh(session)
@@ -225,7 +227,16 @@ def create_session(req: CreateSessionRequest,
                 daemon=True,
             ).start()
     else:
-        bq = _next_bank_question(session.id, req.topic, base_difficulty, db)
+        # Use fixed difficulty if specified, otherwise use adaptive (base_difficulty)
+        difficulty_to_use = base_difficulty if req.difficulty_level == "adaptif" else req.difficulty_level
+        bq = _fetch_bank_question(session.id, req.topic, difficulty_to_use, db)
+        if not bq and req.difficulty_level != "adaptif":
+            # If fixed level but no questions found, raise error
+            raise HTTPException(status_code=404,
+                                detail=f"Belum tersedia soal tingkat {difficulty_to_use} untuk topik ini. Coba pilih tingkat kesulitan lain atau topik lain.")
+        elif not bq:
+            # If adaptive but no questions found, try fallback
+            bq = _next_bank_question(session.id, req.topic, difficulty_to_use, db)
         if not bq:
             raise HTTPException(status_code=404,
                                 detail="Belum tersedia soal untuk topik ini. Coba pilih topik lain atau aktifkan AI untuk soal adaptif.")
@@ -312,8 +323,13 @@ async def submit_answer(req: SubmitAnswerRequest,
                 db.add(new_q); db.commit(); db.refresh(new_q)
             # else: pre-generated new_q already in DB, no add needed
         else:
-            difficulty = performance.get('next_difficulty', 'medium')
-            bq = _next_bank_question(req.session_id, question.topic, difficulty, db)
+            # Use fixed difficulty if specified, otherwise use adaptive
+            if session.difficulty_level != "adaptif":
+                difficulty = session.difficulty_level
+                bq = _fetch_bank_question(req.session_id, question.topic, difficulty, db)
+            else:
+                difficulty = performance.get('next_difficulty', 'sedang')
+                bq = _next_bank_question(req.session_id, question.topic, difficulty, db)
             if not bq:
                 session.completed = True; db.commit()
                 return {
