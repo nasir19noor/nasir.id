@@ -159,17 +159,16 @@ def generate_adaptive_question(topic: str, performance: dict,
     - Sertakan field "image" HANYA jika gambar benar-benar membantu memvisualisasikan soal yang kamu buat (bukan hanya karena topiknya).
     - Jika soal yang kamu hasilkan tidak memerlukan gambar (misalnya soal cerita atau perhitungan murni), JANGAN sertakan field "image".
     - Jika gambar diperlukan, pilih tipe yang paling sesuai dengan ISI SOAL (bukan topiknya):
-        number_line : {"type": "number_line", "params": {"start": 0, "end": 20, "marked": [7]}}
-        rectangle   : {"type": "rectangle",   "params": {"width": 5, "height": 3}}
-        square      : {"type": "square",       "params": {"side": 4}}
-        triangle    : {"type": "triangle",     "params": {"points": [[0.5,0.5],[4.5,0.5],[2.5,4]]}}
-        circle      : {"type": "circle",       "params": {"radius": 3}}
-        angle       : {"type": "angle",        "params": {"degrees": 60}}
-        fraction    : {"type": "fraction",     "params": {"numerator": 3, "denominator": 4}}
-        custom      : {"type": "custom",       "params": {"prompt": "deskripsi detail ilustrasi yang relevan dengan soal, latar putih, gaya edukatif profesional, label Bahasa Indonesia"}}
-    - Gunakan "custom" untuk ilustrasi kontekstual (grafik, tabel, diagram) yang sesuai konten soal secara spesifik.
-    - PENTING: Gambar hanya menampilkan informasi dari soal (data/konteks yang diberikan), BUKAN jawaban atau penyelesaiannya."""
-        image_schema = '\n        "image": {"type": "...", "params": {...}},  // opsional, hanya jika benar-benar membantu'
+        number_line : {"type": "number_line", "params": {"start": 0, "end": 20, "marked": [7]}, "given_info": "Garis bilangan dari 0 sampai 20, titik pada 7"}
+        rectangle   : {"type": "rectangle",   "params": {"width": 5, "height": 3}, "given_info": "Persegi panjang lebar 5 cm, tinggi 3 cm"}
+        square      : {"type": "square",       "params": {"side": 4}, "given_info": "Persegi dengan sisi 4 cm"}
+        triangle    : {"type": "triangle",     "params": {"points": [[0.5,0.5],[4.5,0.5],[2.5,4]]}, "given_info": "Segitiga ABC dengan AB = 8 cm, AC = 10 cm, ∠BAC = 75°"}
+        circle      : {"type": "circle",       "params": {"radius": 3}, "given_info": "Lingkaran dengan jari-jari 3 cm"}
+        angle       : {"type": "angle",        "params": {"degrees": 60}, "given_info": "Sudut 60 derajat"}
+        fraction    : {"type": "fraction",     "params": {"numerator": 3, "denominator": 4}, "given_info": "Pecahan 3/4"}
+    - PENTING untuk "given_info": Tulis HANYA informasi yang SECARA EKSPLISIT diberikan dalam soal. Jangan sertakan nilai yang dihitung, atau informasi turunan.
+    - PENTING: Gambar hanya menampilkan informasi dari "given_info" - TIDAK lebih, TIDAK kurang. Jangan tambahkan sudut yang dihitung, panjang yang tidak disebutkan, atau informasi apapun di luar "given_info"."""
+        image_schema = '\n        "image": {"type": "...", "params": {...}, "given_info": "..."},  // opsional, hanya jika benar-benar membantu'
 
     story_hint    = "\n    - Sajikan sebagai soal cerita kontekstual (gunakan situasi nyata, bukan abstrak)." if needs_story else ""
     symbolic_hint = "\n    - Fokus pada manipulasi aljabar/ekspresi simbolik; sertakan langkah penyelesaian singkat di penjelasan." if needs_symbolic else ""

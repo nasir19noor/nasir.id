@@ -88,60 +88,82 @@ def _generate_with_gemini(prompt: str) -> bytes | None:
 
 def _create_prompt(image_type: str, params: dict) -> str:
     """Create a detailed prompt for Gemini to generate the appropriate math diagram."""
-    no_answer = "JANGAN tampilkan jawaban dan informasi lainnya yang mengarah pada jawaban, hasil perhitungan, atau penyelesaian — hanya tampilkan informasi yang ada pada soal."
+    
+    # Critical instructions - ONLY show explicitly provided information
+    only_given_info = """
+PENTING: Hanya tampilkan INFORMASI YANG DIBERIKAN dalam soal saja.
+JANGAN tampilkan:
+- Nilai yang harus dihitung/dicari (jawaban)
+- Sudut atau panjang yang bukan bagian dari pertanyaan awal
+- Hasil perhitungan atau turunan dari informasi yang diberikan
+- Dekorasi atau informasi tambahan apapun
+
+Hanya tampilkan label, ukuran, dan sudut yang SECARA EKSPLISIT diberikan dalam soal.
+TIDAK ada informasi lain, hasil perhitungan, atau nilai yang dapat diketahui dari soal.
+"""
 
     prompts = {
-        'number_line': f"""Buat ilustrasi matematika yang bersih dan edukatif berupa diagram garis bilangan.
-        Rentang: dari {params.get('start', 0)} sampai {params.get('end', 20)}
-        Tandai angka-angka berikut dengan titik merah: {params.get('marked', [])}
-        Gaya: Sederhana, jelas, latar putih, gaya edukatif profesional.
-        Gunakan garis dan angka hitam, titik merah untuk angka yang ditandai.
-        Label dalam Bahasa Indonesia. {no_answer}""",
+        'number_line': f"""Buat diagram garis bilangan yang bersih dan profesional.
+Rentang: dari {params.get('start', 0)} sampai {params.get('end', 20)}
+Tandai dengan titik dan label angka-angka: {params.get('marked', [])}
+Gaya: hitam dan putih, terang, sederhana, latar putih bersih.
+{only_given_info}""",
 
-        'rectangle': f"""Buat ilustrasi matematika yang bersih dan edukatif berupa diagram persegi panjang.
-        Lebar: {params.get('width', 4)} cm
-        Tinggi: {params.get('height', 3)} cm
-        Tampilkan ukuran berlabel di setiap sisi. Biarkan area dalam kosong (tidak ada label luas atau nilai lain).
-        Gaya: Sederhana, jelas, latar putih, gaya edukatif profesional.
-        Gunakan garis luar biru, isi biru muda, dengan label ukuran yang jelas.
-        Label dalam Bahasa Indonesia. {no_answer}""",
+        'rectangle': f"""Buat diagram persegi panjang yang bersih dan profesional.
+Dimensi: Lebar {params.get('width', 4)} cm, Tinggi {params.get('height', 3)} cm
+Label HANYA ukuran di sisi-sisi: lebar dan tinggi.
+Jangan tampilkan luas, keliling, atau nilai apapun yang bukan dimensi yang diberikan.
+Gaya: garis biru, latar putih bersih, terang, sederhana.
+{only_given_info}""",
 
-        'square': f"""Buat ilustrasi matematika yang bersih dan edukatif berupa diagram persegi.
-        Panjang sisi: {params.get('side', 4)} cm
-        Tampilkan ukuran berlabel di salah satu sisi saja. Biarkan area dalam kosong.
-        Gaya: Sederhana, jelas, latar putih, gaya edukatif profesional.
-        Gunakan garis luar biru, isi biru muda, dengan label yang jelas.
-        Label dalam Bahasa Indonesia. {no_answer}""",
+        'square': f"""Buat diagram persegi yang bersih dan profesional.
+Panjang sisi: {params.get('side', 4)} cm
+Label HANYA satu sisi saja dengan panjangnya.
+Jangan tampilkan luas, keliling, atau informasi yang dihitung.
+Gaya: garis biru tua, latar putih bersih, terang, sederhana.
+{only_given_info}""",
 
-        'triangle': f"""Buat ilustrasi matematika yang bersih dan edukatif berupa diagram segitiga.
-        Tampilkan segitiga yang jelas dengan tiga titik sudut berlabel A, B, C.
-        Gaya: Sederhana, jelas, latar putih, gaya edukatif profesional.
-        Gunakan garis luar biru, isi biru muda.
-        Label dalam Bahasa Indonesia. {no_answer}""",
+        'triangle': f"""Buat diagram segitiga yang bersih dan profesional.
+Informasi yang diberikan dalam soal:
+{params.get('given_info', 'Segitiga ABC dengan titik sudut berlabel A, B, C')}
 
-        'circle': f"""Buat ilustrasi matematika yang bersih dan edukatif berupa diagram lingkaran.
-        Jari-jari: {params.get('radius', 2)} cm
-        Gambar garis dari pusat ke tepi berlabel "r = {params.get('radius', 2)} cm". Tidak perlu tampilkan luas atau keliling.
-        Gaya: Sederhana, jelas, latar putih, gaya edukatif profesional.
-        Gunakan garis luar biru, isi biru muda, garis jari-jari merah.
-        Label dalam Bahasa Indonesia. {no_answer}""",
+Label HANYA informasi yang diberikan di atas. Tidak boleh ada:
+- Sudut yang dihitung
+- Panjang sisi yang tidak disebutkan
+- Tinggi atau garis bantu yang tidak diminta
+- Nilai apapun selain yang EKSPLISIT dalam daftar informasi
 
-        'angle': f"""Buat ilustrasi matematika yang bersih dan edukatif berupa diagram sudut.
-        Sudut: {params.get('degrees', 60)} derajat
-        Tampilkan dua sinar yang membentuk sudut dengan busur dan label derajatnya saja.
-        Gaya: Sederhana, jelas, latar putih, gaya edukatif profesional.
-        Gunakan sinar biru, busur merah, dengan label derajat.
-        Label dalam Bahasa Indonesia. {no_answer}""",
+Jika ada garis khusus (seperti tinggi/median/garis bagi), tampilkan HANYA jika diberikan dalam soal.
+Gaya: garis biru tua, latar putih bersih, terang, sederhana, hanya apa yang perlu.
+{only_given_info}""",
 
-        'fraction': f"""Buat ilustrasi matematika yang bersih dan edukatif berupa diagram pecahan.
-        Pecahan: {params.get('numerator', 3)}/{params.get('denominator', 4)}
-        Tampilkan kotak/batang yang dibagi menjadi {params.get('denominator', 4)} bagian dengan {params.get('numerator', 3)} bagian diarsir. Hanya tampilkan diagram, tidak perlu hasil desimal atau persen.
-        Gaya: Sederhana, jelas, latar putih, gaya edukatif profesional.
-        Gunakan garis luar biru, arsiran biru untuk bagian terisi, dengan label pecahan.
-        Label dalam Bahasa Indonesia. {no_answer}""",
+        'circle': f"""Buat diagram lingkaran yang bersih dan profesional.
+Informasi yang diberikan:
+{params.get('given_info', f'Lingkaran dengan jari-jari {params.get("radius", 2)} cm')}
+
+Label HANYA informasi di atas. Jangan tampilkan luas, keliling, atau perhitungan lain.
+Gaya: garis biru tua, latar putih bersih, terang, sederhana.
+{only_given_info}""",
+
+        'angle': f"""Buat diagram sudut yang bersih dan profesional.
+Informasi yang diberikan:
+{params.get('given_info', f'Sudut {params.get("degrees", 60)} derajat')}
+
+Label HANYA informasi di atas. Tampilkan dua sinar yang membentuk sudut dengan busur dan label derajat.
+Jangan tambahkan informasi lain.
+Gaya: sinar biru tua, busur merah, latar putih bersih, terang, sederhana.
+{only_given_info}""",
+
+        'fraction': f"""Buat diagram pecahan yang bersih dan profesional.
+Pecahan: {params.get('numerator', 3)}/{params.get('denominator', 4)}
+
+Tampilkan persegi/kotak yang dibagi menjadi {params.get('denominator', 4)} bagian dengan {params.get('numerator', 3)} bagian diarsir/berwarna.
+Label pecahan. Jangan tampilkan desimal, persen, atau informasi lain.
+Gaya: garis biru tua, area terisi biru muda, latar putih bersih, terang, sederhana.
+{only_given_info}""",
     }
 
-    return prompts.get(image_type, f"Buat diagram matematika yang sederhana dan edukatif dengan gaya profesional, label dalam Bahasa Indonesia. {no_answer}")
+    return prompts.get(image_type, f"Buat diagram matematika yang sederhana dan profesional. Hanya tampilkan informasi yang diberikan dalam soal. {only_given_info}")
 
 
 _GENERATORS = {
@@ -152,6 +174,8 @@ _GENERATORS = {
     'circle':      lambda p, t: _upload(_generate_with_gemini(_create_prompt('circle', p)), t),
     'angle':       lambda p, t: _upload(_generate_with_gemini(_create_prompt('angle', p)), t),
     'fraction':    lambda p, t: _upload(_generate_with_gemini(_create_prompt('fraction', p)), t),
+    'custom':      lambda p, t: _upload(_generate_with_gemini(p.get('prompt', '')), t),
+}
     'custom':      lambda p, t: _upload(_generate_with_gemini(p.get('prompt', '')), t),
 }
 
