@@ -218,7 +218,7 @@ def generate_adaptive_question(topic: str, performance: dict,
     if needs_image and 'image' in result:
         from services.image_service import generate as gen_image
         img      = result.pop('image')
-        img_url  = gen_image(img.get('type', ''), img.get('params', {}))
+        img_url  = gen_image(img.get('type', ''), img.get('params', {}), topic=topic)
         result['image_url'] = img_url
 
     return result

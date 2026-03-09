@@ -3,6 +3,7 @@ Generates math diagram images with matplotlib and uploads them to Amazon S3.
 Supported types: number_line, rectangle, square, triangle, circle, angle, fraction
 """
 import io, os, uuid
+from datetime import datetime
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -27,12 +28,20 @@ BUCKET   = os.getenv('S3_BUCKET_NAME')
 CDN_BASE = os.getenv('S3_CDN_BASE', '')
 
 
-def _upload(fig) -> str:
+def _upload(fig, topic: str = "general") -> str:
     buf = io.BytesIO()
     fig.savefig(buf, format='png', bbox_inches='tight', dpi=100)
     buf.seek(0)
     plt.close(fig)
-    key = f"questions/{uuid.uuid4()}.png"
+    
+    # Create path with topic/year/month/day structure
+    now = datetime.now()
+    year = now.strftime('%Y')
+    month = now.strftime('%m')
+    day = now.strftime('%d')
+    filename = f"{uuid.uuid4()}.png"
+    key = f"questions/{topic}/{year}/{month}/{day}/{filename}"
+    
     _get_s3().upload_fileobj(
         buf, BUCKET, key,
         ExtraArgs={'ContentType': 'image/png', 'ACL': 'public-read'},
@@ -41,7 +50,7 @@ def _upload(fig) -> str:
     return f"{base}/{key}"
 
 
-def _number_line(start: int, end: int, marked: list | None = None) -> str:
+def _number_line(start: int, end: int, marked: list | None = None, topic: str = "general") -> str:
     fig, ax = plt.subplots(figsize=(8, 2))
     ax.set_xlim(start - 1, end + 1)
     ax.set_ylim(-0.6, 0.6)
@@ -53,10 +62,10 @@ def _number_line(start: int, end: int, marked: list | None = None) -> str:
         for m in marked:
             ax.plot(m, 0, 'ro', markersize=14, zorder=5)
     ax.axis('off')
-    return _upload(fig)
+    return _upload(fig, topic)
 
 
-def _shape(shape_type: str, **p) -> str:
+def _shape(shape_type: str, topic: str = "general", **p) -> str:
     fig, ax = plt.subplots(figsize=(5, 5))
     ax.set_aspect('equal')
     BLUE, FILL = '#1565C0', '#BBDEFB'
@@ -93,10 +102,10 @@ def _shape(shape_type: str, **p) -> str:
         ax.set_xlim(0, 5); ax.set_ylim(0, 5)
 
     ax.axis('off')
-    return _upload(fig)
+    return _upload(fig, topic)
 
 
-def _angle(degrees: int) -> str:
+def _angle(degrees: int, topic: str = "general") -> str:
     fig, ax = plt.subplots(figsize=(5, 5))
     ax.set_aspect('equal')
     length = 3
@@ -115,10 +124,10 @@ def _angle(degrees: int) -> str:
     ax.set_xlim(-0.5, length + 0.5)
     ax.set_ylim(-0.5, length + 0.5)
     ax.axis('off')
-    return _upload(fig)
+    return _upload(fig, topic)
 
 
-def _fraction(numerator: int, denominator: int) -> str:
+def _fraction(numerator: int, denominator: int, topic: str = "general") -> str:
     fig, ax = plt.subplots(figsize=(6, 2))
     w = 1 / denominator
     for i in range(denominator):
@@ -130,27 +139,27 @@ def _fraction(numerator: int, denominator: int) -> str:
             ha='center', fontsize=16, fontweight='bold', color='#1565C0')
     ax.set_xlim(0, 1); ax.set_ylim(-0.2, 1)
     ax.axis('off')
-    return _upload(fig)
+    return _upload(fig, topic)
 
 
 _GENERATORS = {
-    'number_line': lambda p: _number_line(**p),
-    'rectangle':   lambda p: _shape('rectangle', **p),
-    'square':      lambda p: _shape('square', **p),
-    'triangle':    lambda p: _shape('triangle', **p),
-    'circle':      lambda p: _shape('circle', **p),
-    'angle':       lambda p: _angle(**p),
-    'fraction':    lambda p: _fraction(**p),
+    'number_line': lambda p, t: _number_line(**p, topic=t),
+    'rectangle':   lambda p, t: _shape('rectangle', topic=t, **p),
+    'square':      lambda p, t: _shape('square', topic=t, **p),
+    'triangle':    lambda p, t: _shape('triangle', topic=t, **p),
+    'circle':      lambda p, t: _shape('circle', topic=t, **p),
+    'angle':       lambda p, t: _angle(**p, topic=t),
+    'fraction':    lambda p, t: _fraction(**p, topic=t),
 }
 
 
-def generate(image_type: str, params: dict) -> str | None:
+def generate(image_type: str, params: dict, topic: str = "general") -> str | None:
     """Generate a math diagram image and upload to S3. Returns the public URL or None on failure."""
     gen = _GENERATORS.get(image_type)
     if gen is None:
         return None
     try:
-        return gen(params)
+        return gen(params, topic)
     except Exception as e:
         print(f"[image_service] Failed to generate '{image_type}': {e}")
         return None
