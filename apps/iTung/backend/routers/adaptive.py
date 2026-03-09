@@ -11,12 +11,13 @@ _system_claude = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
 DIFFICULTY_LEVELS = ["sangat_mudah", "mudah", "sedang", "sulit", "sangat_sulit"]
 
-# Map old 3-level values to new 5-level values (backward compatibility)
-_LEGACY_MAP = {"easy": "mudah", "medium": "sedang", "hard": "sulit"}
-
 
 def _normalize_difficulty(d: str) -> str:
-    return _LEGACY_MAP.get(d, d) if d not in DIFFICULTY_LEVELS else d
+    """Ensure difficulty is in valid 5-level standard."""
+    if d in DIFFICULTY_LEVELS:
+        return d
+    # Default to 'sedang' if invalid value
+    return "sedang"
 
 
 def calculate_age(birth_date: date) -> int:

@@ -61,7 +61,7 @@ class QuestionBank(Base):
 
     id             = Column(Integer, primary_key=True, index=True)
     topic          = Column(String, nullable=False, index=True)
-    difficulty     = Column(String, nullable=False, default="medium")  # easy | medium | hard
+    difficulty     = Column(String, nullable=False, default="sedang")  # sangat_mudah | mudah | sedang | sulit | sangat_sulit
     question_text  = Column(Text, nullable=False)
     choices        = Column(JSON, nullable=False)   # ["A. ...", "B. ...", "C. ...", "D. ..."]
     correct_answer = Column(String, nullable=False)  # "A" | "B" | "C" | "D"
@@ -80,7 +80,7 @@ class Question(Base):
     user_id          = Column(Integer, ForeignKey('users.id'))
     bank_question_id = Column(Integer, ForeignKey('question_bank.id'), nullable=True)
     topic            = Column(String, nullable=False)
-    difficulty       = Column(String, default="medium")
+    difficulty       = Column(String, default="sedang")  # sangat_mudah | mudah | sedang | sulit | sangat_sulit
     question_text    = Column(Text, nullable=False)
     choices          = Column(JSON, nullable=False)
     correct_answer   = Column(String, nullable=False)

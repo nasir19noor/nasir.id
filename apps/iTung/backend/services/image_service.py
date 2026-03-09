@@ -34,13 +34,16 @@ def _upload(fig, topic: str = "general") -> str:
     buf.seek(0)
     plt.close(fig)
     
+    # Create URL-safe topic slug (replace spaces with hyphens)
+    topic_slug = topic.replace(" ", "-").lower()
+    
     # Create path with topic/year/month/day structure
     now = datetime.now()
     year = now.strftime('%Y')
     month = now.strftime('%m')
     day = now.strftime('%d')
     filename = f"{uuid.uuid4()}.png"
-    key = f"questions/{topic}/{year}/{month}/{day}/{filename}"
+    key = f"questions/{topic_slug}/{year}/{month}/{day}/{filename}"
     
     _get_s3().upload_fileobj(
         buf, BUCKET, key,
