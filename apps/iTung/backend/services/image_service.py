@@ -44,7 +44,7 @@ def _upload(fig, topic: str = "general") -> str:
     
     _get_s3().upload_fileobj(
         buf, BUCKET, key,
-        ExtraArgs={'ContentType': 'image/png', 'ACL': 'public-read'},
+        ExtraArgs={'ContentType': 'image/png'},
     )
     base = CDN_BASE.rstrip('/') or f"https://{BUCKET}.s3.amazonaws.com"
     return f"{base}/{key}"
