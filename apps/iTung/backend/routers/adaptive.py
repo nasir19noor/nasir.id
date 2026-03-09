@@ -168,25 +168,21 @@ def generate_adaptive_question(topic: str, performance: dict,
 
     prompt = f"""Kamu adalah guru matematika. Buat SATU soal matematika dalam Bahasa Indonesia.
 
-PROFIL SISWA:
-- {_age_context(age)}
-- Akurasi keseluruhan : {accuracy_pct}%
-- Topik lemah         : {weak}
-- Target kesulitan    : {difficulty_label}
-- 10 jawaban terakhir : {history}
+PROFIL: {_age_context(age)}
+TOPIK: {topic}
+TINGKAT KESULITAN: {difficulty_label}
 
 ATURAN:
-- Topik   : {topic}
-- Tingkat kesulitan HARUS: {difficulty_label}
-- Sesuaikan kompleksitas angka dan kalimat dengan usia/tingkat siswa di atas
-- Tulis soal, pilihan, dan penjelasan dalam Bahasa Indonesia{story_hint}{symbolic_hint}{image_instruction}
+- Soal harus sesuai tingkat kesulitan dan usia siswa
+- Tulis dalam Bahasa Indonesia{story_hint}{symbolic_hint}{image_instruction}
+- Penjelasan singkat saja (1-2 kalimat)
 
-Balas HANYA dengan JSON ini (tanpa teks lain, tanpa markdown code fences):
+Balas HANYA dengan JSON ini (tanpa markdown, tanpa teks lain):
 {{
-{image_schema}    "soal": "teks soal dalam Bahasa Indonesia",
-    "pilihan": ["A. pilihan pertama", "B. pilihan kedua", "C. pilihan ketiga", "D. pilihan keempat"],
+{image_schema}    "soal": "teks soal",
+    "pilihan": ["A. opsi1", "B. opsi2", "C. opsi3", "D. opsi4"],
     "jawaban_benar": "A",
-    "penjelasan": "penjelasan singkat dalam Bahasa Indonesia",
+    "penjelasan": "penjelasan singkat",
     "difficulty": "{difficulty}"
 }}
 """
@@ -201,34 +197,47 @@ Balas HANYA dengan JSON ini (tanpa teks lain, tanpa markdown code fences):
         client = anthropic.Anthropic(api_key=claude_api_key) if claude_api_key else _system_claude
         msg = client.messages.create(
             model='claude-opus-4-6',
-            max_tokens=1024,
+            max_tokens=2048,
             messages=[{"role": "user", "content": prompt}]
         )
         raw = msg.content[0].text.strip()
 
     # Strip markdown code fences if AI wrapped the JSON
     if raw.startswith("```"):
-        raw = raw.split("```", 2)[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-        raw = raw.rsplit("```", 1)[0].strip()
+        parts = raw.split("```")
+        if len(parts) >= 3:
+            raw = parts[1]
+            if raw.startswith("json\n"):
+                raw = raw[5:]
+        elif len(parts) == 2:
+            raw = parts[1]
     
     # Find and extract only the JSON object (in case AI adds extra text)
     try:
         result = json.loads(raw)
     except json.JSONDecodeError as e:
         # Try to find JSON object within the response
-        json_match = re.search(r'\{.*\}', raw, re.DOTALL)
+        json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', raw, re.DOTALL)
         if json_match:
+            json_str = json_match.group()
             try:
-                result = json.loads(json_match.group())
+                result = json.loads(json_str)
             except json.JSONDecodeError:
-                print(f"[adaptive] Failed to parse JSON: {e}")
-                print(f"[adaptive] Raw response: {raw[:500]}")
-                raise
+                # Last attempt: try to fix incomplete JSON by adding missing closing quotes/braces
+                try:
+                    json_str = json_str + '" }' if not json_str.rstrip().endswith('}') else json_str
+                    result = json.loads(json_str)
+                except:
+                    print(f"[adaptive] Failed to parse JSON: {e}")
+                    print(f"[adaptive] Raw response length: {len(raw)}")
+                    print(f"[adaptive] Raw response (first 1000 chars): {raw[:1000]}")
+                    print(f"[adaptive] Raw response (last 200 chars): {raw[-200:]}")
+                    raise
         else:
             print(f"[adaptive] Failed to parse JSON: {e}")
-            print(f"[adaptive] Raw response: {raw[:500]}")
+            print(f"[adaptive] Raw response length: {len(raw)}")
+            print(f"[adaptive] Raw response (first 1000 chars): {raw[:1000]}")
+            print(f"[adaptive] Raw response (last 200 chars): {raw[-200:]}")
             raise
 
     if needs_image and 'image' in result:
