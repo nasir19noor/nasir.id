@@ -44,6 +44,7 @@ export default function ActiveQuizPage() {
   const [explanation, setExplanation] = useState('')
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [nextQuestion, setNextQuestion] = useState<Question | null | undefined>(undefined)
 
   // Timer (per question)
   const [elapsed, setElapsed] = useState(0)
@@ -130,37 +131,38 @@ export default function ActiveQuizPage() {
         image_url: question.image_url,
       })
 
-      const nextAnswered = answered + 1
-
-      // Wait 1.8s then advance
-      setTimeout(() => {
-        setSelected(null)
-        setStates({})
-        setExplanation('')
-        setIsCorrect(null)
-        setSubmitting(false)
-        setAnswered(nextAnswered)
-
-        if (res.next_question) {
-          setQuestion(res.next_question)
-        } else {
-          // Session complete
-          sessionStorage.setItem(
-            `quiz_result_${sessionId}`,
-            JSON.stringify({
-              history: historyRef.current,
-              score: res.session_score,
-              total: totalQ,
-              topic,
-              performance: res.performance,
-            })
-          )
-          router.push(`/quiz/${sessionId}/result`)
-        }
-      }, 1800)
+      setNextQuestion(res.next_question ?? null)
+      setSubmitting(false)
     } catch {
       setSubmitting(false)
       setSelected(null)
+    }
+  }
+
+  function handleNext() {
+    const nextAnswered = answered + 1
+    setSelected(null)
+    setStates({})
+    setExplanation('')
+    setIsCorrect(null)
+    setNextQuestion(undefined)
+    setAnswered(nextAnswered)
+
+    if (nextQuestion) {
+      setQuestion(nextQuestion)
+    } else {
+      // Session complete
+      sessionStorage.setItem(
+        `quiz_result_${sessionId}`,
+        JSON.stringify({
+          history: historyRef.current,
+          score,
+          total: totalQ,
+          topic,
+          performance,
+        })
+      )
+      router.push(`/quiz/${sessionId}/result`)
     }
   }
 
@@ -225,14 +227,16 @@ export default function ActiveQuizPage() {
             })}
           </div>
 
-          {/* Submit button */}
-          <button
-            onClick={handleSubmit}
-            disabled={!selected || submitting}
-            className="mt-4 w-full bg-primary-600 hover:bg-primary-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition-colors text-sm"
-          >
-            {submitting ? 'Memeriksa...' : 'Jawab'}
-          </button>
+          {/* Submit button — hidden after answered */}
+          {isCorrect === null && (
+            <button
+              onClick={handleSubmit}
+              disabled={!selected || submitting}
+              className="mt-4 w-full bg-primary-600 hover:bg-primary-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition-colors text-sm"
+            >
+              {submitting ? 'Memeriksa...' : 'Jawab'}
+            </button>
+          )}
         </div>
 
         {/* Feedback banner */}
@@ -253,6 +257,12 @@ export default function ActiveQuizPage() {
                 }</span>
               </p>
             )}
+            <button
+              onClick={handleNext}
+              className="mt-3 w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-2.5 rounded-xl transition-colors text-sm"
+            >
+              {nextQuestion ? 'Berikutnya →' : 'Lihat Hasil'}
+            </button>
           </div>
         )}
       </main>
