@@ -176,8 +176,6 @@ _GENERATORS = {
     'fraction':    lambda p, t: _upload(_generate_with_gemini(_create_prompt('fraction', p)), t),
     'custom':      lambda p, t: _upload(_generate_with_gemini(p.get('prompt', '')), t),
 }
-    'custom':      lambda p, t: _upload(_generate_with_gemini(p.get('prompt', '')), t),
-}
 
 
 def generate(image_type: str, params: dict, topic: str = "general") -> str | None:
