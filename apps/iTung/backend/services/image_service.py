@@ -150,6 +150,7 @@ _GENERATORS = {
     'circle':      lambda p, t: _upload(_generate_with_gemini(_create_prompt('circle', p)), t),
     'angle':       lambda p, t: _upload(_generate_with_gemini(_create_prompt('angle', p)), t),
     'fraction':    lambda p, t: _upload(_generate_with_gemini(_create_prompt('fraction', p)), t),
+    'custom':      lambda p, t: _upload(_generate_with_gemini(p.get('prompt', '')), t),
 }
 
 
