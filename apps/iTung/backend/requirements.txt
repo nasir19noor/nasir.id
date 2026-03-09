@@ -15,5 +15,6 @@ pillow
 google-auth
 cryptography
 google-generativeai
+google-genai
 requests
 user-agents

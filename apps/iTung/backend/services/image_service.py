@@ -5,7 +5,8 @@ Supported types: number_line, rectangle, square, triangle, circle, angle, fracti
 import io, os, uuid
 from datetime import datetime
 import boto3
-import google.generativeai as genai
+from google import genai
+from google.genai import types as genai_types
 
 _s3 = None
 
@@ -24,8 +25,7 @@ BUCKET   = os.getenv('S3_BUCKET_NAME')
 CDN_BASE = os.getenv('S3_CDN_BASE', '')
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 
-if GOOGLE_API_KEY:
-    genai.configure(api_key=GOOGLE_API_KEY)
+_genai_client = genai.Client(api_key=GOOGLE_API_KEY) if GOOGLE_API_KEY else None
 
 
 def _upload(image_bytes: bytes, topic: str = "general") -> str | None:
@@ -61,19 +61,19 @@ def _upload(image_bytes: bytes, topic: str = "general") -> str | None:
 
 def _generate_with_gemini(prompt: str) -> bytes | None:
     """Generate image using Google Gemini and return image bytes."""
-    if not GOOGLE_API_KEY:
+    if not _genai_client:
         print("[image_service] GOOGLE_API_KEY not set")
         return None
-    
+
     try:
-        model = genai.ImageGenerationModel('imagen-3.0-generate-002')
-        response = model.generate_images(
+        response = _genai_client.models.generate_images(
+            model='imagen-3.0-generate-002',
             prompt=prompt,
-            number_of_images=1,
+            config=genai_types.GenerateImagesConfig(number_of_images=1),
         )
 
-        if response and response.images:
-            return response.images[0]._image_bytes
+        if response and response.generated_images:
+            return response.generated_images[0].image.image_bytes
         else:
             print(f"[image_service] No image generated for prompt: {prompt[:100]}")
             return None
