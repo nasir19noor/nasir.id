@@ -66,9 +66,10 @@ def _upload(image_bytes: bytes, topic: str = "general") -> str | None:
 def _generate_with_gemini(prompt: str) -> bytes | None:
     """Generate image using Google Gemini and return image bytes."""
     if not _genai_client:
-        print("[image_service] GOOGLE_API_KEY not set")
+        print("[image_service] Gemini skipped: GOOGLE_API_KEY not set")
         return None
 
+    print(f"[image_service] Using Gemini | model={GEMINI_IMAGE_MODEL}")
     try:
         response = _genai_client.models.generate_content(
             model=GEMINI_IMAGE_MODEL,
@@ -80,9 +81,10 @@ def _generate_with_gemini(prompt: str) -> bytes | None:
 
         for part in response.candidates[0].content.parts:
             if part.inline_data is not None:
+                print(f"[image_service] Gemini image generated successfully")
                 return part.inline_data.data
 
-        print(f"[image_service] No image generated for prompt: {prompt[:100]}")
+        print(f"[image_service] Gemini returned no image parts")
         return None
     except Exception as e:
         print(f"[image_service] Gemini image generation failed: {e}")
@@ -199,7 +201,9 @@ Spesifikasi:
 def _generate_with_openrouter(prompt: str) -> bytes | None:
     """Generate image via OpenRouter images/generations endpoint as fallback."""
     if not OPENROUTER_API_KEY:
+        print("[image_service] OpenRouter skipped: OPENROUTER_API_KEY not set")
         return None
+    print(f"[image_service] Using OpenRouter | model={OPENROUTER_IMAGE_MODEL}")
     try:
         resp = _requests.post(
             "https://openrouter.ai/api/v1/images/generations",
@@ -219,8 +223,10 @@ def _generate_with_openrouter(prompt: str) -> bytes | None:
         data = resp.json()
         item = data["data"][0]
         if item.get("b64_json"):
+            print(f"[image_service] OpenRouter image generated successfully (b64_json)")
             return base64.b64decode(item["b64_json"])
         if item.get("url"):
+            print(f"[image_service] OpenRouter image generated successfully (url)")
             img_resp = _requests.get(item["url"], timeout=30)
             img_resp.raise_for_status()
             return img_resp.content
