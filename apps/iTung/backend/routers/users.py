@@ -419,8 +419,17 @@ async def upload_avatar(
     user.avatar_url = original_url
     db.commit()
 
-    # Generate cartoon locally using Pillow
-    cartoon_url = avatar_service.generate_cartoon(file_bytes, user.id)
+    # Calculate age from birth_date
+    age = None
+    if user.birth_date:
+        from datetime import date
+        today = date.today()
+        age = today.year - user.birth_date.year
+        if (today.month, today.day) < (user.birth_date.month, user.birth_date.day):
+            age -= 1
+
+    # Generate cartoon using Gemini with user age info
+    cartoon_url = avatar_service.generate_cartoon(file_bytes, user.id, age=age, race="Asian")
     if cartoon_url:
         user.cartoon_url = cartoon_url
         db.commit()

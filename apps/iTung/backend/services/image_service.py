@@ -88,7 +88,7 @@ def _generate_with_gemini(prompt: str) -> bytes | None:
 
 def _create_prompt(image_type: str, params: dict) -> str:
     """Create a detailed prompt for Gemini to generate the appropriate math diagram."""
-    no_answer = "JANGAN tampilkan jawaban, hasil perhitungan, atau penyelesaian — hanya tampilkan informasi yang ada pada soal."
+    no_answer = "JANGAN tampilkan jawaban dan informasi lainnya yang mengarah pada jawaban, hasil perhitungan, atau penyelesaian — hanya tampilkan informasi yang ada pada soal."
 
     prompts = {
         'number_line': f"""Buat ilustrasi matematika yang bersih dan edukatif berupa diagram garis bilangan.
