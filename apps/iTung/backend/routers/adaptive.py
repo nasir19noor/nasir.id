@@ -161,13 +161,40 @@ def generate_adaptive_question(topic: str, performance: dict,
     - Sertakan field "image" HANYA jika gambar benar-benar membantu memvisualisasikan soal yang kamu buat (bukan wajib).
     - Jika soal yang kamu hasilkan tidak memerlukan gambar (misalnya soal cerita atau perhitungan murni), JANGAN sertakan field "image".
     - Jika gambar diperlukan, pilih tipe yang paling sesuai dengan ISI SOAL (bukan topiknya):
-        number_line : {"type": "number_line", "params": {"start": 0, "end": 20, "marked": [7]}, "given_info": "Garis bilangan dari 0 sampai 20, titik pada 7"}
-        rectangle   : {"type": "rectangle",   "params": {"width": 5, "height": 3}, "given_info": "Persegi panjang lebar 5 cm, tinggi 3 cm"}
-        square      : {"type": "square",       "params": {"side": 4}, "given_info": "Persegi dengan sisi 4 cm"}
-        triangle    : {"type": "triangle",     "params": {"points": [[0.5,0.5],[4.5,0.5],[2.5,4]]}, "given_info": "Segitiga ABC dengan AB = 8 cm, AC = 10 cm, ∠BAC = 75°"}
-        circle      : {"type": "circle",       "params": {"radius": 3}, "given_info": "Lingkaran dengan jari-jari 3 cm"}
-        angle       : {"type": "angle",        "params": {"degrees": 60}, "given_info": "Sudut 60 derajat"}
-        fraction    : {"type": "fraction",     "params": {"numerator": 3, "denominator": 4}, "given_info": "Pecahan 3/4"}
+        number_line      : {"type": "number_line",      "params": {"start": 0, "end": 20, "marked": [7]}, "given_info": "Garis bilangan dari 0 sampai 20, titik pada 7"}
+        rectangle        : {"type": "rectangle",        "params": {"width": 5, "height": 3}, "given_info": "Persegi panjang lebar 5 cm, tinggi 3 cm"}
+        square           : {"type": "square",           "params": {"side": 4}, "given_info": "Persegi dengan sisi 4 cm"}
+        triangle         : {"type": "triangle",         "params": {"points": [[0.5,0.5],[4.5,0.5],[2.5,4]]}, "given_info": "Segitiga ABC dengan AB = 8 cm, AC = 10 cm, ∠BAC = 75°"}
+        circle           : {"type": "circle",           "params": {"radius": 3}, "given_info": "Lingkaran dengan jari-jari 3 cm"}
+        angle            : {"type": "angle",            "params": {"degrees": 60}, "given_info": "Sudut 60 derajat"}
+        fraction         : {"type": "fraction",         "params": {"numerator": 3, "denominator": 4}, "given_info": "Pecahan 3/4"}
+        trapezoid        : {"type": "trapezoid",        "params": {"top": 4, "bottom": 8, "height": 3}, "given_info": "Trapesium dengan sisi sejajar 4 cm dan 8 cm, tinggi 3 cm"}
+        coordinate_plane : {"type": "coordinate_plane", "params": {"x_min": -5, "x_max": 5, "y_min": -5, "y_max": 5, "points": [[1,2],[3,-1]]}, "given_info": "Titik A(1,2) dan B(3,-1) pada bidang koordinat"}
+        bar_chart        : {"type": "bar_chart",        "params": {"labels": ["Senin","Selasa","Rabu"], "values": [10, 20, 15], "title": "Data Penjualan"}, "given_info": "Penjualan Senin 10, Selasa 20, Rabu 15"}
+        3d_shape         : {"type": "3d_shape",         "params": {"shape": "balok"}, "given_info": "Balok dengan panjang 6 cm, lebar 4 cm, tinggi 3 cm"}
+        function_graph   : {"type": "function_graph",   "params": {"function": "sin(x)", "x_min": -360, "x_max": 360, "y_min": -1, "y_max": 1}, "given_info": "Grafik y = sin(x) dengan amplitudo 1 dan periode 360°"}
+        clock            : {"type": "clock",            "params": {"time": "07:30"}, "given_info": "Jam menunjukkan pukul 07:30"}
+        scale            : {"type": "scale",            "params": {"scale_type": "neraca dua lengan", "left": "2 kg + 500 g", "right": "?"}, "given_info": "Neraca dengan sisi kiri 2 kg + 500 g"}
+        venn_diagram     : {"type": "venn_diagram",     "params": {"set_a": [1,2,3], "set_b": [3,4,5], "intersection": [3], "label_a": "A", "label_b": "B", "universal": [1,2,3,4,5,6]}, "given_info": "Himpunan A = {1,2,3}, B = {3,4,5}, irisan A∩B = {3}"}
+        pie_chart        : {"type": "pie_chart",        "params": {"labels": ["Merah","Biru","Hijau"], "values": [40, 35, 25], "title": "Data Warna"}, "given_info": "Merah 40%, Biru 35%, Hijau 25%"}
+        factor_tree      : {"type": "factor_tree",      "params": {"number": 36, "given_info": "Pohon faktor dari 36"}, "given_info": "Faktorisasi prima dari 36"}
+        matrix           : {"type": "matrix",           "params": {"rows": [[1,2],[3,4]], "label": "A"}, "given_info": "Matriks A berukuran 2×2 dengan elemen baris pertama 1 dan 2, baris kedua 3 dan 4"}
+        ruler            : {"type": "ruler",            "params": {"length": 15, "unit": "cm", "marked_points": [7]}, "given_info": "Penggaris 15 cm, ditandai pada 7 cm"}
+        money            : {"type": "money",            "params": {"denominations": ["Rp1.000","Rp500"], "amounts": [3, 2]}, "given_info": "3 keping Rp1.000 dan 2 keping Rp500"}
+        tree_diagram     : {"type": "tree_diagram",     "params": {"branches": ["merah","biru"], "title": "Pengambilan Bola"}, "given_info": "Dua pilihan: merah atau biru di setiap cabang"}
+        number_grid      : {"type": "number_grid",      "params": {"rows": 3, "cols": 4}, "given_info": "Array 3 baris × 4 kolom untuk visualisasi perkalian 3 × 4"}
+    - Untuk "3d_shape", nilai "shape" yang valid: kubus, balok, prisma, tabung, kerucut, bola, limas
+    - Gunakan "function_graph" untuk: fungsi trigonometri (sin/cos/tan), fungsi kuadrat, fungsi linear, grafik turunan, grafik integral
+    - Gunakan "clock" untuk: pengenalan waktu, membaca jam, pengukuran waktu
+    - Gunakan "scale" untuk: pengukuran berat, timbangan, neraca — "scale_type" bisa "neraca dua lengan" atau "timbangan jarum"
+    - Gunakan "venn_diagram" untuk: himpunan, operasi himpunan (irisan, gabungan, komplemen)
+    - Gunakan "pie_chart" untuk: persen (data dalam %), statistika dengan data kategorikal, distribusi data
+    - Gunakan "factor_tree" untuk: KPK, FPB, faktorisasi prima, faktor dan kelipatan
+    - Gunakan "matrix" untuk: matriks, determinan matriks, transformasi matriks, operasi matriks
+    - Gunakan "ruler" untuk: pengukuran panjang, mengukur dengan penggaris
+    - Gunakan "money" untuk: nilai uang, transaksi jual beli, kembalian uang
+    - Gunakan "tree_diagram" untuk: permutasi, kombinasi, peluang (cabang kemungkinan)
+    - Gunakan "number_grid" untuk: pengenalan perkalian, pengenalan pembagian, perkalian array
     - PENTING untuk "given_info": Tulis HANYA informasi yang SECARA EKSPLISIT diberikan dalam soal. Jangan sertakan nilai yang dihitung, atau informasi turunan.
     - PENTING: Gambar hanya menampilkan informasi dari "given_info" - TIDAK lebih, TIDAK kurang. Jangan tambahkan sudut yang dihitung, panjang yang tidak disebutkan, atau informasi apapun di luar "given_info"."""
         image_schema = '\n        "image": {"type": "...", "params": {...}, "given_info": "..."},  // opsional, hanya jika benar-benar membantu'

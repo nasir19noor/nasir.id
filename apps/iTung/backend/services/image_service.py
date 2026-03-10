@@ -1,6 +1,9 @@
 """
 Generates math diagram images using OpenRouter, then uploads them to Amazon S3.
-Supported types: number_line, rectangle, square, triangle, circle, angle, fraction
+Supported types: number_line, rectangle, square, triangle, circle, angle, fraction,
+                 coordinate_plane, bar_chart, 3d_shape, trapezoid, function_graph,
+                 clock, scale, venn_diagram, pie_chart, factor_tree, matrix,
+                 ruler, money, tree_diagram, number_grid, custom
 """
 import io, os, uuid, base64, requests as _requests
 from datetime import datetime
@@ -47,7 +50,7 @@ def _upload(image_bytes: bytes, topic: str = "general") -> str | None:
 def _create_prompt(image_type: str, params: dict, question: str = "") -> str:
     """Create a detailed prompt to generate the appropriate math diagram."""
 
-    only_given_info = """
+    only_given_info = f"""
 PENTING: Buat diagram yang akurat berdasarkan informasi dalam soal.
 - Tampilkan SEMUA informasi penting yang disebutkan dalam soal
 - Label dengan jelas semua ukuran, sudut, dan nilai yang diberikan
@@ -142,6 +145,227 @@ Spesifikasi:
 - JANGAN tampilkan perhitungan atau hasil
 
 {only_given_info}""",
+
+        'coordinate_plane': f"""Buat diagram bidang koordinat kartesius berdasarkan soal ini:
+{question}
+
+Spesifikasi:
+- Sumbu X: dari {params.get('x_min', -5)} sampai {params.get('x_max', 5)}
+- Sumbu Y: dari {params.get('y_min', -5)} sampai {params.get('y_max', 5)}
+- Titik-titik: {params.get('points', [])} — tandai dengan label koordinat jelas
+- Garis/kurva: {params.get('given_info', '')}
+- Tampilkan grid, label sumbu X dan Y, serta titik origin (0,0)
+- JANGAN tampilkan persamaan atau hasil perhitungan
+
+{only_given_info}""",
+
+        'bar_chart': f"""Buat diagram batang (bar chart) berdasarkan soal ini:
+{question}
+
+Spesifikasi:
+- Label kategori: {params.get('labels', [])}
+- Nilai: {params.get('values', [])}
+- Judul diagram: {params.get('title', 'Diagram Batang')}
+- Tampilkan nilai di atas setiap batang
+- Sumbu Y mulai dari 0
+- JANGAN tampilkan hasil perhitungan (mean/median/modus)
+
+{only_given_info}""",
+
+        '3d_shape': f"""Buat diagram bangun ruang berdasarkan soal ini:
+{question}
+
+Spesifikasi:
+- Bentuk: {params.get('shape', 'kubus')}
+- Dimensi: {params.get('given_info', '')}
+- Tampilkan bangun ruang dalam perspektif 3D yang jelas
+- Label semua ukuran yang disebutkan dalam soal (panjang, lebar, tinggi, jari-jari, dll)
+- Gunakan garis putus-putus untuk sisi yang tersembunyi
+- JANGAN tampilkan perhitungan volume atau luas permukaan
+
+{only_given_info}""",
+
+        'trapezoid': f"""Buat diagram HANYA trapesium dengan ukuran yang diberikan:
+{question}
+
+Spesifikasi:
+- Sisi sejajar atas: {params.get('top', 4)} cm
+- Sisi sejajar bawah: {params.get('bottom', 8)} cm
+- Tinggi: {params.get('height', 3)} cm
+- Informasi tambahan: {params.get('given_info', '')}
+- Label semua ukuran yang disebutkan dengan jelas
+- JANGAN tampilkan perhitungan keliling atau luas
+
+{only_given_info}""",
+
+        'function_graph': f"""Buat grafik fungsi matematika berdasarkan soal ini:
+{question}
+
+Spesifikasi:
+- Fungsi: {params.get('function', 'sin(x)')}
+- Sumbu X: dari {params.get('x_min', -360)} sampai {params.get('x_max', 360)}
+- Sumbu Y: dari {params.get('y_min', -2)} sampai {params.get('y_max', 2)}
+- Informasi kunci: {params.get('given_info', '')}
+- Tampilkan grid, label sumbu, dan titik-titik penting (puncak, lembah, titik potong sumbu, titik balik)
+- Untuk fungsi trigonometri: tandai amplitudo, periode, dan nilai kunci (0°, 90°, 180°, 270°, 360°)
+- Untuk fungsi kuadrat/polinomial: tandai titik puncak/minimum dan titik potong sumbu
+- Untuk grafik turunan/integral: tampilkan area yang relevan atau garis singgung jika disebutkan
+- JANGAN tampilkan rumus atau hasil perhitungan
+
+{only_given_info}""",
+
+        'clock': f"""Buat gambar jam analog (clock face) berdasarkan soal ini:
+{question}
+
+Spesifikasi:
+- Waktu yang ditunjukkan: {params.get('time', '07:30')}
+- Tampilkan jam bulat dengan angka 1–12 yang jelas
+- Gambar jarum jam (pendek) dan jarum menit (panjang) pada posisi waktu yang tepat
+- Jika ada jarum detik, tampilkan juga
+- Label waktu di bawah jam: "{params.get('time', '07:30')}"
+- Gaya bersih, latar putih, mudah dibaca anak SD
+- JANGAN tampilkan jawaban atau konversi waktu
+
+{only_given_info}""",
+
+        'scale': f"""Buat gambar timbangan (neraca/scale) berdasarkan soal ini:
+{question}
+
+Spesifikasi:
+- Tipe timbangan: {params.get('scale_type', 'neraca dua lengan')}
+- Sisi kiri: {params.get('left', '')}
+- Sisi kanan: {params.get('right', '')}
+- Informasi: {params.get('given_info', '')}
+- Untuk neraca dua lengan: tampilkan posisi seimbang atau miring sesuai soal
+- Untuk timbangan jarum: tampilkan jarum menunjuk nilai yang diberikan
+- Label semua berat/beban yang disebutkan dalam soal dengan jelas
+- JANGAN tampilkan hasil perhitungan atau jawaban
+
+{only_given_info}""",
+
+        'venn_diagram': f"""Buat diagram Venn yang akurat berdasarkan soal ini:
+{question}
+
+Spesifikasi:
+- Himpunan A: {params.get('set_a', [])} — label: {params.get('label_a', 'A')}
+- Himpunan B: {params.get('set_b', [])} — label: {params.get('label_b', 'B')}
+- Semesta: {params.get('universal', [])}
+- Irisan (A∩B): {params.get('intersection', [])}
+- Informasi tambahan: {params.get('given_info', '')}
+- Gambar dua lingkaran oval yang saling tumpang tindih di dalam kotak semesta
+- Tulis elemen masing-masing himpunan di posisi yang benar (hanya di A, hanya di B, atau di irisan)
+- Label A dan B di dalam/atas lingkaran, label S atau U untuk semesta di pojok
+- Gunakan warna terang yang berbeda untuk membedakan wilayah
+- JANGAN tampilkan hasil operasi himpunan atau jawaban
+
+{only_given_info}""",
+
+        'pie_chart': f"""Buat diagram lingkaran (pie chart) berdasarkan soal ini:
+{question}
+
+Spesifikasi:
+- Label kategori: {params.get('labels', [])}
+- Nilai/persentase: {params.get('values', [])}
+- Judul diagram: {params.get('title', 'Diagram Lingkaran')}
+- Tampilkan setiap sektor dengan warna berbeda
+- Label setiap sektor dengan nama kategori dan nilai/persentasenya
+- Gunakan gaya bersih dan profesional, latar putih
+- JANGAN tampilkan hasil perhitungan atau jawaban
+
+{only_given_info}""",
+
+        'factor_tree': f"""Buat diagram pohon faktor (factor tree) berdasarkan soal ini:
+{question}
+
+Spesifikasi:
+- Bilangan yang difaktorkan: {params.get('number', '')}
+- Informasi: {params.get('given_info', '')}
+- Tampilkan pohon faktorisasi prima secara vertikal/bercabang dari atas ke bawah
+- Setiap node menunjukkan pemfaktoran (misal: 12 → 2 × 6, lalu 6 → 2 × 3)
+- Lingkari atau tebalkan bilangan prima di daun pohon
+- Jika ada dua bilangan (untuk KPK/FPB): tampilkan dua pohon berdampingan
+- JANGAN tampilkan hasil KPK/FPB atau jawaban akhir
+
+{only_given_info}""",
+
+        'matrix': f"""Buat tampilan matriks matematika yang rapi berdasarkan soal ini:
+{question}
+
+Spesifikasi:
+- Matriks: {params.get('rows', [])}
+- Label matriks: {params.get('label', 'A')}
+- Informasi tambahan: {params.get('given_info', '')}
+- Tampilkan matriks dalam notasi matematika standar dengan tanda kurung/bracket kotak
+- Setiap elemen tertulis jelas dengan spasi rata antar kolom
+- Jika ada lebih dari satu matriks (misal A dan B untuk perkalian matriks), tampilkan keduanya
+- Ukuran font besar dan mudah dibaca
+- Latar putih, gaya bersih dan profesional
+- JANGAN tampilkan hasil operasi atau jawaban
+
+{only_given_info}""",
+
+        'ruler': f"""Buat gambar penggaris (ruler) berdasarkan soal ini:
+{question}
+
+Spesifikasi:
+- Panjang penggaris: {params.get('length', 20)} {params.get('unit', 'cm')}
+- Titik yang ditandai: {params.get('marked_points', [])}
+- Satuan: {params.get('unit', 'cm')}
+- Informasi: {params.get('given_info', '')}
+- Gambar penggaris horizontal dengan skala yang jelas (garis centimeter dan milimeter)
+- Tandai titik atau panjang yang disebutkan dalam soal dengan panah atau tanda warna
+- Label angka di setiap centimeter
+- Jika mengukur suatu benda: gambar benda di atas penggaris dengan ujung-ujungnya tepat
+- JANGAN tampilkan hasil pengukuran atau jawaban
+
+{only_given_info}""",
+
+        'money': f"""Buat gambar uang (koin dan/atau lembaran) berdasarkan soal ini:
+{question}
+
+Spesifikasi:
+- Pecahan/denominasi: {params.get('denominations', [])}
+- Jumlah masing-masing: {params.get('amounts', [])}
+- Informasi: {params.get('given_info', '')}
+- Gambar koin atau lembaran uang Rupiah yang realistis dan jelas
+- Label nilai nominal di setiap koin/lembaran (Rp500, Rp1.000, Rp5.000, dst)
+- Susun secara rapi agar mudah dihitung
+- Jika ada transaksi: tampilkan uang yang dibayar dan kembalian secara terpisah
+- Gaya bersih, warna cerah, mudah dibaca anak SD
+- JANGAN tampilkan hasil penjumlahan atau jawaban
+
+{only_given_info}""",
+
+        'tree_diagram': f"""Buat diagram pohon (tree diagram) berdasarkan soal ini:
+{question}
+
+Spesifikasi:
+- Informasi: {params.get('given_info', '')}
+- Cabang-cabang: {params.get('branches', [])}
+- Judul: {params.get('title', 'Diagram Pohon')}
+- Gambar diagram pohon dari kiri ke kanan (atau atas ke bawah)
+- Setiap cabang dilabeli dengan kemungkinan/pilihan yang ada
+- Tampilkan semua hasil akhir di ujung cabang (daun)
+- Jika ada probabilitas: tulis nilai peluang di setiap cabang
+- JANGAN tampilkan hasil perhitungan permutasi/kombinasi/peluang akhir
+
+{only_given_info}""",
+
+        'number_grid': f"""Buat diagram grid/array bilangan berdasarkan soal ini:
+{question}
+
+Spesifikasi:
+- Baris: {params.get('rows', 3)}
+- Kolom: {params.get('cols', 4)}
+- Informasi: {params.get('given_info', '')}
+- Gambar array kotak/lingkaran tersusun dalam baris dan kolom
+- Setiap objek dilabeli atau diwarnai dengan jelas
+- Untuk perkalian: tunjukkan kelompok-kelompok baris sebagai visualisasi perkalian (misal 3 × 4 = 3 baris, 4 kolom)
+- Untuk pembagian: tunjukkan pembagian objek ke dalam kelompok sama besar
+- Label baris dan kolom di sisi kiri dan atas
+- JANGAN tampilkan hasil perkalian/pembagian atau jawaban
+
+{only_given_info}""",
     }
 
     return prompts.get(image_type, f"""Buat diagram matematika akurat berdasarkan soal ini:
@@ -159,6 +383,7 @@ def _generate_image(prompt: str) -> bytes | None:
         print("[image_service] OpenRouter skipped: OPENROUTER_IMAGE_MODEL not set")
         return None
     print(f"[image_service] Using OpenRouter | model={OPENROUTER_IMAGE_MODEL}")
+    print(f"[image_service] Prompt preview: {prompt[:200].strip()!r}")
     try:
         resp = _requests.post(
             "https://openrouter.ai/api/v1/chat/completions",
@@ -168,13 +393,14 @@ def _generate_image(prompt: str) -> bytes | None:
             },
             json={
                 "model": OPENROUTER_IMAGE_MODEL,
-                "modalities": ["image"],
+                "modalities": ["image", "text"],
                 "messages": [{"role": "user", "content": prompt}],
             },
             timeout=60,
         )
         resp.raise_for_status()
         data = resp.json()
+        print(f"[image_service] OpenRouter raw response keys: {list(data.get('choices', [{}])[0].get('message', {}).keys())}")
         message = data["choices"][0]["message"]
 
         # Images returned in message.images[] — can be a string data URL or a dict
@@ -203,7 +429,7 @@ def _generate_image(prompt: str) -> bytes | None:
             img_resp.raise_for_status()
             return img_resp.content
 
-        print(f"[image_service] OpenRouter returned no image data. Response: {data}")
+        print(f"[image_service] OpenRouter returned no image data. Full message: {message}")
         return None
     except Exception as e:
         print(f"[image_service] OpenRouter image generation failed: {e}")
@@ -211,14 +437,29 @@ def _generate_image(prompt: str) -> bytes | None:
 
 
 _GENERATORS = {
-    'number_line': lambda p, t, q: _upload(_generate_image(_create_prompt('number_line', p, q)), t),
-    'rectangle':   lambda p, t, q: _upload(_generate_image(_create_prompt('rectangle', p, q)), t),
-    'square':      lambda p, t, q: _upload(_generate_image(_create_prompt('square', p, q)), t),
-    'triangle':    lambda p, t, q: _upload(_generate_image(_create_prompt('triangle', p, q)), t),
-    'circle':      lambda p, t, q: _upload(_generate_image(_create_prompt('circle', p, q)), t),
-    'angle':       lambda p, t, q: _upload(_generate_image(_create_prompt('angle', p, q)), t),
-    'fraction':    lambda p, t, q: _upload(_generate_image(_create_prompt('fraction', p, q)), t),
-    'custom':      lambda p, t, q: _upload(_generate_image(p.get('prompt', '')), t),
+    'number_line':      lambda p, t, q: _upload(_generate_image(_create_prompt('number_line', p, q)), t),
+    'rectangle':        lambda p, t, q: _upload(_generate_image(_create_prompt('rectangle', p, q)), t),
+    'square':           lambda p, t, q: _upload(_generate_image(_create_prompt('square', p, q)), t),
+    'triangle':         lambda p, t, q: _upload(_generate_image(_create_prompt('triangle', p, q)), t),
+    'circle':           lambda p, t, q: _upload(_generate_image(_create_prompt('circle', p, q)), t),
+    'angle':            lambda p, t, q: _upload(_generate_image(_create_prompt('angle', p, q)), t),
+    'fraction':         lambda p, t, q: _upload(_generate_image(_create_prompt('fraction', p, q)), t),
+    'coordinate_plane': lambda p, t, q: _upload(_generate_image(_create_prompt('coordinate_plane', p, q)), t),
+    'bar_chart':        lambda p, t, q: _upload(_generate_image(_create_prompt('bar_chart', p, q)), t),
+    '3d_shape':         lambda p, t, q: _upload(_generate_image(_create_prompt('3d_shape', p, q)), t),
+    'trapezoid':        lambda p, t, q: _upload(_generate_image(_create_prompt('trapezoid', p, q)), t),
+    'function_graph':   lambda p, t, q: _upload(_generate_image(_create_prompt('function_graph', p, q)), t),
+    'clock':            lambda p, t, q: _upload(_generate_image(_create_prompt('clock', p, q)), t),
+    'scale':            lambda p, t, q: _upload(_generate_image(_create_prompt('scale', p, q)), t),
+    'venn_diagram':     lambda p, t, q: _upload(_generate_image(_create_prompt('venn_diagram', p, q)), t),
+    'pie_chart':        lambda p, t, q: _upload(_generate_image(_create_prompt('pie_chart', p, q)), t),
+    'factor_tree':      lambda p, t, q: _upload(_generate_image(_create_prompt('factor_tree', p, q)), t),
+    'matrix':           lambda p, t, q: _upload(_generate_image(_create_prompt('matrix', p, q)), t),
+    'ruler':            lambda p, t, q: _upload(_generate_image(_create_prompt('ruler', p, q)), t),
+    'money':            lambda p, t, q: _upload(_generate_image(_create_prompt('money', p, q)), t),
+    'tree_diagram':     lambda p, t, q: _upload(_generate_image(_create_prompt('tree_diagram', p, q)), t),
+    'number_grid':      lambda p, t, q: _upload(_generate_image(_create_prompt('number_grid', p, q)), t),
+    'custom':           lambda p, t, q: _upload(_generate_image(p.get('prompt', '')), t),
 }
 
 
