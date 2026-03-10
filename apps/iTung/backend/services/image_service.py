@@ -204,6 +204,9 @@ def _generate_with_openrouter(prompt: str) -> bytes | None:
     if not OPENROUTER_API_KEY:
         print("[image_service] OpenRouter skipped: OPENROUTER_API_KEY not set")
         return None
+    if not OPENROUTER_IMAGE_MODEL:
+        print("[image_service] OpenRouter skipped: OPENROUTER_IMAGE_MODEL not set")
+        return None
     print(f"[image_service] Using OpenRouter | model={OPENROUTER_IMAGE_MODEL}")
     try:
         resp = _requests.post(
@@ -223,19 +226,29 @@ def _generate_with_openrouter(prompt: str) -> bytes | None:
         data = resp.json()
         message = data["choices"][0]["message"]
 
-        # Images returned as base64 data URLs in message.images[]
+        # Images returned in message.images[] — can be a string data URL or a dict
         images = message.get("images") or []
         if images:
-            data_url = images[0]
-            # data_url format: "data:image/png;base64,<b64>"
-            b64 = data_url.split(",", 1)[-1]
-            print("[image_service] OpenRouter image generated successfully (base64)")
-            return base64.b64decode(b64)
+            item = images[0]
+            if isinstance(item, str):
+                # "data:image/png;base64,<b64>" or raw b64
+                b64 = item.split(",", 1)[-1]
+                print("[image_service] OpenRouter image generated successfully (base64 str)")
+                return base64.b64decode(b64)
+            if isinstance(item, dict):
+                if item.get("b64_json"):
+                    print("[image_service] OpenRouter image generated successfully (b64_json)")
+                    return base64.b64decode(item["b64_json"])
+                if item.get("url"):
+                    print("[image_service] OpenRouter image generated successfully (url dict)")
+                    img_resp = _requests.get(item["url"], timeout=30)
+                    img_resp.raise_for_status()
+                    return img_resp.content
 
         # Fallback: some models return a URL in content
         content = message.get("content", "")
         if content and content.startswith("http"):
-            print("[image_service] OpenRouter image generated successfully (url)")
+            print("[image_service] OpenRouter image generated successfully (url content)")
             img_resp = _requests.get(content, timeout=30)
             img_resp.raise_for_status()
             return img_resp.content
