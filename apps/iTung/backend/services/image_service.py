@@ -415,9 +415,25 @@ def _generate_image(prompt: str) -> bytes | None:
                 if item.get("b64_json"):
                     print("[image_service] OpenRouter image generated successfully (b64_json)")
                     return base64.b64decode(item["b64_json"])
+                # Nested format: {"type": "image_url", "image_url": {"url": "data:..."}}
+                nested_url = (item.get("image_url") or {}).get("url", "")
+                if nested_url:
+                    if nested_url.startswith("data:"):
+                        b64 = nested_url.split(",", 1)[-1]
+                        print("[image_service] OpenRouter image generated successfully (nested image_url data URI)")
+                        return base64.b64decode(b64)
+                    print("[image_service] OpenRouter image generated successfully (nested image_url external)")
+                    img_resp = _requests.get(nested_url, timeout=30)
+                    img_resp.raise_for_status()
+                    return img_resp.content
                 if item.get("url"):
+                    url = item["url"]
+                    if url.startswith("data:"):
+                        b64 = url.split(",", 1)[-1]
+                        print("[image_service] OpenRouter image generated successfully (data URI url)")
+                        return base64.b64decode(b64)
                     print("[image_service] OpenRouter image generated successfully (url dict)")
-                    img_resp = _requests.get(item["url"], timeout=30)
+                    img_resp = _requests.get(url, timeout=30)
                     img_resp.raise_for_status()
                     return img_resp.content
 
