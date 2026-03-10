@@ -1,13 +1,10 @@
 """
-Generates math diagram images using Google Gemini (primary) or OpenRouter (fallback),
-then uploads them to Amazon S3.
+Generates math diagram images using OpenRouter, then uploads them to Amazon S3.
 Supported types: number_line, rectangle, square, triangle, circle, angle, fraction
 """
 import io, os, uuid, base64, requests as _requests
 from datetime import datetime
 import boto3
-from google import genai
-from google.genai import types as genai_types
 
 _s3 = None
 
@@ -22,14 +19,10 @@ def _get_s3():
         )
     return _s3
 
-BUCKET               = os.getenv('S3_BUCKET_NAME')
-CDN_BASE             = os.getenv('S3_CDN_BASE', '')
-GOOGLE_API_KEY       = os.getenv('GOOGLE_API_KEY')
-GEMINI_IMAGE_MODEL   = os.getenv('GEMINI_IMAGE_MODEL')
-OPENROUTER_API_KEY   = os.getenv('OPENROUTER_API_KEY')
+BUCKET                 = os.getenv('S3_BUCKET_NAME')
+CDN_BASE               = os.getenv('S3_CDN_BASE', '')
+OPENROUTER_API_KEY     = os.getenv('OPENROUTER_API_KEY')
 OPENROUTER_IMAGE_MODEL = os.getenv('OPENROUTER_IMAGE_MODEL')
-
-_genai_client = genai.Client(api_key=GOOGLE_API_KEY) if GOOGLE_API_KEY else None
 
 
 def _upload(image_bytes: bytes, topic: str = "general") -> str | None:
@@ -37,25 +30,13 @@ def _upload(image_bytes: bytes, topic: str = "general") -> str | None:
     if not image_bytes:
         print("[image_service] No image bytes to upload")
         return None
-    
+
     try:
         buf = io.BytesIO(image_bytes)
-        
-        # Create URL-safe topic slug (replace spaces with hyphens)
         topic_slug = topic.replace(" ", "-").lower()
-        
-        # Create path with topic/year/month/day structure
         now = datetime.now()
-        year = now.strftime('%Y')
-        month = now.strftime('%m')
-        day = now.strftime('%d')
-        filename = f"{uuid.uuid4()}.png"
-        key = f"questions/{topic_slug}/{year}/{month}/{day}/{filename}"
-        
-        _get_s3().upload_fileobj(
-            buf, BUCKET, key,
-            ExtraArgs={'ContentType': 'image/png'},
-        )
+        key = f"questions/{topic_slug}/{now.strftime('%Y/%m/%d')}/{uuid.uuid4()}.png"
+        _get_s3().upload_fileobj(buf, BUCKET, key, ExtraArgs={'ContentType': 'image/png'})
         base = CDN_BASE.rstrip('/') or f"https://{BUCKET}.s3.amazonaws.com"
         return f"{base}/{key}"
     except Exception as e:
@@ -63,38 +44,9 @@ def _upload(image_bytes: bytes, topic: str = "general") -> str | None:
         return None
 
 
-def _generate_with_gemini(prompt: str) -> bytes | None:
-    """Generate image using Google Gemini and return image bytes."""
-    if not _genai_client:
-        print("[image_service] Gemini skipped: GOOGLE_API_KEY not set")
-        return None
-
-    print(f"[image_service] Using Gemini | model={GEMINI_IMAGE_MODEL}")
-    try:
-        response = _genai_client.models.generate_content(
-            model=GEMINI_IMAGE_MODEL,
-            contents=prompt,
-            config=genai_types.GenerateContentConfig(
-                response_modalities=['IMAGE', 'TEXT'],
-            ),
-        )
-
-        for part in response.candidates[0].content.parts:
-            if part.inline_data is not None:
-                print(f"[image_service] Gemini image generated successfully")
-                return part.inline_data.data
-
-        print(f"[image_service] Gemini returned no image parts")
-        return None
-    except Exception as e:
-        print(f"[image_service] Gemini image generation failed: {e}")
-        return None
-
-
 def _create_prompt(image_type: str, params: dict, question: str = "") -> str:
-    """Create a detailed prompt for Gemini to generate the appropriate math diagram."""
-    
-    # Critical instructions - ONLY show explicitly provided information
+    """Create a detailed prompt to generate the appropriate math diagram."""
+
     only_given_info = """
 PENTING: Buat diagram yang akurat berdasarkan informasi dalam soal.
 - Tampilkan SEMUA informasi penting yang disebutkan dalam soal
@@ -154,7 +106,7 @@ Informasi yang harus ditampilkan:
 PENTING:
 - Tampilkan HANYA sisi dan sudut yang disebutkan dalam soal
 - Label titik sudut: A, B, C dan ukuran yang diberikan
-- JANGAN tampilkan perhitungan, keliing, luas, atau rumus
+- JANGAN tampilkan perhitungan, keliling, luas, atau rumus
 
 {only_given_info}""",
 
@@ -198,9 +150,8 @@ Spesifikasi:
 {only_given_info}""")
 
 
-def _generate_with_openrouter(prompt: str) -> bytes | None:
-    """Generate image via OpenRouter chat completions endpoint as fallback.
-    Image models return base64 data URLs in choices[0].message.images[]."""
+def _generate_image(prompt: str) -> bytes | None:
+    """Generate image via OpenRouter chat completions endpoint."""
     if not OPENROUTER_API_KEY:
         print("[image_service] OpenRouter skipped: OPENROUTER_API_KEY not set")
         return None
@@ -231,7 +182,6 @@ def _generate_with_openrouter(prompt: str) -> bytes | None:
         if images:
             item = images[0]
             if isinstance(item, str):
-                # "data:image/png;base64,<b64>" or raw b64
                 b64 = item.split(",", 1)[-1]
                 print("[image_service] OpenRouter image generated successfully (base64 str)")
                 return base64.b64decode(b64)
@@ -260,15 +210,6 @@ def _generate_with_openrouter(prompt: str) -> bytes | None:
         return None
 
 
-def _generate_image(prompt: str) -> bytes | None:
-    """Try Gemini first; fall back to OpenRouter if Gemini fails or returns nothing."""
-    result = _generate_with_gemini(prompt)
-    if result is None and OPENROUTER_API_KEY:
-        print("[image_service] Gemini returned no image, trying OpenRouter fallback")
-        result = _generate_with_openrouter(prompt)
-    return result
-
-
 _GENERATORS = {
     'number_line': lambda p, t, q: _upload(_generate_image(_create_prompt('number_line', p, q)), t),
     'rectangle':   lambda p, t, q: _upload(_generate_image(_create_prompt('rectangle', p, q)), t),
@@ -285,16 +226,12 @@ def delete_from_s3(image_url: str) -> bool:
     """Delete an image from S3 given its full URL. Returns True if successful."""
     if not image_url:
         return False
-    
     try:
         base = CDN_BASE.rstrip('/') or f"https://{BUCKET}.s3.amazonaws.com"
-        # Remove CDN base URL to get the S3 key
         if image_url.startswith(base):
             key = image_url[len(base):].lstrip('/')
         else:
-            # Handle case where URL has different format
             key = image_url.split(BUCKET)[-1].lstrip('/')
-        
         _get_s3().delete_object(Bucket=BUCKET, Key=key)
         print(f"[image_service] Deleted S3 object: {key}")
         return True
@@ -304,7 +241,7 @@ def delete_from_s3(image_url: str) -> bool:
 
 
 def generate(image_type: str, params: dict, topic: str = "general", question: str = "") -> str | None:
-    """Generate a math diagram image using Gemini and upload to S3. Returns the public URL or None on failure."""
+    """Generate a math diagram image via OpenRouter and upload to S3. Returns the public URL or None on failure."""
     gen = _GENERATORS.get(image_type)
     if gen is None:
         return None
