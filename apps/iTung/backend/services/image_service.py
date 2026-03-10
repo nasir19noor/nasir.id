@@ -25,9 +25,9 @@ def _get_s3():
 BUCKET               = os.getenv('S3_BUCKET_NAME')
 CDN_BASE             = os.getenv('S3_CDN_BASE', '')
 GOOGLE_API_KEY       = os.getenv('GOOGLE_API_KEY')
-GEMINI_IMAGE_MODEL   = os.getenv('GEMINI_IMAGE_MODEL', 'gemini-2.0-flash-exp')
+GEMINI_IMAGE_MODEL   = os.getenv('GEMINI_IMAGE_MODEL')
 OPENROUTER_API_KEY   = os.getenv('OPENROUTER_API_KEY')
-OPENROUTER_IMAGE_MODEL = os.getenv('OPENROUTER_IMAGE_MODEL', 'black-forest-labs/flux-schnell')
+OPENROUTER_IMAGE_MODEL = os.getenv('OPENROUTER_IMAGE_MODEL')
 
 _genai_client = genai.Client(api_key=GOOGLE_API_KEY) if GOOGLE_API_KEY else None
 
@@ -199,38 +199,48 @@ Spesifikasi:
 
 
 def _generate_with_openrouter(prompt: str) -> bytes | None:
-    """Generate image via OpenRouter images/generations endpoint as fallback."""
+    """Generate image via OpenRouter chat completions endpoint as fallback.
+    Image models return base64 data URLs in choices[0].message.images[]."""
     if not OPENROUTER_API_KEY:
         print("[image_service] OpenRouter skipped: OPENROUTER_API_KEY not set")
         return None
     print(f"[image_service] Using OpenRouter | model={OPENROUTER_IMAGE_MODEL}")
     try:
         resp = _requests.post(
-            "https://openrouter.ai/api/v1/images/generations",
+            "https://openrouter.ai/api/v1/chat/completions",
             headers={
                 "Authorization": f"Bearer {OPENROUTER_API_KEY}",
                 "Content-Type": "application/json",
             },
             json={
                 "model": OPENROUTER_IMAGE_MODEL,
-                "prompt": prompt,
-                "n": 1,
-                "response_format": "b64_json",
+                "modalities": ["image"],
+                "messages": [{"role": "user", "content": prompt}],
             },
             timeout=60,
         )
         resp.raise_for_status()
         data = resp.json()
-        item = data["data"][0]
-        if item.get("b64_json"):
-            print(f"[image_service] OpenRouter image generated successfully (b64_json)")
-            return base64.b64decode(item["b64_json"])
-        if item.get("url"):
-            print(f"[image_service] OpenRouter image generated successfully (url)")
-            img_resp = _requests.get(item["url"], timeout=30)
+        message = data["choices"][0]["message"]
+
+        # Images returned as base64 data URLs in message.images[]
+        images = message.get("images") or []
+        if images:
+            data_url = images[0]
+            # data_url format: "data:image/png;base64,<b64>"
+            b64 = data_url.split(",", 1)[-1]
+            print("[image_service] OpenRouter image generated successfully (base64)")
+            return base64.b64decode(b64)
+
+        # Fallback: some models return a URL in content
+        content = message.get("content", "")
+        if content and content.startswith("http"):
+            print("[image_service] OpenRouter image generated successfully (url)")
+            img_resp = _requests.get(content, timeout=30)
             img_resp.raise_for_status()
             return img_resp.content
-        print("[image_service] OpenRouter returned no image data")
+
+        print(f"[image_service] OpenRouter returned no image data. Response: {data}")
         return None
     except Exception as e:
         print(f"[image_service] OpenRouter image generation failed: {e}")
