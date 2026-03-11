@@ -1,6 +1,6 @@
 """
 Generates math diagram images using matplotlib (programmatic, zero AI tokens),
-verifies with Claude Haiku vision, then uploads to Amazon S3.
+verifies with OpenRouter vision, then uploads to Amazon S3.
 
 Supported types: number_line, rectangle, square, triangle, circle, angle, fraction,
                  coordinate_plane, bar_chart, 3d_shape, trapezoid, function_graph,
@@ -35,11 +35,10 @@ def _get_s3():
         )
     return _s3
 
-BUCKET        = os.getenv('S3_BUCKET_NAME')
-CDN_BASE      = os.getenv('S3_CDN_BASE', '')
-CLAUDE_MODEL  = os.getenv('CLAUDE_MODEL', 'claude-haiku-4-5-20251001')
-
-_claude = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
+BUCKET             = os.getenv('S3_BUCKET_NAME')
+CDN_BASE           = os.getenv('S3_CDN_BASE', '')
+OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
+OPENROUTER_VISION_MODEL = os.getenv('OPENROUTER_VISION_MODEL', 'google/gemini-flash-1.5')
 
 MAX_IMAGE_RETRIES = 1  # matplotlib is accurate; only retry once for visual issues
 
@@ -627,7 +626,10 @@ def _draw_money(params: dict, question: str = "") -> bytes:
 # ─── OpenRouter vision verifier ───────────────────────────────────
 
 def _verify_image(image_bytes: bytes, image_type: str, params: dict, question: str) -> tuple[bool, str]:
-    """Send image to Claude Haiku vision. Returns (is_valid, feedback)."""
+    """Send image to OpenRouter vision model. Returns (is_valid, feedback)."""
+    if not OPENROUTER_API_KEY:
+        print("[image_service] OpenRouter not configured — skipping verification")
+        return True, ""
     try:
         b64 = base64.standard_b64encode(image_bytes).decode("utf-8")
         verify_prompt = f"""You are a math teacher checking a diagram.
@@ -643,18 +645,24 @@ Check this image:
 
 Reply ONLY with "VALID" or "INVALID: [brief reason]"."""
 
-        msg = _claude.messages.create(
-            model=CLAUDE_MODEL,
-            max_tokens=80,
-            messages=[{
-                "role": "user",
-                "content": [
-                    {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": b64}},
-                    {"type": "text", "text": verify_prompt},
-                ],
-            }]
+        resp = _requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={"Authorization": f"Bearer {OPENROUTER_API_KEY}", "Content-Type": "application/json"},
+            json={
+                "model": OPENROUTER_VISION_MODEL,
+                "max_tokens": 80,
+                "messages": [{
+                    "role": "user",
+                    "content": [
+                        {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64}"}},
+                        {"type": "text", "text": verify_prompt},
+                    ],
+                }],
+            },
+            timeout=30,
         )
-        result = msg.content[0].text.strip()
+        resp.raise_for_status()
+        result = resp.json()["choices"][0]["message"]["content"].strip()
         print(f"[image_service] vision verification: {result}")
         if result.upper().startswith("VALID"):
             return True, ""
