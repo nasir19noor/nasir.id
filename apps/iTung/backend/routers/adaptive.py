@@ -76,6 +76,40 @@ def _adjust_difficulty(current: str, acc5: float) -> str:
     return DIFFICULTY_LEVELS[idx]
 
 
+# ─── Explanation Verifier ──────────────────────────────────────────
+
+def _verify_penjelasan(soal: str, pilihan: list, jawaban_benar: str, penjelasan: str) -> str:
+    """Call Claude to verify and, if wrong, rewrite the explanation."""
+    verify_prompt = f"""Kamu adalah guru matematika yang memeriksa kebenaran penjelasan soal.
+
+Soal: {soal}
+Pilihan: {', '.join(pilihan)}
+Jawaban benar: {jawaban_benar}
+Penjelasan: {penjelasan}
+
+Tugasmu:
+1. Periksa apakah penjelasan di atas BENAR secara matematis dan sesuai jawaban benar.
+2. Jika penjelasan sudah benar, balas HANYA dengan teks penjelasan aslinya (tidak diubah).
+3. Jika penjelasan salah atau menyesatkan, balas HANYA dengan penjelasan yang sudah diperbaiki.
+
+Balas HANYA dengan teks penjelasan (tanpa label, tanpa awalan apapun)."""
+
+    try:
+        msg = _system_claude.messages.create(
+            model=CLAUDE_MODEL,
+            max_tokens=512,
+            messages=[{"role": "user", "content": verify_prompt}]
+        )
+        verified = msg.content[0].text.strip()
+        if verified:
+            print(f"[adaptive] penjelasan verified/corrected")
+            return verified
+    except Exception as e:
+        print(f"[adaptive] penjelasan verification failed: {e}")
+
+    return penjelasan  # fallback to original if verifier fails
+
+
 # ─── Core Functions ────────────────────────────────────────────────
 
 def analyse_performance(user_id: int, session_id: int, db: Session,
@@ -381,5 +415,13 @@ Balas HANYA dengan JSON ini (tanpa markdown, tanpa teks lain):
             print(f"[adaptive] Missing required field: {field}")
             print(f"[adaptive] Response keys: {list(result.keys())}")
             result[field] = result.get(field, "")
+
+    # Verify and correct the explanation
+    result['penjelasan'] = _verify_penjelasan(
+        soal=result.get('soal', ''),
+        pilihan=result.get('pilihan', []),
+        jawaban_benar=result.get('jawaban_benar', ''),
+        penjelasan=result.get('penjelasan', ''),
+    )
 
     return result

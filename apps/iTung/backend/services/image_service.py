@@ -8,6 +8,9 @@ Supported types: number_line, rectangle, square, triangle, circle, angle, fracti
 import io, os, uuid, base64, requests as _requests
 from datetime import datetime
 import boto3
+import anthropic
+
+_claude = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
 _s3 = None
 
@@ -452,6 +455,42 @@ def _generate_image(prompt: str) -> bytes | None:
         return None
 
 
+def _verify_image(image_bytes: bytes, image_type: str, params: dict, question: str) -> bool:
+    """Send image to Claude Vision to check it matches the question. Returns True if valid."""
+    try:
+        b64 = base64.standard_b64encode(image_bytes).decode("utf-8")
+        verify_prompt = f"""Kamu adalah guru matematika yang memeriksa diagram soal.
+
+Soal: {question}
+Tipe diagram yang diharapkan: {image_type}
+Parameter: {params}
+
+Periksa gambar ini:
+1. Apakah gambar sesuai dengan soal dan tipe diagram yang diminta?
+2. Apakah nilai/ukuran yang ditampilkan sudah benar sesuai parameter?
+3. Apakah gambar TIDAK menampilkan jawaban atau hasil perhitungan?
+
+Balas HANYA dengan "VALID" jika gambar benar, atau "INVALID" jika gambar salah/tidak sesuai."""
+
+        msg = _claude.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=10,
+            messages=[{
+                "role": "user",
+                "content": [
+                    {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": b64}},
+                    {"type": "text", "text": verify_prompt},
+                ],
+            }]
+        )
+        result = msg.content[0].text.strip().upper()
+        print(f"[image_service] image verification result: {result}")
+        return result.startswith("VALID")
+    except Exception as e:
+        print(f"[image_service] image verification failed: {e} — accepting image anyway")
+        return True  # fail open: don't discard image if verifier errors
+
+
 _GENERATORS = {
     'number_line':      lambda p, t, q: _upload(_generate_image(_create_prompt('number_line', p, q)), t),
     'rectangle':        lambda p, t, q: _upload(_generate_image(_create_prompt('rectangle', p, q)), t),
@@ -498,12 +537,18 @@ def delete_from_s3(image_url: str) -> bool:
 
 
 def generate(image_type: str, params: dict, topic: str = "general", question: str = "") -> str | None:
-    """Generate a math diagram image via OpenRouter and upload to S3. Returns the public URL or None on failure."""
-    gen = _GENERATORS.get(image_type)
-    if gen is None:
+    """Generate a math diagram image via OpenRouter, verify with Claude Vision, then upload to S3."""
+    if image_type not in _GENERATORS:
         return None
     try:
-        return gen(params, topic, question)
+        prompt = _create_prompt(image_type, params, question) if image_type != 'custom' else params.get('prompt', '')
+        image_bytes = _generate_image(prompt)
+        if not image_bytes:
+            return None
+        if not _verify_image(image_bytes, image_type, params, question):
+            print(f"[image_service] image failed verification for type='{image_type}' — discarding")
+            return None
+        return _upload(image_bytes, topic)
     except Exception as e:
         print(f"[image_service] Failed to generate '{image_type}': {e}")
         return None
