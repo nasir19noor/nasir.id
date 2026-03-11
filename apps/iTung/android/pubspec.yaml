@@ -1,7 +1,7 @@
 name: itung
 description: iTung - Aplikasi Kuis Matematika untuk kita semua
 publish_to: 'none'
-version: 1.0.1 (stat issue)
+version: 1.0.1-stat-issue
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
