@@ -124,11 +124,11 @@ jobs:
       run: |
         aws s3 rm s3://assets.itung.nasir.id/android/app-release.aab
         aws s3 cp apps/iTung/android/build/app/outputs/bundle/release/app-release.aab \
-          s3://assets.itung.nasir.id/android/app-release.aab
+          s3://assets.itung.nasir.id/android/iTung.aab
         
         aws s3 rm s3://assets.itung.nasir.id/android/app-release.apk
         aws s3 cp apps/iTung/android/build/app/outputs/flutter-apk/app-release.apk \
-          s3://assets.itung.nasir.id/android/app-release.apk
+          s3://assets.itung.nasir.id/android/iTung.apk
 
         echo "Android AAB and APK uploaded successfully"
 

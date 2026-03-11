@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../theme.dart';
@@ -17,6 +18,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late TextEditingController _nameCtrl;
   late TextEditingController _emailCtrl;
   DateTime? _birthDate;
+  String _version = '';
 
   @override
   void initState() {
@@ -24,6 +26,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final user = context.read<AuthProvider>().user;
     _nameCtrl = TextEditingController(text: user?.fullName ?? '');
     _emailCtrl = TextEditingController(text: user?.email ?? '');
+    PackageInfo.fromPlatform().then((info) {
+      if (mounted) setState(() => _version = info.version);
+    });
     if (user?.birthDate != null) {
       try {
         _birthDate = DateTime.parse(user!.birthDate!);
@@ -282,6 +287,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
             ),
+            const SizedBox(height: 16),
+            if (_version.isNotEmpty)
+              Text(
+                'v$_version',
+                style: const TextStyle(
+                    fontSize: 12, color: AppTheme.textSecondary),
+              ),
           ],
         ),
       ),

@@ -146,7 +146,8 @@ class TopicStat {
         topic: json['topic'] as String,
         questions: json['questions'] as int? ?? 0,
         correct: json['correct'] as int? ?? 0,
-        accuracy: (json['accuracy'] as num?)?.toDouble() ?? 0.0,
+        // Backend sends 0.0–1.0, convert to 0–100
+        accuracy: ((json['accuracy'] as num?)?.toDouble() ?? 0.0) * 100,
         skillLevel: json['skill_level'] as String? ?? 'pemula',
       );
 }
