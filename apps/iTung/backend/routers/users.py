@@ -2,8 +2,12 @@
 from datetime import timedelta, datetime, timezone, date
 from typing import Optional, Literal
 import os, random, requests
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+limiter = Limiter(key_func=get_remote_address)
+
+from fastapi import APIRouter, Depends, HTTPException, Request, status, UploadFile, File
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
@@ -101,7 +105,8 @@ router = APIRouter(tags=["Users"])
 
 
 @router.post("/send-otp", status_code=200)
-def send_otp(data: SendOtpRequest, db: Session = Depends(get_db)):
+@limiter.limit("3/minute")
+def send_otp(request: Request, data: SendOtpRequest, db: Session = Depends(get_db)):
     """Generate and send a WhatsApp OTP via WAHA."""
     if not WAHA_URL:
         raise HTTPException(status_code=500, detail="WhatsApp OTP tidak dikonfigurasi")
@@ -173,7 +178,9 @@ def register(data: UserRegister, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenResponse)
+@limiter.limit("5/minute")
 def login(
+    request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):

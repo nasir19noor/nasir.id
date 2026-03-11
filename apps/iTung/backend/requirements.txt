@@ -16,3 +16,4 @@ google-auth
 cryptography
 requests
 user-agents
+slowapi
