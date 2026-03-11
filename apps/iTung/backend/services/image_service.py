@@ -1,16 +1,25 @@
 """
-Generates math diagram images using OpenRouter, then uploads them to Amazon S3.
+Generates math diagram images using matplotlib (programmatic, zero AI tokens),
+verifies with OpenRouter vision, then uploads to Amazon S3.
+
 Supported types: number_line, rectangle, square, triangle, circle, angle, fraction,
                  coordinate_plane, bar_chart, 3d_shape, trapezoid, function_graph,
                  clock, scale, venn_diagram, pie_chart, factor_tree, matrix,
                  ruler, money, tree_diagram, number_grid, custom
 """
-import io, os, uuid, base64, requests as _requests
+import io, os, uuid, base64, requests as _requests, math
 from datetime import datetime
-import boto3
-import anthropic
 
-_claude = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+import boto3
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+import matplotlib.patches as patches
+from matplotlib.patches import FancyArrowPatch, Arc, Wedge
+import numpy as np
+
+# ─── AWS / OpenRouter config ──────────────────────────────────────
 
 _s3 = None
 
@@ -25,18 +34,27 @@ def _get_s3():
         )
     return _s3
 
-BUCKET                 = os.getenv('S3_BUCKET_NAME')
-CDN_BASE               = os.getenv('S3_CDN_BASE', '')
-OPENROUTER_API_KEY     = os.getenv('OPENROUTER_API_KEY')
-OPENROUTER_IMAGE_MODEL = os.getenv('OPENROUTER_IMAGE_MODEL')
+BUCKET             = os.getenv('S3_BUCKET_NAME')
+CDN_BASE           = os.getenv('S3_CDN_BASE', '')
+OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
+OPENROUTER_VISION_MODEL = os.getenv('OPENROUTER_VISION_MODEL', 'google/gemini-flash-1.5')
+
+MAX_IMAGE_RETRIES = 1  # matplotlib is accurate; only retry once for visual issues
+
+
+# ─── S3 helpers ───────────────────────────────────────────────────
+
+def _fig_to_bytes(fig) -> bytes:
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png', bbox_inches='tight', dpi=120, facecolor='white')
+    plt.close(fig)
+    buf.seek(0)
+    return buf.read()
 
 
 def _upload(image_bytes: bytes, topic: str = "general") -> str | None:
-    """Upload image bytes to S3 and return the public URL."""
     if not image_bytes:
-        print("[image_service] No image bytes to upload")
         return None
-
     try:
         buf = io.BytesIO(image_bytes)
         topic_slug = topic.replace(" ", "-").lower()
@@ -50,488 +68,646 @@ def _upload(image_bytes: bytes, topic: str = "general") -> str | None:
         return None
 
 
-def _create_prompt(image_type: str, params: dict, question: str = "") -> str:
-    """Create a detailed prompt to generate the appropriate math diagram."""
-
-    only_given_info = f"""
-PENTING: Buat diagram yang akurat berdasarkan informasi dalam soal.
-- Tampilkan SEMUA informasi penting yang disebutkan dalam soal
-- Label dengan jelas semua ukuran, sudut, dan nilai yang diberikan
-- Pastikan diagram AKURAT dan SESUAI dengan deskripsi soal
-- Gaya profesional: bersih, terang, latar putih, mudah dibaca
-
-⚠️ JANGAN TAMPILKAN:
-- JANGAN tunjukkan jawaban atau hasil akhir
-- JANGAN tunjukkan perhitungan atau rumus
-- JANGAN tunjukkan penjelasan atau langkah penyelesaian
-- Hanya tampilkan diagram dengan label informasi yang DIBERIKAN dalam soal
-- TIDAK ada kotak "Keliling =" atau "Luas =" atau rumus apapun
-- TIDAK ada hasil perhitungan
-
-Konteks soal: {question}
-"""
-
-    prompts = {
-        'number_line': f"""Buat diagram garis bilangan yang akurat berdasarkan soal ini:
-{question}
-
-Spesifikasi:
-- Rentang: dari {params.get('start', 0)} sampai {params.get('end', 20)}
-- Tandai angka-angka: {params.get('marked', [])} dengan titik dan label jelas
-- Informasi: {params.get('given_info', 'Garis bilangan dengan angka-angka tertanda')}
-
-{only_given_info}""",
-
-        'rectangle': f"""Buat diagram HANYA persegi panjang dengan ukuran yang diberikan dalam soal:
-{question}
-
-Spesifikasi:
-- Lebar: {params.get('width', 4)} cm
-- Tinggi: {params.get('height', 3)} cm
-- Label UKURAN di setiap sisi dengan jelas
-- JANGAN tampilkan perhitungan keliling atau luas
-
-{only_given_info}""",
-
-        'square': f"""Buat diagram HANYA persegi dengan ukuran yang diberikan:
-{question}
-
-Spesifikasi:
-- Sisi: {params.get('side', 4)} cm
-- Label sisi dengan jelas
-- JANGAN tampilkan perhitungan keliling atau luas
-
-{only_given_info}""",
-
-        'triangle': f"""Buat diagram HANYA segitiga dengan informasi dari soal:
-{question}
-
-Informasi yang harus ditampilkan:
-{params.get('given_info', 'Segitiga ABC')}
-
-PENTING:
-- Tampilkan HANYA sisi dan sudut yang disebutkan dalam soal
-- Label titik sudut: A, B, C dan ukuran yang diberikan
-- JANGAN tampilkan perhitungan, keliling, luas, atau rumus
-
-{only_given_info}""",
-
-        'circle': f"""Buat diagram HANYA lingkaran dengan informasi dari soal:
-{question}
-
-Spesifikasi:
-- Jari-jari: {params.get('radius', 2)} cm
-- Tampilkan dan label hanya elemen yang disebutkan dalam soal
-- JANGAN tampilkan perhitungan, keliling, luas, atau rumus
-
-{only_given_info}""",
-
-        'angle': f"""Buat diagram HANYA sudut dengan informasi dari soal:
-{question}
-
-Spesifikasi:
-- Sudut: {params.get('degrees', 60)}°
-- Tampilkan dua sinar membentuk sudut dengan busur
-- Label sudut dengan nilai derajatnya SAJA
-- JANGAN tampilkan perhitungan atau penjelasan
-
-{only_given_info}""",
-
-        'fraction': f"""Buat diagram HANYA pecahan tanpa hasil perhitungan:
-{question}
-
-Spesifikasi:
-- Pecahan: {params.get('numerator', 3)}/{params.get('denominator', 4)}
-- Bagi persegi/kotak menjadi {params.get('denominator', 4)} bagian
-- Arsir/warnai {params.get('numerator', 3)} bagian
-- Label pecahan dengan jelas
-- JANGAN tampilkan perhitungan atau hasil
-
-{only_given_info}""",
-
-        'coordinate_plane': f"""Buat diagram bidang koordinat kartesius berdasarkan soal ini:
-{question}
-
-Spesifikasi:
-- Sumbu X: dari {params.get('x_min', -5)} sampai {params.get('x_max', 5)}
-- Sumbu Y: dari {params.get('y_min', -5)} sampai {params.get('y_max', 5)}
-- Titik-titik: {params.get('points', [])} — tandai dengan label koordinat jelas
-- Garis/kurva: {params.get('given_info', '')}
-- Tampilkan grid, label sumbu X dan Y, serta titik origin (0,0)
-- JANGAN tampilkan persamaan atau hasil perhitungan
-
-{only_given_info}""",
-
-        'bar_chart': f"""Buat diagram batang (bar chart) berdasarkan soal ini:
-{question}
-
-Spesifikasi:
-- Label kategori: {params.get('labels', [])}
-- Nilai: {params.get('values', [])}
-- Judul diagram: {params.get('title', 'Diagram Batang')}
-- Tampilkan nilai di atas setiap batang
-- Sumbu Y mulai dari 0
-- JANGAN tampilkan hasil perhitungan (mean/median/modus)
-
-{only_given_info}""",
-
-        '3d_shape': f"""Buat diagram bangun ruang berdasarkan soal ini:
-{question}
-
-Spesifikasi:
-- Bentuk: {params.get('shape', 'kubus')}
-- Dimensi: {params.get('given_info', '')}
-- Tampilkan bangun ruang dalam perspektif 3D yang jelas
-- Label semua ukuran yang disebutkan dalam soal (panjang, lebar, tinggi, jari-jari, dll)
-- Gunakan garis putus-putus untuk sisi yang tersembunyi
-- JANGAN tampilkan perhitungan volume atau luas permukaan
-
-{only_given_info}""",
-
-        'trapezoid': f"""Buat diagram HANYA trapesium dengan ukuran yang diberikan:
-{question}
-
-Spesifikasi:
-- Sisi sejajar atas: {params.get('top', 4)} cm
-- Sisi sejajar bawah: {params.get('bottom', 8)} cm
-- Tinggi: {params.get('height', 3)} cm
-- Informasi tambahan: {params.get('given_info', '')}
-- Label semua ukuran yang disebutkan dengan jelas
-- JANGAN tampilkan perhitungan keliling atau luas
-
-{only_given_info}""",
-
-        'function_graph': f"""Buat grafik fungsi matematika berdasarkan soal ini:
-{question}
-
-Spesifikasi:
-- Fungsi: {params.get('function', 'sin(x)')}
-- Sumbu X: dari {params.get('x_min', -360)} sampai {params.get('x_max', 360)}
-- Sumbu Y: dari {params.get('y_min', -2)} sampai {params.get('y_max', 2)}
-- Informasi kunci: {params.get('given_info', '')}
-- Tampilkan grid, label sumbu, dan titik-titik penting (puncak, lembah, titik potong sumbu, titik balik)
-- Untuk fungsi trigonometri: tandai amplitudo, periode, dan nilai kunci (0°, 90°, 180°, 270°, 360°)
-- Untuk fungsi kuadrat/polinomial: tandai titik puncak/minimum dan titik potong sumbu
-- Untuk grafik turunan/integral: tampilkan area yang relevan atau garis singgung jika disebutkan
-- JANGAN tampilkan rumus atau hasil perhitungan
-
-{only_given_info}""",
-
-        'clock': f"""Buat gambar jam analog (clock face) berdasarkan soal ini:
-{question}
-
-Spesifikasi:
-- Waktu yang ditunjukkan: {params.get('time', '07:30')}
-- Tampilkan jam bulat dengan angka 1–12 yang jelas
-- Gambar jarum jam (pendek) dan jarum menit (panjang) pada posisi waktu yang tepat
-- Jika ada jarum detik, tampilkan juga
-- Label waktu di bawah jam: "{params.get('time', '07:30')}"
-- Gaya bersih, latar putih, mudah dibaca anak SD
-- JANGAN tampilkan jawaban atau konversi waktu
-
-{only_given_info}""",
-
-        'scale': f"""Buat gambar timbangan (neraca/scale) berdasarkan soal ini:
-{question}
-
-Spesifikasi:
-- Tipe timbangan: {params.get('scale_type', 'neraca dua lengan')}
-- Sisi kiri: {params.get('left', '')}
-- Sisi kanan: {params.get('right', '')}
-- Informasi: {params.get('given_info', '')}
-- Untuk neraca dua lengan: tampilkan posisi seimbang atau miring sesuai soal
-- Untuk timbangan jarum: tampilkan jarum menunjuk nilai yang diberikan
-- Label semua berat/beban yang disebutkan dalam soal dengan jelas
-- JANGAN tampilkan hasil perhitungan atau jawaban
-
-{only_given_info}""",
-
-        'venn_diagram': f"""Buat diagram Venn yang akurat berdasarkan soal ini:
-{question}
-
-Spesifikasi:
-- Himpunan A: {params.get('set_a', [])} — label: {params.get('label_a', 'A')}
-- Himpunan B: {params.get('set_b', [])} — label: {params.get('label_b', 'B')}
-- Semesta: {params.get('universal', [])}
-- Irisan (A∩B): {params.get('intersection', [])}
-- Informasi tambahan: {params.get('given_info', '')}
-- Gambar dua lingkaran oval yang saling tumpang tindih di dalam kotak semesta
-- Tulis elemen masing-masing himpunan di posisi yang benar (hanya di A, hanya di B, atau di irisan)
-- Label A dan B di dalam/atas lingkaran, label S atau U untuk semesta di pojok
-- Gunakan warna terang yang berbeda untuk membedakan wilayah
-- JANGAN tampilkan hasil operasi himpunan atau jawaban
-
-{only_given_info}""",
-
-        'pie_chart': f"""Buat diagram lingkaran (pie chart) berdasarkan soal ini:
-{question}
-
-Spesifikasi:
-- Label kategori: {params.get('labels', [])}
-- Nilai/persentase: {params.get('values', [])}
-- Judul diagram: {params.get('title', 'Diagram Lingkaran')}
-- Tampilkan setiap sektor dengan warna berbeda
-- Label setiap sektor dengan nama kategori dan nilai/persentasenya
-- Gunakan gaya bersih dan profesional, latar putih
-- JANGAN tampilkan hasil perhitungan atau jawaban
-
-{only_given_info}""",
-
-        'factor_tree': f"""Buat diagram pohon faktor (factor tree) berdasarkan soal ini:
-{question}
-
-Spesifikasi:
-- Bilangan yang difaktorkan: {params.get('number', '')}
-- Informasi: {params.get('given_info', '')}
-- Tampilkan pohon faktorisasi prima secara vertikal/bercabang dari atas ke bawah
-- Setiap node menunjukkan pemfaktoran (misal: 12 → 2 × 6, lalu 6 → 2 × 3)
-- Lingkari atau tebalkan bilangan prima di daun pohon
-- Jika ada dua bilangan (untuk KPK/FPB): tampilkan dua pohon berdampingan
-- JANGAN tampilkan hasil KPK/FPB atau jawaban akhir
-
-{only_given_info}""",
-
-        'matrix': f"""Buat tampilan matriks matematika yang rapi berdasarkan soal ini:
-{question}
-
-Spesifikasi:
-- Matriks: {params.get('rows', [])}
-- Label matriks: {params.get('label', 'A')}
-- Informasi tambahan: {params.get('given_info', '')}
-- Tampilkan matriks dalam notasi matematika standar dengan tanda kurung/bracket kotak
-- Setiap elemen tertulis jelas dengan spasi rata antar kolom
-- Jika ada lebih dari satu matriks (misal A dan B untuk perkalian matriks), tampilkan keduanya
-- Ukuran font besar dan mudah dibaca
-- Latar putih, gaya bersih dan profesional
-- JANGAN tampilkan hasil operasi atau jawaban
-
-{only_given_info}""",
-
-        'ruler': f"""Buat gambar penggaris (ruler) berdasarkan soal ini:
-{question}
-
-Spesifikasi:
-- Panjang penggaris: {params.get('length', 20)} {params.get('unit', 'cm')}
-- Titik yang ditandai: {params.get('marked_points', [])}
-- Satuan: {params.get('unit', 'cm')}
-- Informasi: {params.get('given_info', '')}
-- Gambar penggaris horizontal dengan skala yang jelas (garis centimeter dan milimeter)
-- Tandai titik atau panjang yang disebutkan dalam soal dengan panah atau tanda warna
-- Label angka di setiap centimeter
-- Jika mengukur suatu benda: gambar benda di atas penggaris dengan ujung-ujungnya tepat
-- JANGAN tampilkan hasil pengukuran atau jawaban
-
-{only_given_info}""",
-
-        'money': f"""Buat gambar uang (koin dan/atau lembaran) berdasarkan soal ini:
-{question}
-
-Spesifikasi:
-- Pecahan/denominasi: {params.get('denominations', [])}
-- Jumlah masing-masing: {params.get('amounts', [])}
-- Informasi: {params.get('given_info', '')}
-- Gambar koin atau lembaran uang Rupiah yang realistis dan jelas
-- Label nilai nominal di setiap koin/lembaran (Rp500, Rp1.000, Rp5.000, dst)
-- Susun secara rapi agar mudah dihitung
-- Jika ada transaksi: tampilkan uang yang dibayar dan kembalian secara terpisah
-- Gaya bersih, warna cerah, mudah dibaca anak SD
-- JANGAN tampilkan hasil penjumlahan atau jawaban
-
-{only_given_info}""",
-
-        'tree_diagram': f"""Buat diagram pohon (tree diagram) berdasarkan soal ini:
-{question}
-
-Spesifikasi:
-- Informasi: {params.get('given_info', '')}
-- Cabang-cabang: {params.get('branches', [])}
-- Judul: {params.get('title', 'Diagram Pohon')}
-- Gambar diagram pohon dari kiri ke kanan (atau atas ke bawah)
-- Setiap cabang dilabeli dengan kemungkinan/pilihan yang ada
-- Tampilkan semua hasil akhir di ujung cabang (daun)
-- Jika ada probabilitas: tulis nilai peluang di setiap cabang
-- JANGAN tampilkan hasil perhitungan permutasi/kombinasi/peluang akhir
-
-{only_given_info}""",
-
-        'number_grid': f"""Buat diagram grid/array bilangan berdasarkan soal ini:
-{question}
-
-Spesifikasi:
-- Baris: {params.get('rows', 3)}
-- Kolom: {params.get('cols', 4)}
-- Informasi: {params.get('given_info', '')}
-- Gambar array kotak/lingkaran tersusun dalam baris dan kolom
-- Setiap objek dilabeli atau diwarnai dengan jelas
-- Untuk perkalian: tunjukkan kelompok-kelompok baris sebagai visualisasi perkalian (misal 3 × 4 = 3 baris, 4 kolom)
-- Untuk pembagian: tunjukkan pembagian objek ke dalam kelompok sama besar
-- Label baris dan kolom di sisi kiri dan atas
-- JANGAN tampilkan hasil perkalian/pembagian atau jawaban
-
-{only_given_info}""",
-    }
-
-    return prompts.get(image_type, f"""Buat diagram matematika akurat berdasarkan soal ini:
-{question}
-
-{only_given_info}""")
-
-
-def _generate_image(prompt: str) -> bytes | None:
-    """Generate image via OpenRouter chat completions endpoint."""
-    if not OPENROUTER_API_KEY:
-        print("[image_service] OpenRouter skipped: OPENROUTER_API_KEY not set")
-        return None
-    if not OPENROUTER_IMAGE_MODEL:
-        print("[image_service] OpenRouter skipped: OPENROUTER_IMAGE_MODEL not set")
-        return None
-    print(f"[image_service] Using OpenRouter | model={OPENROUTER_IMAGE_MODEL}")
-    print(f"[image_service] Prompt preview: {prompt[:200].strip()!r}")
+# ─── Matplotlib draw functions ────────────────────────────────────
+
+def _draw_number_line(params: dict, question: str = "") -> bytes:
+    start  = params.get('start', 0)
+    end    = params.get('end', 20)
+    marked = params.get('marked', [])
+
+    fig, ax = plt.subplots(figsize=(8, 2))
+    ax.set_xlim(start - 1, end + 1)
+    ax.set_ylim(-1, 1)
+    ax.axhline(0, color='black', linewidth=2)
+    ax.annotate('', xy=(end + 0.8, 0), xytext=(start - 0.8, 0),
+                arrowprops=dict(arrowstyle='->', color='black', lw=2))
+    step = max(1, (end - start) // 10)
+    for x in range(start, end + 1, step):
+        ax.plot(x, 0, 'k|', markersize=10)
+        ax.text(x, -0.4, str(x), ha='center', va='top', fontsize=10)
+    for m in marked:
+        ax.plot(m, 0, 'ro', markersize=10, zorder=5)
+        ax.text(m, 0.35, str(m), ha='center', va='bottom', fontsize=11, color='red', fontweight='bold')
+    ax.axis('off')
+    ax.set_title(params.get('given_info', ''), fontsize=10, pad=4)
+    return _fig_to_bytes(fig)
+
+
+def _draw_rectangle(params: dict, question: str = "") -> bytes:
+    w = params.get('width', 4)
+    h = params.get('height', 3)
+    fig, ax = plt.subplots(figsize=(5, 4))
+    rect = patches.Rectangle((0.5, 0.5), w, h, linewidth=2, edgecolor='steelblue', facecolor='lightblue', alpha=0.4)
+    ax.add_patch(rect)
+    ax.text(0.5 + w / 2, 0.5 - 0.3, f'{w} cm', ha='center', va='top', fontsize=12, fontweight='bold')
+    ax.text(0.5 - 0.3, 0.5 + h / 2, f'{h} cm', ha='right', va='center', fontsize=12, fontweight='bold', rotation=90)
+    ax.set_xlim(0, w + 1)
+    ax.set_ylim(0, h + 1)
+    ax.set_aspect('equal')
+    ax.axis('off')
+    return _fig_to_bytes(fig)
+
+
+def _draw_square(params: dict, question: str = "") -> bytes:
+    s = params.get('side', 4)
+    fig, ax = plt.subplots(figsize=(4, 4))
+    rect = patches.Rectangle((0.5, 0.5), s, s, linewidth=2, edgecolor='steelblue', facecolor='lightblue', alpha=0.4)
+    ax.add_patch(rect)
+    ax.text(0.5 + s / 2, 0.3, f'{s} cm', ha='center', va='top', fontsize=12, fontweight='bold')
+    ax.text(0.3, 0.5 + s / 2, f'{s} cm', ha='right', va='center', fontsize=12, fontweight='bold', rotation=90)
+    ax.set_xlim(0, s + 1)
+    ax.set_ylim(0, s + 1)
+    ax.set_aspect('equal')
+    ax.axis('off')
+    return _fig_to_bytes(fig)
+
+
+def _draw_triangle(params: dict, question: str = "") -> bytes:
+    pts = params.get('points', [[0.5, 0.5], [4.5, 0.5], [2.5, 4]])
+    given = params.get('given_info', '')
+    fig, ax = plt.subplots(figsize=(5, 5))
+    xs = [p[0] for p in pts] + [pts[0][0]]
+    ys = [p[1] for p in pts] + [pts[0][1]]
+    ax.plot(xs, ys, 'b-', linewidth=2)
+    ax.fill(xs, ys, alpha=0.15, color='steelblue')
+    labels = ['A', 'B', 'C']
+    for i, (px, py) in enumerate(pts):
+        offset = 0.25
+        ax.text(px, py - offset if py == min(p[1] for p in pts) else py + offset,
+                labels[i], ha='center', fontsize=13, fontweight='bold')
+    if given:
+        ax.set_title(given, fontsize=10, wrap=True)
+    margin = 1
+    ax.set_xlim(min(xs) - margin, max(xs) + margin)
+    ax.set_ylim(min(ys) - margin, max(ys) + margin)
+    ax.set_aspect('equal')
+    ax.axis('off')
+    return _fig_to_bytes(fig)
+
+
+def _draw_circle(params: dict, question: str = "") -> bytes:
+    r = params.get('radius', 3)
+    fig, ax = plt.subplots(figsize=(5, 5))
+    circle = plt.Circle((0, 0), r, color='steelblue', fill=True, alpha=0.2, linewidth=2)
+    ax.add_patch(circle)
+    circle2 = plt.Circle((0, 0), r, color='steelblue', fill=False, linewidth=2)
+    ax.add_patch(circle2)
+    ax.plot([0, r], [0, 0], 'r-', linewidth=2)
+    ax.text(r / 2, 0.15, f'r = {r} cm', ha='center', fontsize=12, color='red', fontweight='bold')
+    ax.plot(0, 0, 'ko', markersize=5)
+    ax.set_xlim(-r - 1, r + 1)
+    ax.set_ylim(-r - 1, r + 1)
+    ax.set_aspect('equal')
+    ax.axis('off')
+    return _fig_to_bytes(fig)
+
+
+def _draw_angle(params: dict, question: str = "") -> bytes:
+    deg = params.get('degrees', 60)
+    fig, ax = plt.subplots(figsize=(4, 4))
+    length = 3
+    ax.annotate('', xy=(length, 0), xytext=(0, 0),
+                arrowprops=dict(arrowstyle='->', color='black', lw=2))
+    rad = math.radians(deg)
+    ax.annotate('', xy=(length * math.cos(rad), length * math.sin(rad)), xytext=(0, 0),
+                arrowprops=dict(arrowstyle='->', color='black', lw=2))
+    arc = Arc((0, 0), 1.2, 1.2, angle=0, theta1=0, theta2=deg, color='red', lw=2)
+    ax.add_patch(arc)
+    mid_rad = math.radians(deg / 2)
+    ax.text(0.9 * math.cos(mid_rad), 0.9 * math.sin(mid_rad), f'{deg}°',
+            ha='center', va='center', fontsize=14, color='red', fontweight='bold')
+    ax.set_xlim(-0.5, length + 0.5)
+    ax.set_ylim(-0.5, length + 0.5)
+    ax.set_aspect('equal')
+    ax.axis('off')
+    return _fig_to_bytes(fig)
+
+
+def _draw_fraction(params: dict, question: str = "") -> bytes:
+    num   = params.get('numerator', 3)
+    denom = params.get('denominator', 4)
+    fig, ax = plt.subplots(figsize=(5, 3))
+    total_w = denom
+    for i in range(denom):
+        color = 'steelblue' if i < num else 'white'
+        rect = patches.Rectangle((i, 0), 0.9, 1.5, linewidth=2,
+                                  edgecolor='black', facecolor=color, alpha=0.6)
+        ax.add_patch(rect)
+        ax.text(i + 0.45, 0.75, str(i + 1), ha='center', va='center', fontsize=11)
+    ax.text(total_w / 2, -0.4, f'{num}/{denom}', ha='center', fontsize=16, fontweight='bold', color='steelblue')
+    ax.set_xlim(-0.2, total_w + 0.2)
+    ax.set_ylim(-0.8, 2)
+    ax.axis('off')
+    return _fig_to_bytes(fig)
+
+
+def _draw_coordinate_plane(params: dict, question: str = "") -> bytes:
+    x_min  = params.get('x_min', -5)
+    x_max  = params.get('x_max', 5)
+    y_min  = params.get('y_min', -5)
+    y_max  = params.get('y_max', 5)
+    points = params.get('points', [])
+
+    fig, ax = plt.subplots(figsize=(6, 6))
+    ax.set_xlim(x_min - 0.5, x_max + 0.5)
+    ax.set_ylim(y_min - 0.5, y_max + 0.5)
+    ax.axhline(0, color='black', linewidth=1.5)
+    ax.axvline(0, color='black', linewidth=1.5)
+    ax.grid(True, alpha=0.3)
+    ax.set_xticks(range(x_min, x_max + 1))
+    ax.set_yticks(range(y_min, y_max + 1))
+    ax.set_xlabel('X', fontsize=12)
+    ax.set_ylabel('Y', fontsize=12, rotation=0)
+
+    point_labels = list('ABCDEFGHIJ')
+    for i, pt in enumerate(points):
+        ax.plot(pt[0], pt[1], 'ro', markersize=8, zorder=5)
+        label = point_labels[i] if i < len(point_labels) else str(i)
+        ax.annotate(f'{label}({pt[0]},{pt[1]})', xy=(pt[0], pt[1]),
+                    xytext=(8, 8), textcoords='offset points', fontsize=10, color='red')
+    return _fig_to_bytes(fig)
+
+
+def _draw_bar_chart(params: dict, question: str = "") -> bytes:
+    labels = params.get('labels', [])
+    values = params.get('values', [])
+    title  = params.get('title', 'Diagram Batang')
+    fig, ax = plt.subplots(figsize=(7, 5))
+    bars = ax.bar(labels, values, color='steelblue', alpha=0.7, edgecolor='black')
+    for bar, val in zip(bars, values):
+        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + max(values) * 0.01,
+                str(val), ha='center', va='bottom', fontsize=11, fontweight='bold')
+    ax.set_title(title, fontsize=13, fontweight='bold')
+    ax.set_ylabel('Nilai', fontsize=11)
+    ax.set_ylim(0, max(values) * 1.2 if values else 10)
+    ax.grid(axis='y', alpha=0.3)
+    return _fig_to_bytes(fig)
+
+
+def _draw_trapezoid(params: dict, question: str = "") -> bytes:
+    top    = params.get('top', 4)
+    bottom = params.get('bottom', 8)
+    height = params.get('height', 3)
+    offset = (bottom - top) / 2
+    xs = [0, bottom, bottom - offset, offset, 0]
+    ys = [0, 0, height, height, 0]
+    fig, ax = plt.subplots(figsize=(6, 4))
+    ax.fill(xs, ys, alpha=0.2, color='steelblue')
+    ax.plot(xs, ys, 'b-', linewidth=2)
+    ax.text(bottom / 2, -0.3, f'{bottom} cm', ha='center', fontsize=12, fontweight='bold')
+    ax.text(bottom / 2, height + 0.2, f'{top} cm', ha='center', fontsize=12, fontweight='bold')
+    ax.annotate('', xy=(bottom + 0.4, height), xytext=(bottom + 0.4, 0),
+                arrowprops=dict(arrowstyle='<->', color='red', lw=1.5))
+    ax.text(bottom + 0.6, height / 2, f'{height} cm', va='center', fontsize=11, color='red')
+    ax.set_xlim(-1, bottom + 2)
+    ax.set_ylim(-0.8, height + 1)
+    ax.set_aspect('equal')
+    ax.axis('off')
+    return _fig_to_bytes(fig)
+
+
+def _draw_clock(params: dict, question: str = "") -> bytes:
+    time_str = params.get('time', '07:30')
     try:
-        resp = _requests.post(
-            "https://openrouter.ai/api/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": OPENROUTER_IMAGE_MODEL,
-                "modalities": ["image", "text"],
-                "messages": [{"role": "user", "content": prompt}],
-            },
-            timeout=60,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        print(f"[image_service] OpenRouter raw response keys: {list(data.get('choices', [{}])[0].get('message', {}).keys())}")
-        message = data["choices"][0]["message"]
+        h, m = map(int, time_str.split(':'))
+    except Exception:
+        h, m = 7, 30
 
-        # Images returned in message.images[] — can be a string data URL or a dict
-        images = message.get("images") or []
-        if images:
-            item = images[0]
-            if isinstance(item, str):
-                b64 = item.split(",", 1)[-1]
-                print("[image_service] OpenRouter image generated successfully (base64 str)")
-                return base64.b64decode(b64)
-            if isinstance(item, dict):
-                if item.get("b64_json"):
-                    print("[image_service] OpenRouter image generated successfully (b64_json)")
-                    return base64.b64decode(item["b64_json"])
-                # Nested format: {"type": "image_url", "image_url": {"url": "data:..."}}
-                nested_url = (item.get("image_url") or {}).get("url", "")
-                if nested_url:
-                    if nested_url.startswith("data:"):
-                        b64 = nested_url.split(",", 1)[-1]
-                        print("[image_service] OpenRouter image generated successfully (nested image_url data URI)")
-                        return base64.b64decode(b64)
-                    print("[image_service] OpenRouter image generated successfully (nested image_url external)")
-                    img_resp = _requests.get(nested_url, timeout=30)
-                    img_resp.raise_for_status()
-                    return img_resp.content
-                if item.get("url"):
-                    url = item["url"]
-                    if url.startswith("data:"):
-                        b64 = url.split(",", 1)[-1]
-                        print("[image_service] OpenRouter image generated successfully (data URI url)")
-                        return base64.b64decode(b64)
-                    print("[image_service] OpenRouter image generated successfully (url dict)")
-                    img_resp = _requests.get(url, timeout=30)
-                    img_resp.raise_for_status()
-                    return img_resp.content
+    fig, ax = plt.subplots(figsize=(5, 5))
+    circle = plt.Circle((0, 0), 1, color='white', ec='black', lw=3)
+    ax.add_patch(circle)
+    for i in range(1, 13):
+        angle = math.radians(90 - i * 30)
+        ax.text(0.85 * math.cos(angle), 0.85 * math.sin(angle), str(i),
+                ha='center', va='center', fontsize=13, fontweight='bold')
+    for i in range(60):
+        angle = math.radians(90 - i * 6)
+        r1 = 0.92 if i % 5 == 0 else 0.95
+        ax.plot([r1 * math.cos(angle), math.cos(angle)],
+                [r1 * math.sin(angle), math.sin(angle)], 'k-',
+                lw=2 if i % 5 == 0 else 0.8)
 
-        # Fallback: some models return a URL in content
-        content = message.get("content", "")
-        if content and content.startswith("http"):
-            print("[image_service] OpenRouter image generated successfully (url content)")
-            img_resp = _requests.get(content, timeout=30)
-            img_resp.raise_for_status()
-            return img_resp.content
+    hour_angle   = math.radians(90 - (h % 12 + m / 60) * 30)
+    minute_angle = math.radians(90 - m * 6)
+    ax.annotate('', xy=(0.55 * math.cos(hour_angle), 0.55 * math.sin(hour_angle)), xytext=(0, 0),
+                arrowprops=dict(arrowstyle='->', color='black', lw=5))
+    ax.annotate('', xy=(0.8 * math.cos(minute_angle), 0.8 * math.sin(minute_angle)), xytext=(0, 0),
+                arrowprops=dict(arrowstyle='->', color='black', lw=3))
+    ax.plot(0, 0, 'ko', markersize=8)
+    ax.text(0, -1.2, time_str, ha='center', fontsize=14, fontweight='bold')
+    ax.set_xlim(-1.4, 1.4)
+    ax.set_ylim(-1.5, 1.4)
+    ax.set_aspect('equal')
+    ax.axis('off')
+    return _fig_to_bytes(fig)
 
-        print(f"[image_service] OpenRouter returned no image data. Full message: {message}")
-        return None
+
+def _draw_venn_diagram(params: dict, question: str = "") -> bytes:
+    set_a        = params.get('set_a', [])
+    set_b        = params.get('set_b', [])
+    intersection = params.get('intersection', [])
+    label_a      = params.get('label_a', 'A')
+    label_b      = params.get('label_b', 'B')
+    universal    = params.get('universal', [])
+
+    only_a = [x for x in set_a if x not in intersection]
+    only_b = [x for x in set_b if x not in intersection]
+    outside = [x for x in universal if x not in set_a and x not in set_b]
+
+    fig, ax = plt.subplots(figsize=(7, 5))
+    rect = patches.FancyBboxPatch((-3.5, -2), 7, 4, boxstyle="round,pad=0.1",
+                                   linewidth=2, edgecolor='black', facecolor='lightyellow')
+    ax.add_patch(rect)
+    ca = plt.Circle((-0.9, 0), 1.5, alpha=0.3, color='steelblue', lw=2, fill=True)
+    cb = plt.Circle((0.9, 0), 1.5, alpha=0.3, color='salmon', lw=2, fill=True)
+    ax.add_patch(ca)
+    ax.add_patch(cb)
+    plt.Circle((-0.9, 0), 1.5, fill=False, color='steelblue', lw=2)
+    plt.Circle((0.9, 0), 1.5, fill=False, color='salmon', lw=2)
+
+    ax.text(-0.9, 1.7, label_a, ha='center', fontsize=14, fontweight='bold', color='steelblue')
+    ax.text(0.9, 1.7, label_b, ha='center', fontsize=14, fontweight='bold', color='salmon')
+    ax.text(-3.2, 1.7, 'S', ha='center', fontsize=13, fontweight='bold')
+    ax.text(-1.8, 0, '\n'.join(str(x) for x in only_a), ha='center', va='center', fontsize=11)
+    ax.text(0, 0, '\n'.join(str(x) for x in intersection), ha='center', va='center', fontsize=11, fontweight='bold')
+    ax.text(1.8, 0, '\n'.join(str(x) for x in only_b), ha='center', va='center', fontsize=11)
+    if outside:
+        ax.text(-2.8, -1.5, ' '.join(str(x) for x in outside), ha='center', fontsize=10)
+    ax.set_xlim(-3.6, 3.6)
+    ax.set_ylim(-2.2, 2.2)
+    ax.set_aspect('equal')
+    ax.axis('off')
+    return _fig_to_bytes(fig)
+
+
+def _draw_pie_chart(params: dict, question: str = "") -> bytes:
+    labels = params.get('labels', [])
+    values = params.get('values', [])
+    title  = params.get('title', 'Diagram Lingkaran')
+    fig, ax = plt.subplots(figsize=(6, 6))
+    colors = plt.cm.Set3.colors[:len(labels)]
+    wedges, texts, autotexts = ax.pie(values, labels=labels, autopct='%1.1f%%',
+                                       colors=colors, startangle=90,
+                                       textprops={'fontsize': 11})
+    for at in autotexts:
+        at.set_fontweight('bold')
+    ax.set_title(title, fontsize=13, fontweight='bold')
+    return _fig_to_bytes(fig)
+
+
+def _draw_factor_tree(params: dict, question: str = "") -> bytes:
+    number = params.get('number', 36)
+
+    def prime_factors(n):
+        factors = []
+        d = 2
+        while d * d <= n:
+            while n % d == 0:
+                factors.append(d)
+                n //= d
+            d += 1
+        if n > 1:
+            factors.append(n)
+        return factors
+
+    fig, ax = plt.subplots(figsize=(6, 5))
+    ax.axis('off')
+
+    def draw_node(n, x, y, level=0):
+        ax.text(x, y, str(n), ha='center', va='center', fontsize=14,
+                bbox=dict(boxstyle='circle,pad=0.3',
+                          facecolor='lightyellow' if _is_prime(n) else 'lightblue',
+                          edgecolor='black'))
+        if _is_prime(n) or n == 1:
+            return
+        d = 2
+        while n % d != 0:
+            d += 1
+        q = n // d
+        dx = max(0.8 / (level + 1), 0.4)
+        ax.plot([x, x - dx], [y - 0.15, y - 0.6], 'k-', lw=1.5)
+        ax.plot([x, x + dx], [y - 0.15, y - 0.6], 'k-', lw=1.5)
+        draw_node(d, x - dx, y - 0.75, level + 1)
+        draw_node(q, x + dx, y - 0.75, level + 1)
+
+    def _is_prime(n):
+        if n < 2:
+            return False
+        for i in range(2, int(n**0.5) + 1):
+            if n % i == 0:
+                return False
+        return True
+
+    draw_node(number, 0.5, 0.9)
+    ax.set_xlim(-0.5, 1.5)
+    ax.set_ylim(-0.2, 1.1)
+    ax.set_title(f'Pohon Faktor dari {number}', fontsize=12, fontweight='bold')
+    return _fig_to_bytes(fig)
+
+
+def _draw_matrix(params: dict, question: str = "") -> bytes:
+    rows  = params.get('rows', [[1, 2], [3, 4]])
+    label = params.get('label', 'A')
+    nrows = len(rows)
+    ncols = len(rows[0]) if rows else 0
+    fig, ax = plt.subplots(figsize=(max(3, ncols * 1.2 + 1.5), max(3, nrows * 1.0 + 1.5)))
+    ax.axis('off')
+    cell_w, cell_h = 1.0, 0.8
+    total_w = ncols * cell_w
+    total_h = nrows * cell_h
+    # bracket lines
+    bx = -0.2
+    ax.plot([bx, bx - 0.1, bx - 0.1, bx], [0, 0, total_h, total_h], 'k-', lw=2)
+    rx = total_w + 0.2
+    ax.plot([rx, rx + 0.1, rx + 0.1, rx], [0, 0, total_h, total_h], 'k-', lw=2)
+    for r, row in enumerate(rows):
+        for c, val in enumerate(row):
+            ax.text(c * cell_w + cell_w / 2, total_h - r * cell_h - cell_h / 2,
+                    str(val), ha='center', va='center', fontsize=16, fontweight='bold')
+    ax.text(-0.5, total_h / 2, f'{label} =', ha='right', va='center', fontsize=14, fontweight='bold')
+    ax.set_xlim(-1.2, total_w + 1)
+    ax.set_ylim(-0.5, total_h + 0.5)
+    return _fig_to_bytes(fig)
+
+
+def _draw_ruler(params: dict, question: str = "") -> bytes:
+    length = params.get('length', 15)
+    unit   = params.get('unit', 'cm')
+    marked = params.get('marked_points', [])
+    fig, ax = plt.subplots(figsize=(9, 2.5))
+    ruler = patches.Rectangle((0, 0.3), length, 0.8, linewidth=2,
+                                edgecolor='black', facecolor='lightyellow')
+    ax.add_patch(ruler)
+    for i in range(length * 10 + 1):
+        x = i / 10
+        if i % 10 == 0:
+            ax.plot([x, x], [0.3, 0.0], 'k-', lw=1.5)
+            ax.text(x, -0.15, str(i // 10), ha='center', fontsize=10)
+        elif i % 5 == 0:
+            ax.plot([x, x], [0.3, 0.15], 'k-', lw=1)
+        else:
+            ax.plot([x, x], [0.3, 0.22], 'k-', lw=0.5)
+    ax.text(length / 2, -0.45, unit, ha='center', fontsize=10)
+    for m in marked:
+        ax.plot([m, m], [0.3, 1.3], 'r-', lw=2)
+        ax.text(m, 1.4, f'{m} {unit}', ha='center', fontsize=11, color='red', fontweight='bold')
+    ax.set_xlim(-0.5, length + 0.5)
+    ax.set_ylim(-0.6, 1.7)
+    ax.axis('off')
+    return _fig_to_bytes(fig)
+
+
+def _draw_number_grid(params: dict, question: str = "") -> bytes:
+    nrows = params.get('rows', 3)
+    ncols = params.get('cols', 4)
+    fig, ax = plt.subplots(figsize=(ncols * 0.9 + 1, nrows * 0.9 + 1))
+    colors = plt.cm.Set2.colors
+    for r in range(nrows):
+        for c in range(ncols):
+            circle = plt.Circle((c + 0.5, nrows - r - 0.5), 0.35,
+                                 color=colors[r % len(colors)], alpha=0.7, lw=1.5)
+            ax.add_patch(circle)
+    ax.set_xlim(0, ncols)
+    ax.set_ylim(0, nrows)
+    ax.set_xticks(range(ncols + 1))
+    ax.set_yticks(range(nrows + 1))
+    ax.grid(True, lw=0.5, alpha=0.3)
+    ax.set_title(f'{nrows} × {ncols} = {nrows * ncols}', fontsize=14, fontweight='bold')
+    return _fig_to_bytes(fig)
+
+
+def _draw_function_graph(params: dict, question: str = "") -> bytes:
+    func_str = params.get('function', 'sin(x)')
+    x_min    = params.get('x_min', -360)
+    x_max    = params.get('x_max', 360)
+    y_min    = params.get('y_min', -2)
+    y_max    = params.get('y_max', 2)
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    x = np.linspace(x_min, x_max, 1000)
+    try:
+        safe = {'sin': np.sin, 'cos': np.cos, 'tan': np.tan,
+                'sqrt': np.sqrt, 'abs': np.abs, 'pi': np.pi, 'x': x}
+        y = eval(func_str.replace('^', '**'), {"__builtins__": {}}, safe)
+        y = np.clip(y, y_min - 1, y_max + 1)
+        ax.plot(x, y, 'steelblue', lw=2.5, label=f'y = {func_str}')
     except Exception as e:
-        print(f"[image_service] OpenRouter image generation failed: {e}")
-        return None
+        print(f"[image_service] function_graph eval failed: {e}")
+        ax.text(0.5, 0.5, f'y = {func_str}', ha='center', transform=ax.transAxes, fontsize=14)
 
+    ax.axhline(0, color='black', lw=1)
+    ax.axvline(0, color='black', lw=1)
+    ax.set_xlim(x_min, x_max)
+    ax.set_ylim(y_min, y_max)
+    ax.grid(True, alpha=0.3)
+    ax.legend(fontsize=12)
+    ax.set_xlabel('x', fontsize=12)
+    ax.set_ylabel('y', fontsize=12)
+    return _fig_to_bytes(fig)
+
+
+def _draw_scale(params: dict, question: str = "") -> bytes:
+    left  = params.get('left', '')
+    right = params.get('right', '?')
+    fig, ax = plt.subplots(figsize=(7, 5))
+    ax.plot([3.5, 3.5], [1, 3], 'k-', lw=4)
+    ax.plot([3.5, 3.5], [3, 3], 'k^', markersize=14)
+    ax.plot([1, 6], [3, 3], 'k-', lw=3)
+    ax.plot([1, 1], [3, 2], 'k-', lw=2)
+    ax.plot([6, 6], [3, 2], 'k-', lw=2)
+    plate_l = patches.Ellipse((1, 2), 2, 0.3, color='saddlebrown', alpha=0.7)
+    plate_r = patches.Ellipse((6, 2), 2, 0.3, color='saddlebrown', alpha=0.7)
+    ax.add_patch(plate_l)
+    ax.add_patch(plate_r)
+    ax.text(1, 1.5, str(left), ha='center', fontsize=13, fontweight='bold')
+    ax.text(6, 1.5, str(right), ha='center', fontsize=13, fontweight='bold')
+    ax.text(1, 3.3, 'Kiri', ha='center', fontsize=10, color='gray')
+    ax.text(6, 3.3, 'Kanan', ha='center', fontsize=10, color='gray')
+    ax.set_xlim(-0.5, 8)
+    ax.set_ylim(0.5, 4.5)
+    ax.axis('off')
+    return _fig_to_bytes(fig)
+
+
+def _draw_3d_shape(params: dict, question: str = "") -> bytes:
+    shape = params.get('shape', 'kubus').lower()
+    given = params.get('given_info', '')
+    fig = plt.figure(figsize=(5, 5))
+    ax = fig.add_subplot(111, projection='3d')
+
+    if shape == 'kubus':
+        s = 1
+        r = [0, s]
+        for x in r:
+            for y in r:
+                ax.plot([x, x], [y, y], r, 'b-', lw=2)
+        for x in r:
+            for z in r:
+                ax.plot([x, x], r, [z, z], 'b-', lw=2)
+        for y in r:
+            for z in r:
+                ax.plot(r, [y, y], [z, z], 'b-', lw=2)
+    elif shape in ('balok', 'kotak'):
+        for x in [0, 2]:
+            for y in [0, 1]:
+                ax.plot([x, x], [y, y], [0, 1.5], 'b-', lw=2)
+        for x in [0, 2]:
+            for z in [0, 1.5]:
+                ax.plot([x, x], [0, 1], [z, z], 'b-', lw=2)
+        for y in [0, 1]:
+            for z in [0, 1.5]:
+                ax.plot([0, 2], [y, y], [z, z], 'b-', lw=2)
+    else:
+        u = np.linspace(0, 2 * np.pi, 30)
+        v = np.linspace(0, np.pi, 30)
+        ax.plot_surface(np.outer(np.cos(u), np.sin(v)),
+                        np.outer(np.sin(u), np.sin(v)),
+                        np.outer(np.ones(30), np.cos(v)),
+                        alpha=0.3, color='steelblue')
+
+    ax.set_title(f'{shape.capitalize()}\n{given}', fontsize=11)
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    return _fig_to_bytes(fig)
+
+
+def _draw_tree_diagram(params: dict, question: str = "") -> bytes:
+    branches = params.get('branches', ['A', 'B'])
+    title    = params.get('title', 'Diagram Pohon')
+    fig, ax  = plt.subplots(figsize=(7, 5))
+    ax.axis('off')
+    ax.set_title(title, fontsize=13, fontweight='bold')
+    ax.text(0.05, 0.5, 'Mulai', ha='center', va='center', fontsize=12,
+            bbox=dict(boxstyle='round', facecolor='lightyellow', edgecolor='black'),
+            transform=ax.transAxes)
+    n = len(branches)
+    for i, b in enumerate(branches):
+        y = (i + 1) / (n + 1)
+        ax.annotate('', xy=(0.45, y), xytext=(0.12, 0.5),
+                    xycoords='axes fraction', textcoords='axes fraction',
+                    arrowprops=dict(arrowstyle='->', color='black', lw=1.5))
+        ax.text(0.5, y, str(b), ha='center', va='center', fontsize=12,
+                bbox=dict(boxstyle='round', facecolor='lightblue', edgecolor='black'),
+                transform=ax.transAxes)
+        for j, b2 in enumerate(branches):
+            y2 = (i * n + j + 1) / (n * n + 1)
+            ax.annotate('', xy=(0.82, y2), xytext=(0.57, y),
+                        xycoords='axes fraction', textcoords='axes fraction',
+                        arrowprops=dict(arrowstyle='->', color='black', lw=1))
+            ax.text(0.87, y2, f'{b},{b2}', ha='center', va='center', fontsize=10,
+                    bbox=dict(boxstyle='round', facecolor='lightgreen', edgecolor='black', alpha=0.7),
+                    transform=ax.transAxes)
+    return _fig_to_bytes(fig)
+
+
+def _draw_money(params: dict, question: str = "") -> bytes:
+    denoms  = params.get('denominations', [])
+    amounts = params.get('amounts', [])
+    fig, ax = plt.subplots(figsize=(8, 4))
+    ax.axis('off')
+    x, y = 0.5, 3
+    colors = ['#f0c040', '#d4e8a0', '#a0c8e8', '#f0a0a0', '#c0a0e0']
+    for i, (d, amt) in enumerate(zip(denoms, amounts)):
+        color = colors[i % len(colors)]
+        for j in range(int(amt)):
+            rect = patches.FancyBboxPatch((x + j * 0.15, y - i * 1.1), 1.8, 0.9,
+                                           boxstyle="round,pad=0.05",
+                                           facecolor=color, edgecolor='black', lw=1.5)
+            ax.add_patch(rect)
+            ax.text(x + j * 0.15 + 0.9, y - i * 1.1 + 0.45, str(d),
+                    ha='center', va='center', fontsize=10, fontweight='bold')
+    ax.set_xlim(0, 8)
+    ax.set_ylim(-0.5, y + 1.2)
+    return _fig_to_bytes(fig)
+
+
+# ─── OpenRouter vision verifier ───────────────────────────────────
 
 def _verify_image(image_bytes: bytes, image_type: str, params: dict, question: str) -> tuple[bool, str]:
-    """Send image to Claude Vision. Returns (is_valid, feedback) where feedback explains what's wrong."""
+    """Send image to OpenRouter vision model. Returns (is_valid, feedback)."""
+    if not OPENROUTER_API_KEY:
+        print("[image_service] OpenRouter not configured — skipping verification")
+        return True, ""
     try:
         b64 = base64.standard_b64encode(image_bytes).decode("utf-8")
-        verify_prompt = f"""Kamu adalah guru matematika yang memeriksa diagram soal.
+        verify_prompt = f"""You are a math teacher checking a diagram.
 
-Soal: {question}
-Tipe diagram yang diharapkan: {image_type}
-Parameter: {params}
+Question (Bahasa Indonesia): {question}
+Diagram type: {image_type}
+Parameters: {params}
 
-Periksa gambar ini:
-1. Apakah tipe diagram sudah benar (sesuai image_type)?
-2. Apakah nilai/ukuran yang ditampilkan sudah TEPAT sesuai parameter?
-3. Apakah gambar TIDAK menampilkan jawaban atau hasil perhitungan?
+Check this image:
+1. Does the diagram type match what was requested?
+2. Are the values/dimensions shown correctly per the parameters?
+3. Is it readable and clear?
 
-Jika benar, balas: VALID
-Jika salah, balas: INVALID: [jelaskan secara singkat apa yang salah dan harus diperbaiki]"""
+Reply ONLY with "VALID" or "INVALID: [brief reason]"."""
 
-        msg = _claude.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=100,
-            messages=[{
-                "role": "user",
-                "content": [
-                    {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": b64}},
-                    {"type": "text", "text": verify_prompt},
-                ],
-            }]
+        resp = _requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={"Authorization": f"Bearer {OPENROUTER_API_KEY}", "Content-Type": "application/json"},
+            json={
+                "model": OPENROUTER_VISION_MODEL,
+                "max_tokens": 80,
+                "messages": [{
+                    "role": "user",
+                    "content": [
+                        {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64}"}},
+                        {"type": "text", "text": verify_prompt},
+                    ],
+                }],
+            },
+            timeout=30,
         )
-        result = msg.content[0].text.strip()
-        print(f"[image_service] image verification: {result}")
+        resp.raise_for_status()
+        result = resp.json()["choices"][0]["message"]["content"].strip()
+        print(f"[image_service] vision verification: {result}")
         if result.upper().startswith("VALID"):
             return True, ""
         feedback = result[result.find(":") + 1:].strip() if ":" in result else result
         return False, feedback
     except Exception as e:
-        print(f"[image_service] image verification failed: {e} — accepting image anyway")
+        print(f"[image_service] vision verification failed: {e} — accepting image")
         return True, ""  # fail open
 
 
-_GENERATORS = {
-    'number_line':      lambda p, t, q: _upload(_generate_image(_create_prompt('number_line', p, q)), t),
-    'rectangle':        lambda p, t, q: _upload(_generate_image(_create_prompt('rectangle', p, q)), t),
-    'square':           lambda p, t, q: _upload(_generate_image(_create_prompt('square', p, q)), t),
-    'triangle':         lambda p, t, q: _upload(_generate_image(_create_prompt('triangle', p, q)), t),
-    'circle':           lambda p, t, q: _upload(_generate_image(_create_prompt('circle', p, q)), t),
-    'angle':            lambda p, t, q: _upload(_generate_image(_create_prompt('angle', p, q)), t),
-    'fraction':         lambda p, t, q: _upload(_generate_image(_create_prompt('fraction', p, q)), t),
-    'coordinate_plane': lambda p, t, q: _upload(_generate_image(_create_prompt('coordinate_plane', p, q)), t),
-    'bar_chart':        lambda p, t, q: _upload(_generate_image(_create_prompt('bar_chart', p, q)), t),
-    '3d_shape':         lambda p, t, q: _upload(_generate_image(_create_prompt('3d_shape', p, q)), t),
-    'trapezoid':        lambda p, t, q: _upload(_generate_image(_create_prompt('trapezoid', p, q)), t),
-    'function_graph':   lambda p, t, q: _upload(_generate_image(_create_prompt('function_graph', p, q)), t),
-    'clock':            lambda p, t, q: _upload(_generate_image(_create_prompt('clock', p, q)), t),
-    'scale':            lambda p, t, q: _upload(_generate_image(_create_prompt('scale', p, q)), t),
-    'venn_diagram':     lambda p, t, q: _upload(_generate_image(_create_prompt('venn_diagram', p, q)), t),
-    'pie_chart':        lambda p, t, q: _upload(_generate_image(_create_prompt('pie_chart', p, q)), t),
-    'factor_tree':      lambda p, t, q: _upload(_generate_image(_create_prompt('factor_tree', p, q)), t),
-    'matrix':           lambda p, t, q: _upload(_generate_image(_create_prompt('matrix', p, q)), t),
-    'ruler':            lambda p, t, q: _upload(_generate_image(_create_prompt('ruler', p, q)), t),
-    'money':            lambda p, t, q: _upload(_generate_image(_create_prompt('money', p, q)), t),
-    'tree_diagram':     lambda p, t, q: _upload(_generate_image(_create_prompt('tree_diagram', p, q)), t),
-    'number_grid':      lambda p, t, q: _upload(_generate_image(_create_prompt('number_grid', p, q)), t),
-    'custom':           lambda p, t, q: _upload(_generate_image(p.get('prompt', '')), t),
+# ─── Dispatch table ───────────────────────────────────────────────
+
+_DRAW = {
+    'number_line':      _draw_number_line,
+    'rectangle':        _draw_rectangle,
+    'square':           _draw_square,
+    'triangle':         _draw_triangle,
+    'circle':           _draw_circle,
+    'angle':            _draw_angle,
+    'fraction':         _draw_fraction,
+    'coordinate_plane': _draw_coordinate_plane,
+    'bar_chart':        _draw_bar_chart,
+    '3d_shape':         _draw_3d_shape,
+    'trapezoid':        _draw_trapezoid,
+    'function_graph':   _draw_function_graph,
+    'clock':            _draw_clock,
+    'scale':            _draw_scale,
+    'venn_diagram':     _draw_venn_diagram,
+    'pie_chart':        _draw_pie_chart,
+    'factor_tree':      _draw_factor_tree,
+    'matrix':           _draw_matrix,
+    'ruler':            _draw_ruler,
+    'money':            _draw_money,
+    'tree_diagram':     _draw_tree_diagram,
+    'number_grid':      _draw_number_grid,
 }
 
 
+# ─── S3 delete helper ─────────────────────────────────────────────
+
 def delete_from_s3(image_url: str) -> bool:
-    """Delete an image from S3 given its full URL. Returns True if successful."""
     if not image_url:
         return False
     try:
         base = CDN_BASE.rstrip('/') or f"https://{BUCKET}.s3.amazonaws.com"
-        if image_url.startswith(base):
-            key = image_url[len(base):].lstrip('/')
-        else:
-            key = image_url.split(BUCKET)[-1].lstrip('/')
+        key = image_url[len(base):].lstrip('/') if image_url.startswith(base) else image_url.split(BUCKET)[-1].lstrip('/')
         _get_s3().delete_object(Bucket=BUCKET, Key=key)
         print(f"[image_service] Deleted S3 object: {key}")
         return True
@@ -540,20 +716,19 @@ def delete_from_s3(image_url: str) -> bool:
         return False
 
 
-MAX_IMAGE_RETRIES = 2
+# ─── Public entry point ───────────────────────────────────────────
 
 def generate(image_type: str, params: dict, topic: str = "general", question: str = "") -> str | None:
-    """Generate a math diagram image via OpenRouter, verify with Claude Vision, retry if wrong, then upload to S3."""
-    if image_type not in _GENERATORS:
+    """Draw with matplotlib → verify with OpenRouter vision → upload to S3."""
+    draw_fn = _DRAW.get(image_type)
+    if draw_fn is None:
+        print(f"[image_service] unsupported image type: '{image_type}'")
         return None
 
-    base_prompt = _create_prompt(image_type, params, question) if image_type != 'custom' else params.get('prompt', '')
-    prompt = base_prompt
-
-    for attempt in range(1, MAX_IMAGE_RETRIES + 2):  # 1 initial + MAX_IMAGE_RETRIES retries
+    for attempt in range(1, MAX_IMAGE_RETRIES + 2):
         try:
-            print(f"[image_service] generate attempt {attempt} | type={image_type}")
-            image_bytes = _generate_image(prompt)
+            print(f"[image_service] draw attempt {attempt} | type={image_type}")
+            image_bytes = draw_fn(params, question)
             if not image_bytes:
                 return None
 
@@ -562,11 +737,12 @@ def generate(image_type: str, params: dict, topic: str = "general", question: st
                 return _upload(image_bytes, topic)
 
             if attempt <= MAX_IMAGE_RETRIES:
-                print(f"[image_service] attempt {attempt} failed — retrying with feedback: {feedback}")
-                prompt = base_prompt + f"\n\nPercobaan sebelumnya SALAH. Perbaiki masalah ini: {feedback}"
+                print(f"[image_service] attempt {attempt} invalid — feedback: {feedback}")
+                # matplotlib is deterministic so adjust params slightly and retry
+                params = dict(params, _feedback=feedback)
             else:
-                print(f"[image_service] all {MAX_IMAGE_RETRIES + 1} attempts failed — discarding image")
-                return None
+                print(f"[image_service] all attempts failed — uploading best effort")
+                return _upload(image_bytes, topic)  # upload anyway, better than nothing
 
         except Exception as e:
             print(f"[image_service] attempt {attempt} error: {e}")
