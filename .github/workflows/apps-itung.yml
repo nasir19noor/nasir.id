@@ -103,6 +103,11 @@ jobs:
 
     - name: Build release AAB and APK
       working-directory: apps/iTung/android
+      env:
+        KEYSTORE_PATH: ${{ github.workspace }}/apps/iTung/android/android/app/my-release-key.keystore
+        KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
       run: |
         export PATH=$PATH:$HOME/flutter/bin:$HOME/android-sdk/cmdline-tools/latest/bin:$HOME/android-sdk/platform-tools
         export ANDROID_HOME=$HOME/android-sdk
@@ -110,16 +115,10 @@ jobs:
         flutter pub get
 
         echo "Building AAB..."
-        flutter build appbundle --release \
-          --dart-define=KEY_STORE_PASSWORD=${{ secrets.KEY_STORE_PASSWORD }} \
-          --dart-define=KEY_ALIAS=${{ secrets.KEY_ALIAS }} \
-          --dart-define=KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}
+        flutter build appbundle --release
 
         echo "Building APK..."
-        flutter build apk --release \
-          --dart-define=KEY_STORE_PASSWORD=${{ secrets.KEY_STORE_PASSWORD }} \
-          --dart-define=KEY_ALIAS=${{ secrets.KEY_ALIAS }} \
-          --dart-define=KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}
+        flutter build apk --release
 
     - name: Upload AAB and APK to S3
       run: |
