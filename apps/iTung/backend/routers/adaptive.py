@@ -4,7 +4,6 @@ from typing import Optional
 from sqlalchemy.orm import Session
 from models import UserAnswer
 from constants import VISUAL_TOPICS, STORY_TOPICS, SYMBOLIC_TOPICS
-from services import question_generator
 
 _system_claude = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
@@ -164,110 +163,265 @@ def analyse_performance(user_id: int, session_id: int, db: Session,
     }
 
 
-def _generate_penjelasan(soal: str, pilihan: list, jawaban_benar: str,
-                         topic: str, claude_api_key: Optional[str] = None) -> str:
-    """Ask Claude to write a step-by-step explanation for a given question."""
-    client = anthropic.Anthropic(api_key=claude_api_key) if claude_api_key else _system_claude
-    prompt = f"""Kamu adalah guru matematika. Tulis penjelasan langkah demi langkah dalam Bahasa Indonesia untuk soal berikut.
-
-Topik: {topic}
-Soal: {soal}
-Pilihan: {', '.join(pilihan)}
-Jawaban benar: {jawaban_benar}
-
-Tulis penjelasan singkat yang menunjukkan cara menjawab soal ini.
-Pisahkan setiap langkah dengan "\\n" (contoh: "Langkah 1: ...\\nLangkah 2: ...\\nJadi jawabannya ...").
-Balas HANYA dengan teks penjelasan, tanpa label apapun."""
-    try:
-        msg = client.messages.create(
-            model=CLAUDE_MODEL,
-            max_tokens=512,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        return msg.content[0].text.strip()
-    except Exception as e:
-        print(f"[adaptive] penjelasan generation failed: {e}")
-        return ""
-
-
-def _claude_image_metadata(soal: str, topic: str) -> Optional[dict]:
-    """Ask Claude for the image type and params for a question. Returns {type, params} or None."""
-    prompt = f"""Soal matematika berikut memerlukan diagram. Tentukan tipe diagram yang paling sesuai.
-
-Soal: {soal}
-Topik: {topic}
-
-Pilih SATU tipe dari daftar ini HANYA jika gambar benar-benar membantu:
-number_line, rectangle, square, triangle, circle, angle, fraction, coordinate_plane,
-bar_chart, 3d_shape, trapezoid, function_graph, clock, scale, venn_diagram,
-pie_chart, factor_tree, matrix, ruler, money, tree_diagram, number_grid
-
-Jika tidak perlu gambar, balas: null
-
-Jika perlu, balas HANYA JSON ini (tanpa markdown):
-{{"type": "...", "params": {{...}}}}"""
-    try:
-        msg = _system_claude.messages.create(
-            model=CLAUDE_MODEL,
-            max_tokens=200,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        raw = msg.content[0].text.strip()
-        if raw.lower() == "null" or not raw.startswith("{"):
-            return None
-        return json.loads(raw)
-    except Exception as e:
-        print(f"[adaptive] image metadata failed: {e}")
-        return None
-
-
 def generate_adaptive_question(topic: str, performance: dict,
                                 include_image: bool = False,
                                 claude_api_key: Optional[str] = None,
                                 gemini_api_key: Optional[str] = None,
                                 age: Optional[int] = None,
                                 fixed_difficulty: Optional[str] = None) -> dict:
-    # Determine difficulty
-    difficulty = _normalize_difficulty(fixed_difficulty) if fixed_difficulty else \
-                 performance.get("next_difficulty", get_base_difficulty(age))
+    accuracy_pct = round(performance.get('accuracy', 0) * 100)
+    weak         = performance.get('weak_topics', [])
+    # Use fixed difficulty if provided, otherwise use adaptive difficulty
+    difficulty   = _normalize_difficulty(fixed_difficulty) if fixed_difficulty else performance.get('next_difficulty', get_base_difficulty(age))
+    history      = performance.get('recent_history', [])
+    needs_image    = include_image  # Generate image if checkbox is checked, regardless of topic
+    needs_story    = topic in STORY_TOPICS
+    needs_symbolic = topic in SYMBOLIC_TOPICS
 
-    print(f"[adaptive] Generating | topic={topic} difficulty={difficulty} age={age}")
+    # Map internal key to human-readable label for the prompt
+    difficulty_labels = {
+        "sangat_mudah": "Sangat Mudah",
+        "mudah": "Mudah",
+        "sedang": "Sedang",
+        "sulit": "Sulit",
+        "sangat_sulit": "Sangat Sulit",
+    }
+    difficulty_label = difficulty_labels.get(difficulty, difficulty)
 
-    # Step 1: Generate question with Python (zero AI tokens)
-    result = question_generator.generate(topic, difficulty, age or 10)
+    image_instruction = ""
+    image_schema      = ""
+    if needs_image:
+        image_instruction = """
+    - Sertakan field "image" HANYA jika gambar benar-benar membantu memvisualisasikan soal yang kamu buat (bukan wajib).
+    - Jika soal yang kamu hasilkan tidak memerlukan gambar (misalnya soal cerita atau perhitungan murni), JANGAN sertakan field "image".
+    - Jika gambar diperlukan, pilih tipe yang paling sesuai dengan ISI SOAL (bukan topiknya):
+        number_line      : {"type": "number_line",      "params": {"start": 0, "end": 20, "marked": [7]}, "given_info": "Garis bilangan dari 0 sampai 20, titik pada 7"}
+        rectangle        : {"type": "rectangle",        "params": {"width": 5, "height": 3}, "given_info": "Persegi panjang lebar 5 cm, tinggi 3 cm"}
+        square           : {"type": "square",           "params": {"side": 4}, "given_info": "Persegi dengan sisi 4 cm"}
+        triangle         : {"type": "triangle",         "params": {"points": [[0.5,0.5],[4.5,0.5],[2.5,4]]}, "given_info": "Segitiga ABC dengan AB = 8 cm, AC = 10 cm, ∠BAC = 75°"}
+        circle           : {"type": "circle",           "params": {"radius": 3}, "given_info": "Lingkaran dengan jari-jari 3 cm"}
+        angle            : {"type": "angle",            "params": {"degrees": 60}, "given_info": "Sudut 60 derajat"}
+        fraction         : {"type": "fraction",         "params": {"numerator": 3, "denominator": 4}, "given_info": "Pecahan 3/4"}
+        trapezoid        : {"type": "trapezoid",        "params": {"top": 4, "bottom": 8, "height": 3}, "given_info": "Trapesium dengan sisi sejajar 4 cm dan 8 cm, tinggi 3 cm"}
+        coordinate_plane : {"type": "coordinate_plane", "params": {"x_min": -5, "x_max": 5, "y_min": -5, "y_max": 5, "points": [[1,2],[3,-1]]}, "given_info": "Titik A(1,2) dan B(3,-1) pada bidang koordinat"}
+        bar_chart        : {"type": "bar_chart",        "params": {"labels": ["Senin","Selasa","Rabu"], "values": [10, 20, 15], "title": "Data Penjualan"}, "given_info": "Penjualan Senin 10, Selasa 20, Rabu 15"}
+        3d_shape         : {"type": "3d_shape",         "params": {"shape": "balok"}, "given_info": "Balok dengan panjang 6 cm, lebar 4 cm, tinggi 3 cm"}
+        function_graph   : {"type": "function_graph",   "params": {"function": "sin(x)", "x_min": -360, "x_max": 360, "y_min": -1, "y_max": 1}, "given_info": "Grafik y = sin(x) dengan amplitudo 1 dan periode 360°"}
+        clock            : {"type": "clock",            "params": {"time": "07:30"}, "given_info": "Jam menunjukkan pukul 07:30"}
+        scale            : {"type": "scale",            "params": {"scale_type": "neraca dua lengan", "left": "2 kg + 500 g", "right": "?"}, "given_info": "Neraca dengan sisi kiri 2 kg + 500 g"}
+        venn_diagram     : {"type": "venn_diagram",     "params": {"set_a": [1,2,3], "set_b": [3,4,5], "intersection": [3], "label_a": "A", "label_b": "B", "universal": [1,2,3,4,5,6]}, "given_info": "Himpunan A = {1,2,3}, B = {3,4,5}, irisan A∩B = {3}"}
+        pie_chart        : {"type": "pie_chart",        "params": {"labels": ["Merah","Biru","Hijau"], "values": [40, 35, 25], "title": "Data Warna"}, "given_info": "Merah 40%, Biru 35%, Hijau 25%"}
+        factor_tree      : {"type": "factor_tree",      "params": {"number": 36, "given_info": "Pohon faktor dari 36"}, "given_info": "Faktorisasi prima dari 36"}
+        matrix           : {"type": "matrix",           "params": {"rows": [[1,2],[3,4]], "label": "A"}, "given_info": "Matriks A berukuran 2×2 dengan elemen baris pertama 1 dan 2, baris kedua 3 dan 4"}
+        ruler            : {"type": "ruler",            "params": {"length": 15, "unit": "cm", "marked_points": [7]}, "given_info": "Penggaris 15 cm, ditandai pada 7 cm"}
+        money            : {"type": "money",            "params": {"denominations": ["Rp1.000","Rp500"], "amounts": [3, 2]}, "given_info": "3 keping Rp1.000 dan 2 keping Rp500"}
+        tree_diagram     : {"type": "tree_diagram",     "params": {"branches": ["merah","biru"], "title": "Pengambilan Bola"}, "given_info": "Dua pilihan: merah atau biru di setiap cabang"}
+        number_grid      : {"type": "number_grid",      "params": {"rows": 3, "cols": 4}, "given_info": "Array 3 baris × 4 kolom untuk visualisasi perkalian 3 × 4"}
+    - Untuk "3d_shape", nilai "shape" yang valid: kubus, balok, prisma, tabung, kerucut, bola, limas
+    - Gunakan "function_graph" untuk: fungsi trigonometri (sin/cos/tan), fungsi kuadrat, fungsi linear, grafik turunan, grafik integral
+    - Gunakan "clock" untuk: pengenalan waktu, membaca jam, pengukuran waktu
+    - Gunakan "scale" untuk: pengukuran berat, timbangan, neraca — "scale_type" bisa "neraca dua lengan" atau "timbangan jarum"
+    - Gunakan "venn_diagram" untuk: himpunan, operasi himpunan (irisan, gabungan, komplemen)
+    - Gunakan "pie_chart" untuk: persen (data dalam %), statistika dengan data kategorikal, distribusi data
+    - Gunakan "factor_tree" untuk: KPK, FPB, faktorisasi prima, faktor dan kelipatan
+    - Gunakan "matrix" untuk: matriks, determinan matriks, transformasi matriks, operasi matriks
+    - Gunakan "ruler" untuk: pengukuran panjang, mengukur dengan penggaris
+    - Gunakan "money" untuk: nilai uang, transaksi jual beli, kembalian uang
+    - Gunakan "tree_diagram" untuk: permutasi, kombinasi, peluang (cabang kemungkinan)
+    - Gunakan "number_grid" untuk: pengenalan perkalian, pengenalan pembagian, perkalian array
+    - PENTING untuk "given_info": Tulis HANYA informasi yang SECARA EKSPLISIT diberikan dalam soal. Jangan sertakan nilai yang dihitung, atau informasi turunan.
+    - PENTING: Gambar hanya menampilkan informasi dari "given_info" - TIDAK lebih, TIDAK kurang. Jangan tambahkan sudut yang dihitung, panjang yang tidak disebutkan, atau informasi apapun di luar "given_info"."""
+        image_schema = '\n        "image": {"type": "...", "params": {...}, "given_info": "..."},  // opsional, hanya jika benar-benar membantu'
 
-    if result is None:
-        print(f"[adaptive] No generator for topic={topic}")
-        raise ValueError(f"Topic is not supported by the question generator")
+    story_hint    = "\n    - Sajikan sebagai soal cerita kontekstual (gunakan situasi nyata, bukan abstrak)." if needs_story else ""
+    symbolic_hint = "\n    - Fokus pada manipulasi aljabar/ekspresi simbolik; sertakan langkah penyelesaian singkat di penjelasan." if needs_symbolic else ""
 
-    # Step 2: Generate penjelasan with Claude
-    result["penjelasan"] = _generate_penjelasan(
-        soal=result["soal"],
-        pilihan=result["pilihan"],
-        jawaban_benar=result["jawaban_benar"],
-        topic=topic,
-        claude_api_key=claude_api_key,
+    prompt = f"""Kamu adalah guru matematika. Buat SATU soal matematika dalam Bahasa Indonesia.
+
+PROFIL: {_age_context(age)}
+TOPIK: {topic}
+TINGKAT KESULITAN: {difficulty_label}
+
+ATURAN:
+- Soal harus sesuai tingkat kesulitan dan usia siswa
+- Tulis dalam Bahasa Indonesia{story_hint}{symbolic_hint}{image_instruction}
+- Penjelasan: tulis langkah-langkah penyelesaian singkat, pisahkan setiap langkah dengan "\n" (contoh: "Langkah 1: ...\nLangkah 2: ...\nJadi jawabannya ...")
+
+Balas HANYA dengan JSON ini (tanpa markdown, tanpa teks lain):
+{{
+{image_schema}    "soal": "teks soal",
+    "pilihan": ["A. opsi1", "B. opsi2", "C. opsi3", "D. opsi4"],
+    "jawaban_benar": "A",
+    "penjelasan": "penjelasan singkat",
+    "difficulty": "{difficulty}"
+}}
+"""
+
+    if gemini_api_key:
+        print(f"[adaptive] Using Gemini (user key) | topic={topic} difficulty={difficulty}")
+        import google.generativeai as genai
+        genai.configure(api_key=gemini_api_key)
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        response = model.generate_content(prompt)
+        raw = response.text.strip()
+    else:
+        if claude_api_key:
+            print(f"[adaptive] Using Claude (user key) | model={CLAUDE_MODEL} topic={topic} difficulty={difficulty}")
+        else:
+            print(f"[adaptive] Using Claude (system key) | model={CLAUDE_MODEL} topic={topic} difficulty={difficulty}")
+        client = anthropic.Anthropic(api_key=claude_api_key) if claude_api_key else _system_claude
+        msg = client.messages.create(
+            model=CLAUDE_MODEL,
+            max_tokens=CLAUDE_MAX_TOKENS,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        raw = msg.content[0].text.strip()
+
+    # Strip markdown code fences if AI wrapped the JSON
+    if raw.startswith("```"):
+        parts = raw.split("```")
+        if len(parts) >= 3:
+            raw = parts[1]
+            if raw.startswith("json\n"):
+                raw = raw[5:]
+        elif len(parts) == 2:
+            raw = parts[1]
+    
+    # Strip language identifier if present without backticks (e.g., "json\n{...}")
+    if raw.startswith("json\n"):
+        raw = raw[5:]
+    elif raw.startswith("javascript\n"):
+        raw = raw[11:]
+    
+    # Escape literal newlines/tabs inside JSON string values (AI sometimes forgets to escape them)
+    def _escape_in_strings(s: str) -> str:
+        out, in_str, esc = [], False, False
+        for ch in s:
+            if esc:
+                out.append(ch); esc = False
+            elif ch == '\\':
+                out.append(ch); esc = True
+            elif ch == '"':
+                out.append(ch); in_str = not in_str
+            elif in_str and ch == '\n':
+                out.append('\\n')
+            elif in_str and ch == '\r':
+                out.append('\\r')
+            elif in_str and ch == '\t':
+                out.append('\\t')
+            else:
+                out.append(ch)
+        return ''.join(out)
+
+    raw = _escape_in_strings(raw)
+
+    # Find and extract only the JSON object (in case AI adds extra text)
+    try:
+        result = json.loads(raw)
+    except json.JSONDecodeError as e:
+        # Try to find JSON object within the response using bracket matching
+        start_idx = raw.find('{')
+        if start_idx != -1:
+            # Find the matching closing brace
+            brace_count = 0
+            end_idx = start_idx
+            in_string = False
+            escape = False
+            
+            for i in range(start_idx, len(raw)):
+                char = raw[i]
+                
+                if escape:
+                    escape = False
+                    continue
+                
+                if char == '\\':
+                    escape = True
+                    continue
+                
+                if char == '"' and not escape:
+                    in_string = not in_string
+                    continue
+                
+                if not in_string:
+                    if char == '{':
+                        brace_count += 1
+                    elif char == '}':
+                        brace_count -= 1
+                        if brace_count == 0:
+                            end_idx = i + 1
+                            break
+            
+            if end_idx > start_idx:
+                json_str = raw[start_idx:end_idx]
+                try:
+                    result = json.loads(json_str)
+                except json.JSONDecodeError as parse_err:
+                    print(f"[adaptive] Failed to parse extracted JSON: {parse_err}")
+                    print(f"[adaptive] Extracted JSON (first 500 chars): {json_str[:500]}")
+                    raise
+            else:
+                print(f"[adaptive] Could not find matching closing brace: {e}")
+                print(f"[adaptive] Raw response length: {len(raw)}")
+                print(f"[adaptive] Raw response (first 1000 chars): {raw[:1000]}")
+                print(f"[adaptive] Raw response (last 200 chars): {raw[-200:]}")
+                raise
+        else:
+            print(f"[adaptive] No opening brace found: {e}")
+            print(f"[adaptive] Raw response length: {len(raw)}")
+            print(f"[adaptive] Raw response (first 1000 chars): {raw[:1000]}")
+            raise
+    except json.JSONDecodeError as e:
+        # Try to find JSON object within the response
+        json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', raw, re.DOTALL)
+        if json_match:
+            json_str = json_match.group()
+            try:
+                result = json.loads(json_str)
+            except json.JSONDecodeError:
+                # Last attempt: try to fix incomplete JSON by adding missing closing quotes/braces
+                try:
+                    json_str = json_str + '" }' if not json_str.rstrip().endswith('}') else json_str
+                    result = json.loads(json_str)
+                except:
+                    print(f"[adaptive] Failed to parse JSON: {e}")
+                    print(f"[adaptive] Raw response length: {len(raw)}")
+                    print(f"[adaptive] Raw response (first 1000 chars): {raw[:1000]}")
+                    print(f"[adaptive] Raw response (last 200 chars): {raw[-200:]}")
+                    raise
+        else:
+            print(f"[adaptive] Failed to parse JSON: {e}")
+            print(f"[adaptive] Raw response length: {len(raw)}")
+            print(f"[adaptive] Raw response (first 1000 chars): {raw[:1000]}")
+            print(f"[adaptive] Raw response (last 200 chars): {raw[-200:]}")
+            raise
+
+    if needs_image and 'image' in result:
+        from services.image_service import generate as gen_image
+        img      = result.pop('image')
+        # Pass the full question for context so Gemini can generate accurate diagrams
+        img_url  = gen_image(
+            img.get('type', ''), 
+            img.get('params', {}), 
+            topic=topic,
+            question=result.get('soal', '')  # Pass full question for context
+        )
+        result['image_url'] = img_url
+    
+    # Ensure all required fields exist
+    required_fields = ['soal', 'pilihan', 'jawaban_benar', 'penjelasan', 'difficulty']
+    for field in required_fields:
+        if field not in result:
+            print(f"[adaptive] Missing required field: {field}")
+            print(f"[adaptive] Response keys: {list(result.keys())}")
+            result[field] = result.get(field, "")
+
+    # Verify and correct the explanation
+    result['penjelasan'] = _verify_penjelasan(
+        soal=result.get('soal', ''),
+        pilihan=result.get('pilihan', []),
+        jawaban_benar=result.get('jawaban_benar', ''),
+        penjelasan=result.get('penjelasan', ''),
     )
-
-    # Step 3: Verify penjelasan
-    result["penjelasan"] = _verify_penjelasan(
-        soal=result["soal"],
-        pilihan=result["pilihan"],
-        jawaban_benar=result["jawaban_benar"],
-        penjelasan=result["penjelasan"],
-    )
-
-    # Step 4: Generate image if requested
-    if include_image:
-        img_meta = _claude_image_metadata(result["soal"], topic)
-        if img_meta:
-            from services.image_service import generate as gen_image
-            img_url = gen_image(
-                img_meta.get("type", ""),
-                img_meta.get("params", {}),
-                topic=topic,
-                question=result["soal"],
-            )
-            result["image_url"] = img_url
 
     return result
