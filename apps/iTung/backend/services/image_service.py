@@ -455,8 +455,8 @@ def _generate_image(prompt: str) -> bytes | None:
         return None
 
 
-def _verify_image(image_bytes: bytes, image_type: str, params: dict, question: str) -> bool:
-    """Send image to Claude Vision to check it matches the question. Returns True if valid."""
+def _verify_image(image_bytes: bytes, image_type: str, params: dict, question: str) -> tuple[bool, str]:
+    """Send image to Claude Vision. Returns (is_valid, feedback) where feedback explains what's wrong."""
     try:
         b64 = base64.standard_b64encode(image_bytes).decode("utf-8")
         verify_prompt = f"""Kamu adalah guru matematika yang memeriksa diagram soal.
@@ -466,15 +466,16 @@ Tipe diagram yang diharapkan: {image_type}
 Parameter: {params}
 
 Periksa gambar ini:
-1. Apakah gambar sesuai dengan soal dan tipe diagram yang diminta?
-2. Apakah nilai/ukuran yang ditampilkan sudah benar sesuai parameter?
+1. Apakah tipe diagram sudah benar (sesuai image_type)?
+2. Apakah nilai/ukuran yang ditampilkan sudah TEPAT sesuai parameter?
 3. Apakah gambar TIDAK menampilkan jawaban atau hasil perhitungan?
 
-Balas HANYA dengan "VALID" jika gambar benar, atau "INVALID" jika gambar salah/tidak sesuai."""
+Jika benar, balas: VALID
+Jika salah, balas: INVALID: [jelaskan secara singkat apa yang salah dan harus diperbaiki]"""
 
         msg = _claude.messages.create(
             model="claude-haiku-4-5-20251001",
-            max_tokens=10,
+            max_tokens=100,
             messages=[{
                 "role": "user",
                 "content": [
@@ -483,12 +484,15 @@ Balas HANYA dengan "VALID" jika gambar benar, atau "INVALID" jika gambar salah/t
                 ],
             }]
         )
-        result = msg.content[0].text.strip().upper()
-        print(f"[image_service] image verification result: {result}")
-        return result.startswith("VALID")
+        result = msg.content[0].text.strip()
+        print(f"[image_service] image verification: {result}")
+        if result.upper().startswith("VALID"):
+            return True, ""
+        feedback = result[result.find(":") + 1:].strip() if ":" in result else result
+        return False, feedback
     except Exception as e:
         print(f"[image_service] image verification failed: {e} — accepting image anyway")
-        return True  # fail open: don't discard image if verifier errors
+        return True, ""  # fail open
 
 
 _GENERATORS = {
@@ -536,19 +540,36 @@ def delete_from_s3(image_url: str) -> bool:
         return False
 
 
+MAX_IMAGE_RETRIES = 2
+
 def generate(image_type: str, params: dict, topic: str = "general", question: str = "") -> str | None:
-    """Generate a math diagram image via OpenRouter, verify with Claude Vision, then upload to S3."""
+    """Generate a math diagram image via OpenRouter, verify with Claude Vision, retry if wrong, then upload to S3."""
     if image_type not in _GENERATORS:
         return None
-    try:
-        prompt = _create_prompt(image_type, params, question) if image_type != 'custom' else params.get('prompt', '')
-        image_bytes = _generate_image(prompt)
-        if not image_bytes:
+
+    base_prompt = _create_prompt(image_type, params, question) if image_type != 'custom' else params.get('prompt', '')
+    prompt = base_prompt
+
+    for attempt in range(1, MAX_IMAGE_RETRIES + 2):  # 1 initial + MAX_IMAGE_RETRIES retries
+        try:
+            print(f"[image_service] generate attempt {attempt} | type={image_type}")
+            image_bytes = _generate_image(prompt)
+            if not image_bytes:
+                return None
+
+            is_valid, feedback = _verify_image(image_bytes, image_type, params, question)
+            if is_valid:
+                return _upload(image_bytes, topic)
+
+            if attempt <= MAX_IMAGE_RETRIES:
+                print(f"[image_service] attempt {attempt} failed — retrying with feedback: {feedback}")
+                prompt = base_prompt + f"\n\nPercobaan sebelumnya SALAH. Perbaiki masalah ini: {feedback}"
+            else:
+                print(f"[image_service] all {MAX_IMAGE_RETRIES + 1} attempts failed — discarding image")
+                return None
+
+        except Exception as e:
+            print(f"[image_service] attempt {attempt} error: {e}")
             return None
-        if not _verify_image(image_bytes, image_type, params, question):
-            print(f"[image_service] image failed verification for type='{image_type}' — discarding")
-            return None
-        return _upload(image_bytes, topic)
-    except Exception as e:
-        print(f"[image_service] Failed to generate '{image_type}': {e}")
-        return None
+
+    return None
