@@ -3,15 +3,20 @@ name: 'Deploy itung.nasir.id'
 on:
   push:
     paths:
-      - 'apps/iTung/**'
+      - 'apps/iTung/frontend/**'
+      - 'apps/iTung/backend/**'
+      - 'apps/iTung/android/**'
     branches:
       - main
   workflow_dispatch:
 
 jobs:
-  deploy-itung:
+  changes:
     runs-on: [self-hosted, nasir-contabo]
-
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      android: ${{ steps.filter.outputs.android }}
     steps:
     - name: Remove stale nested .git directories
       run: find "$GITHUB_WORKSPACE" -mindepth 2 -name ".git" -exec rm -rf {} + 2>/dev/null || true
@@ -19,6 +24,23 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
+    - name: Detect changed paths
+      uses: dorny/paths-filter@v3
+      id: filter
+      with:
+        filters: |
+          backend:
+            - 'apps/iTung/backend/**'
+          frontend:
+            - 'apps/iTung/frontend/**'
+          android:
+            - 'apps/iTung/android/**'
+
+  deploy-backend:
+    needs: changes
+    if: ${{ needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch' }}
+    runs-on: [self-hosted, nasir-contabo]
+    steps:
     - name: Deploy backend
       env:
         FONNTE_TOKEN: ${{ secrets.FONNTE_TOKEN }}
@@ -45,6 +67,11 @@ jobs:
 
         echo "Backend deployed successfully"
 
+  deploy-frontend:
+    needs: changes
+    if: ${{ needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch' }}
+    runs-on: [self-hosted, nasir-contabo]
+    steps:
     - name: Deploy frontend
       env:
         SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
@@ -64,3 +91,48 @@ jobs:
         echo "$SSH_PASSWORD" | sudo -S docker run -d -p 5000:5000 --name itung-frontend itung-frontend:latest
 
         echo "Frontend deployed successfully"
+
+  deploy-android:
+    needs: changes
+    if: ${{ needs.changes.outputs.android == 'true' || github.event_name == 'workflow_dispatch' }}
+    runs-on: [self-hosted, nasir-contabo]
+    steps:
+    - name: Decode keystore
+      run: |
+        echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > $GITHUB_WORKSPACE/apps/iTung/android/android/app/my-release-key.keystore
+
+    - name: Build release AAB and APK
+      working-directory: apps/iTung/android
+      run: |
+        export PATH=$PATH:$HOME/flutter/bin:$HOME/android-sdk/cmdline-tools/latest/bin:$HOME/android-sdk/platform-tools
+        export ANDROID_HOME=$HOME/android-sdk
+
+        flutter pub get
+
+        echo "Building AAB..."
+        flutter build appbundle --release \
+          --dart-define=KEY_STORE_PASSWORD=${{ secrets.KEY_STORE_PASSWORD }} \
+          --dart-define=KEY_ALIAS=${{ secrets.KEY_ALIAS }} \
+          --dart-define=KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}
+
+        echo "Building APK..."
+        flutter build apk --release \
+          --dart-define=KEY_STORE_PASSWORD=${{ secrets.KEY_STORE_PASSWORD }} \
+          --dart-define=KEY_ALIAS=${{ secrets.KEY_ALIAS }} \
+          --dart-define=KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}
+
+    - name: Upload AAB and APK to S3
+      run: |
+        aws s3 rm s3://assets.itung.nasir.id/android/app-release.aab
+        aws s3 cp apps/iTung/android/build/app/outputs/bundle/release/app-release.aab \
+          s3://assets.itung.nasir.id/android/app-release.aab
+        
+        aws s3 rm s3://assets.itung.nasir.id/android/app-release.aab
+        aws s3 cp apps/iTung/android/build/app/outputs/flutter-apk/app-release.apk \
+          s3://assets.itung.nasir.id/android/app-release.apk
+
+        echo "Android AAB and APK uploaded successfully"
+
+    - name: Clean up keystore
+      if: always()
+      run: rm -f $GITHUB_WORKSPACE/apps/iTung/android/android/app/my-release-key.keystore

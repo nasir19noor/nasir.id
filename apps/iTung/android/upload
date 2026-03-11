@@ -1,0 +1,3 @@
+/root/develop/flutter/bin/flutter build apk --release
+aws s3 rm s3://www.nasir.id/uploads/app-release.apk
+aws s3 cp build/app/outputs/flutter-apk/app-release.apk s3://www.nasir.id/uploads/app-release.apk

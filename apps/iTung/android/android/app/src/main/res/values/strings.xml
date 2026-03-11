@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">iTung</string>
+    <!-- Google Sign-In web client ID (used to get idToken the backend can verify) -->
+    <string name="default_web_client_id">943652190384-emo9evfro4d5n6rpabn1artu2brmtm9m.apps.googleusercontent.com</string>
+</resources>
