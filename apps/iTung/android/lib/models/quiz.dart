@@ -104,22 +104,24 @@ class AnswerResult {
 
 class UserStats {
   final int totalSessions;
-  final int completedSessions;
+  final int totalQuestions;
   final double overallAccuracy;
   final List<TopicStat> topicStats;
 
   const UserStats({
     required this.totalSessions,
-    required this.completedSessions,
+    required this.totalQuestions,
     required this.overallAccuracy,
     required this.topicStats,
   });
 
   factory UserStats.fromJson(Map<String, dynamic> json) => UserStats(
         totalSessions: json['total_sessions'] as int? ?? 0,
-        completedSessions: json['completed_sessions'] as int? ?? 0,
-        overallAccuracy: (json['overall_accuracy'] as num?)?.toDouble() ?? 0.0,
-        topicStats: (json['topic_stats'] as List? ?? [])
+        totalQuestions: json['total_questions'] as int? ?? 0,
+        // Backend sends 0.0–1.0, convert to 0–100
+        overallAccuracy: ((json['overall_accuracy'] as num?)?.toDouble() ?? 0.0) * 100,
+        // Backend key is 'topics', not 'topic_stats'
+        topicStats: (json['topics'] as List? ?? [])
             .map((e) => TopicStat.fromJson(e as Map<String, dynamic>))
             .toList(),
       );

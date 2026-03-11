@@ -89,8 +89,8 @@ class _ProgressScreenState extends State<ProgressScreen> {
             children: [
               Expanded(
                 child: _StatCard(
-                  label: 'Total Sesi',
-                  value: '${stats.totalSessions}',
+                  label: 'Soal Dijawab',
+                  value: '${stats.totalQuestions}',
                   icon: Icons.quiz_outlined,
                   color: AppTheme.primary,
                 ),
@@ -98,9 +98,9 @@ class _ProgressScreenState extends State<ProgressScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: _StatCard(
-                  label: 'Selesai',
-                  value: '${stats.completedSessions}',
-                  icon: Icons.check_circle_outline,
+                  label: 'Topik Dipelajari',
+                  value: '${stats.topicStats.length}',
+                  icon: Icons.school_outlined,
                   color: AppTheme.success,
                 ),
               ),
