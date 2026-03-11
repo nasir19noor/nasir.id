@@ -32,6 +32,7 @@ class QuizProvider extends ChangeNotifier {
     required String topic,
     required int totalQuestions,
     required bool useAi,
+    bool includeImages = false,
     String difficultyLevel = 'adaptif',
   }) async {
     _state = QuizState.creating;
@@ -45,6 +46,7 @@ class QuizProvider extends ChangeNotifier {
         topic: topic,
         totalQuestions: totalQuestions,
         useAi: useAi,
+        includeImages: includeImages,
         difficultyLevel: difficultyLevel,
       );
       _currentQuestion = _session!.firstQuestion;

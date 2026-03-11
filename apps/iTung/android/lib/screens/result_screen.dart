@@ -46,7 +46,8 @@ class ResultScreen extends StatelessWidget {
         title: const Text('Hasil Kuis'),
         automaticallyImplyLeading: false,
       ),
-      body: SingleChildScrollView(
+      body: SafeArea(
+        child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
@@ -238,6 +239,7 @@ class ResultScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

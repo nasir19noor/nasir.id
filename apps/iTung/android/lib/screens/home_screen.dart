@@ -20,6 +20,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _selectedTopic;
   int _totalQuestions = 5;
   bool _useAi = true;
+  bool _includeImages = false;
   String _difficulty = 'adaptif';
   String _selectedGrade = 'Dasar';
 
@@ -59,6 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
       topic: _selectedTopic!,
       totalQuestions: _totalQuestions,
       useAi: _useAi,
+      includeImages: _includeImages,
       difficultyLevel: _difficulty,
     );
     if (ok && mounted) context.push('/quiz');
@@ -232,9 +234,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             Slider(
                               value: _totalQuestions.toDouble(),
-                              min: 3,
+                              min: 1,
                               max: 20,
-                              divisions: 17,
+                              divisions: 19,
                               activeColor: AppTheme.primary,
                               label: '$_totalQuestions',
                               onChanged: (v) =>
@@ -250,13 +252,30 @@ class _HomeScreenState extends State<HomeScreen> {
                   // Use AI toggle
                   SwitchListTile(
                     value: _useAi,
-                    onChanged: (v) => setState(() => _useAi = v),
+                    onChanged: (v) => setState(() {
+                      _useAi = v;
+                      if (!v) _includeImages = false;
+                    }),
                     title: const Text('Gunakan AI',
                         style: TextStyle(fontWeight: FontWeight.w600)),
                     subtitle: const Text('Soal dibuat oleh AI secara dinamis'),
                     activeThumbColor: AppTheme.primary,
                     contentPadding: EdgeInsets.zero,
                   ),
+
+                  // Image checkbox — only visible when AI is enabled
+                  if (_useAi)
+                    CheckboxListTile(
+                      value: _includeImages,
+                      onChanged: (v) =>
+                          setState(() => _includeImages = v ?? false),
+                      title: const Text('Tampilkan gambar/diagram',
+                          style: TextStyle(fontWeight: FontWeight.w600)),
+                      subtitle: const Text('Soal dilengkapi ilustrasi visual'),
+                      activeColor: AppTheme.primary,
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                    ),
                   const SizedBox(height: 24),
 
                   SizedBox(
