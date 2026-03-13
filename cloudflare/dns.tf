@@ -205,6 +205,15 @@ resource "cloudflare_record" "assets_itung_nasir_id" {
   ttl     = 3600
 }
 
+resource "cloudflare_record" "tailscale_nasir_id" {
+  zone_id = data.cloudflare_zones.nasir_id.zones[0].id
+  name    = "tailscale.nasir.id"
+  content = "100.87.60.95"
+  type    = "A"
+  proxied = false
+  ttl     = 3600
+}
+
 
 
 
