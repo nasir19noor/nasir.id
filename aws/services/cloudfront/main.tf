@@ -112,7 +112,7 @@ module "cloudfront_pulsara" {
   }
 
   aliases = [local.domain_name_pulsara]
-  comment = "CloudFront distribution for ${local.domain_name_itung}"
+  comment = "CloudFront distribution for ${local.domain_name_pulsara}"
 
   # OAC — keeps assets.pulsara.nasir.id bucket private; only this distribution can access it
   create_origin_access_control = true
@@ -156,13 +156,4 @@ module "cloudfront_pulsara" {
   }
   web_acl_id = "arn:aws:wafv2:us-east-1:647459380434:global/webacl/CreatedByCloudFront-b0d05f91/2ff953c7-42db-4dee-af26-1d933ea236b0"
 }
-
-
-
-
-
-
-
-
-
 
