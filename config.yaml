@@ -20,6 +20,7 @@ aws:
   acm:
     domain_name_nasir: "assets.nasir.id" 
     domain_name_itung_nasir: "assets.itung.nasir.id" 
+    domain_name_pulsara_nasir: "assets.pulsara.nasir.id" 
     create_route53_records: false
     validation_method: "DNS"
   cloudfront:
