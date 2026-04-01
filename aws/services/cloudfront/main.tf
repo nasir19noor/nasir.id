@@ -117,7 +117,7 @@ module "cloudfront_pulsara" {
   # OAC — keeps assets.pulsara.nasir.id bucket private; only this distribution can access it
   create_origin_access_control = true
   origin_access_control = {
-    "assets-itung" = {
+    "assets-pulsara" = {
       description      = "OAC for assets.pulsara.nasir.id"
       origin_type      = "s3"
       signing_behavior = "always"
@@ -154,7 +154,7 @@ module "cloudfront_pulsara" {
     restriction_type = "none"
     locations        = []
   }
-  web_acl_id = "arn:aws:wafv2:us-east-1:647459380434:global/webacl/CreatedByCloudFront-b0d05f91/2ff953c7-42db-4dee-af26-1d933ea236b0"
+  web_acl_id = "arn:aws:wafv2:us-east-1:647459380434:global/webacl/CreatedByCloudFront-d550082b/98f68743-26be-4953-a995-61403d4571e4"
 }
 
 
