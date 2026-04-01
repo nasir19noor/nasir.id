@@ -224,6 +224,15 @@ resource "cloudflare_record" "pulsara_nasir_id" {
   ttl     = 3600
 }
 
+resource "cloudflare_record" "api_pulsara_nasir_id" {
+  zone_id = data.cloudflare_zones.nasir_id.zones[0].id
+  name    = "api.pulsara.nasir.id"
+  content = "207.180.248.214"
+  type    = "A"
+  proxied = false
+  ttl     = 3600
+}
+
 
 
 
