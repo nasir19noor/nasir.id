@@ -154,7 +154,7 @@ module "cloudfront_pulsara" {
     restriction_type = "none"
     locations        = []
   }
-  web_acl_id = "arn:aws:wafv2:us-east-1:647459380434:global/webacl/CreatedByCloudFront-d550082b/98f68743-26be-4953-a995-61403d4571e4"
+  # web_acl_id = "arn:aws:wafv2:us-east-1:647459380434:global/webacl/CreatedByCloudFront-d550082b/98f68743-26be-4953-a995-61403d4571e4"
 }
 
 
