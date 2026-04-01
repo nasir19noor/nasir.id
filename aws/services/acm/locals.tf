@@ -3,7 +3,7 @@ locals {
   region                    = local.config.aws.global.region
   domain_name_nasir         = local.config.aws.acm.domain_name_nasir
   domain_name_itung_nasir   = local.config.aws.acm.domain_name_itung_nasir
-  domain_name_pulsara_nasir = local.config.aws.acm.domain_name_itung_nasir
+  domain_name_pulsara_nasir = local.config.aws.acm.domain_name_pulsara_nasir
   create_route53_records    = local.config.aws.acm.create_route53_records
   validation_method         = local.config.aws.acm.validation_method
 }    
