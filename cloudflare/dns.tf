@@ -235,12 +235,14 @@ resource "cloudflare_record" "api_pulsara_nasir_id" {
 
 resource "cloudflare_record" "assets_pulsara_nasir_id_acm_validation" {
   zone_id = data.cloudflare_zones.nasir_id.zones[0].id
-  name    = "_a6ab5210cd7720a042af22dc5ee21f6a.assets.pulsara.nasir.id.."
+  name    = "_a6ab5210cd7720a042af22dc5ee21f6a.assets.pulsara.nasir.id."
   content = "_95b87eac2e5a5a1f4d34439473614474.jkddzztszm.acm-validations.aws."
   type    = "CNAME"
   proxied = false
   ttl     = 3600
 }
+
+
 
 
 
