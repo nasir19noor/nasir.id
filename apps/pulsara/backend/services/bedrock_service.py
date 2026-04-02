@@ -83,9 +83,9 @@ class BedrockService:
             ('resourcenotfoundexception' in err_str and 'use case details' in err_str)
         )
 
-    def _invoke_with_retry(self, model_id: str, body: dict, max_retries: int = 3) -> dict:
+    def _invoke_with_retry(self, model_id: str, body: dict, max_retries: int = 5) -> dict:
         """Invoke a single model ID with exponential backoff on throttling"""
-        delay = 2
+        delay = 5
         for attempt in range(max_retries):
             try:
                 response = self.bedrock_client.invoke_model(
@@ -96,9 +96,9 @@ class BedrockService:
                 return json.loads(response['body'].read())
             except Exception as e:
                 if self._is_throttling_error(e) and attempt < max_retries - 1:
-                    logger.warning(f"Throttled on attempt {attempt + 1}, retrying in {delay}s...")
+                    logger.warning(f"Throttled on attempt {attempt + 1}/{max_retries}, retrying in {delay}s...")
                     time.sleep(delay)
-                    delay *= 2
+                    delay = min(delay * 2, 60)
                     continue
                 raise
 
