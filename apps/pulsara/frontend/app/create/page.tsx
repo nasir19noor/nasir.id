@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -23,7 +23,7 @@ interface AIFeature {
   loading: boolean
 }
 
-export default function CreatePost() {
+function CreatePostInner() {
   const searchParams = useSearchParams()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [preview, setPreview] = useState(false)
@@ -506,5 +506,13 @@ export default function CreatePost() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function CreatePost() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" /></div>}>
+      <CreatePostInner />
+    </Suspense>
   )
 }
