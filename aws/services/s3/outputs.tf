@@ -29,7 +29,7 @@ output "s3_nasir_arn" {
 output "s3_itung_id" {
   value = module.s3_itung.s3_bucket_id
 }
-output "s3_nasir_arn" {
+output "s3_itung_arn" {
   value = module.s3_itung.s3_bucket_arn
 }
 
