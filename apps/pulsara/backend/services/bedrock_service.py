@@ -22,6 +22,11 @@ class BedrockService:
             aws_access_key = os.getenv('AWS_ACCESS_KEY_ID')
             aws_secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
             
+            logger.info(f"AWS_ACCESS_KEY_ID present: {bool(aws_access_key)}")
+            logger.info(f"AWS_SECRET_ACCESS_KEY present: {bool(aws_secret_key)}")
+            logger.info(f"Bedrock region: {self.region}")
+            logger.info(f"Bedrock model: {self.model_id}")
+            
             if not aws_access_key or not aws_secret_key:
                 logger.warning("AWS credentials not found in environment variables")
                 self.bedrock_client = None
