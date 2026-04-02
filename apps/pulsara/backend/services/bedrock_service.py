@@ -75,10 +75,12 @@ class BedrockService:
         """Invoke model with proper handling for inference profiles"""
         try:
             if self.use_inference_profile:
+                failed_attempts = []
+
                 # Priority 1: Use configured inference profile ARN if available
                 if self.inference_profile_arn:
                     try:
-                        logger.info(f"Using configured inference profile ARN: {self.inference_profile_arn}")
+                        logger.info(f"Attempting configured inference profile ARN: {self.inference_profile_arn}")
                         response = self.bedrock_client.invoke_model(
                             modelId=self.inference_profile_arn,
                             body=json.dumps(body),
@@ -87,12 +89,14 @@ class BedrockService:
                         logger.info(f"SUCCESS: Used inference profile ARN: {self.inference_profile_arn}")
                         return json.loads(response['body'].read())
                     except Exception as e:
-                        logger.warning(f"Failed with configured ARN {self.inference_profile_arn}: {str(e)[:100]}...")
-                
+                        err = str(e)
+                        logger.error(f"FAILED with configured ARN {self.inference_profile_arn}: {err}")
+                        failed_attempts.append(f"ARN '{self.inference_profile_arn}': {err}")
+
                 # Priority 2: Use configured inference profile ID if available
                 if self.inference_profile_id:
                     try:
-                        logger.info(f"Using configured inference profile ID: {self.inference_profile_id}")
+                        logger.info(f"Attempting configured inference profile ID: {self.inference_profile_id}")
                         response = self.bedrock_client.invoke_model(
                             modelId=self.inference_profile_id,
                             body=json.dumps(body),
@@ -101,16 +105,18 @@ class BedrockService:
                         logger.info(f"SUCCESS: Used inference profile ID: {self.inference_profile_id}")
                         return json.loads(response['body'].read())
                     except Exception as e:
-                        logger.warning(f"Failed with configured ID {self.inference_profile_id}: {str(e)[:100]}...")
-                
+                        err = str(e)
+                        logger.error(f"FAILED with configured ID {self.inference_profile_id}: {err}")
+                        failed_attempts.append(f"ID '{self.inference_profile_id}': {err}")
+
                 # Priority 3: If the model_id is already an inference profile ID or ARN, use it directly
-                if (self.model_id.startswith('apac.') or 
-                    self.model_id.startswith('us.') or 
-                    self.model_id.startswith('eu.') or 
+                if (self.model_id.startswith('apac.') or
+                    self.model_id.startswith('us.') or
+                    self.model_id.startswith('eu.') or
                     self.model_id.startswith('arn:aws:bedrock')):
-                    
+
                     try:
-                        logger.info(f"Using model_id as inference profile: {self.model_id}")
+                        logger.info(f"Attempting model_id as inference profile: {self.model_id}")
                         response = self.bedrock_client.invoke_model(
                             modelId=self.model_id,
                             body=json.dumps(body),
@@ -119,42 +125,22 @@ class BedrockService:
                         logger.info(f"SUCCESS: Used model_id as inference profile: {self.model_id}")
                         return json.loads(response['body'].read())
                     except Exception as e:
-                        logger.warning(f"Failed with model_id {self.model_id}: {str(e)[:100]}...")
-                
-                # Priority 4: Try common inference profile patterns as fallback
-                inference_profiles = [
-                    # APAC profiles (for Asia-Pacific region)
-                    "apac.anthropic.claude-4-sonnet-20250514-v1:0",
-                    "apac.anthropic.claude-sonnet-4-20250514-v1:0", 
-                    # Cross-region profiles
-                    "us.anthropic.claude-4-sonnet-20250514-v1:0",
-                    "us.anthropic.claude-sonnet-4-20250514-v1:0", 
-                    "cross-region.anthropic.claude-4-sonnet-20250514-v1:0",
-                    "cross-region.anthropic.claude-sonnet-4-20250514-v1:0",
-                    # Regional profiles
-                    f"us-east-1.anthropic.claude-4-sonnet-20250514-v1:0",
-                    f"us-west-2.anthropic.claude-4-sonnet-20250514-v1:0",
-                    # Generic patterns
-                    "us.anthropic.claude-4-sonnet-v1:0",
-                    "us.anthropic.claude-sonnet-4-v1:0",
-                ]
-                
-                for profile_id in inference_profiles:
-                    try:
-                        logger.info(f"Trying fallback inference profile: {profile_id}")
-                        response = self.bedrock_client.invoke_model(
-                            modelId=profile_id,
-                            body=json.dumps(body),
-                            contentType='application/json'
-                        )
-                        logger.info(f"SUCCESS: Used fallback inference profile: {profile_id}")
-                        return json.loads(response['body'].read())
-                    except Exception as e:
-                        logger.warning(f"Failed with profile {profile_id}: {str(e)[:100]}...")
-                        continue
-                
-                # If all inference profiles fail, provide helpful error message
-                raise Exception(f"No valid inference profile found. Please check BEDROCK_INFERENCE_PROFILE_ID or BEDROCK_INFERENCE_PROFILE_ARN in environment variables, or verify available profiles in AWS Bedrock console for region {self.region}")
+                        err = str(e)
+                        logger.error(f"FAILED with model_id {self.model_id}: {err}")
+                        failed_attempts.append(f"model_id '{self.model_id}': {err}")
+
+                # If configured IDs failed, raise immediately with the actual errors rather than
+                # trying unrelated fallback patterns that are unlikely to work
+                if failed_attempts:
+                    raise Exception(
+                        f"Configured inference profile(s) failed in region {self.region}. "
+                        f"Errors: {' | '.join(failed_attempts)}"
+                    )
+
+                raise Exception(
+                    f"No inference profile configured. Set BEDROCK_INFERENCE_PROFILE_ID or "
+                    f"BEDROCK_INFERENCE_PROFILE_ARN in environment variables."
+                )
             else:
                 # For older models, use direct model ID
                 response = self.bedrock_client.invoke_model(
@@ -163,7 +149,7 @@ class BedrockService:
                     contentType='application/json'
                 )
                 return json.loads(response['body'].read())
-                
+
         except Exception as e:
             logger.error(f"Error invoking model: {e}")
             raise e
