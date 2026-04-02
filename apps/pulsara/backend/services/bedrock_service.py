@@ -5,6 +5,7 @@ AWS Bedrock Service for AI-powered content creation
 import boto3
 import json
 import os
+import time
 from typing import List, Dict, Optional
 from datetime import datetime
 import logging
@@ -71,6 +72,36 @@ class BedrockService:
             }
         return None
 
+    def _is_throttling_error(self, error: Exception) -> bool:
+        """Detect throttling/rate-limit errors, including misleading ResourceNotFoundException from Bedrock"""
+        err_str = str(error).lower()
+        return (
+            'throttling' in err_str or
+            'toomanyrequests' in err_str or
+            'rate exceeded' in err_str or
+            # Bedrock sometimes returns ResourceNotFoundException when throttled
+            ('resourcenotfoundexception' in err_str and 'use case details' in err_str)
+        )
+
+    def _invoke_with_retry(self, model_id: str, body: dict, max_retries: int = 3) -> dict:
+        """Invoke a single model ID with exponential backoff on throttling"""
+        delay = 2
+        for attempt in range(max_retries):
+            try:
+                response = self.bedrock_client.invoke_model(
+                    modelId=model_id,
+                    body=json.dumps(body),
+                    contentType='application/json'
+                )
+                return json.loads(response['body'].read())
+            except Exception as e:
+                if self._is_throttling_error(e) and attempt < max_retries - 1:
+                    logger.warning(f"Throttled on attempt {attempt + 1}, retrying in {delay}s...")
+                    time.sleep(delay)
+                    delay *= 2
+                    continue
+                raise
+
     def _invoke_model(self, body: dict) -> dict:
         """Invoke model with proper handling for inference profiles"""
         try:
@@ -81,13 +112,9 @@ class BedrockService:
                 if self.inference_profile_arn:
                     try:
                         logger.info(f"Attempting configured inference profile ARN: {self.inference_profile_arn}")
-                        response = self.bedrock_client.invoke_model(
-                            modelId=self.inference_profile_arn,
-                            body=json.dumps(body),
-                            contentType='application/json'
-                        )
+                        result = self._invoke_with_retry(self.inference_profile_arn, body)
                         logger.info(f"SUCCESS: Used inference profile ARN: {self.inference_profile_arn}")
-                        return json.loads(response['body'].read())
+                        return result
                     except Exception as e:
                         err = str(e)
                         logger.error(f"FAILED with configured ARN {self.inference_profile_arn}: {err}")
@@ -97,13 +124,9 @@ class BedrockService:
                 if self.inference_profile_id:
                     try:
                         logger.info(f"Attempting configured inference profile ID: {self.inference_profile_id}")
-                        response = self.bedrock_client.invoke_model(
-                            modelId=self.inference_profile_id,
-                            body=json.dumps(body),
-                            contentType='application/json'
-                        )
+                        result = self._invoke_with_retry(self.inference_profile_id, body)
                         logger.info(f"SUCCESS: Used inference profile ID: {self.inference_profile_id}")
-                        return json.loads(response['body'].read())
+                        return result
                     except Exception as e:
                         err = str(e)
                         logger.error(f"FAILED with configured ID {self.inference_profile_id}: {err}")
@@ -117,20 +140,14 @@ class BedrockService:
 
                     try:
                         logger.info(f"Attempting model_id as inference profile: {self.model_id}")
-                        response = self.bedrock_client.invoke_model(
-                            modelId=self.model_id,
-                            body=json.dumps(body),
-                            contentType='application/json'
-                        )
+                        result = self._invoke_with_retry(self.model_id, body)
                         logger.info(f"SUCCESS: Used model_id as inference profile: {self.model_id}")
-                        return json.loads(response['body'].read())
+                        return result
                     except Exception as e:
                         err = str(e)
                         logger.error(f"FAILED with model_id {self.model_id}: {err}")
                         failed_attempts.append(f"model_id '{self.model_id}': {err}")
 
-                # If configured IDs failed, raise immediately with the actual errors rather than
-                # trying unrelated fallback patterns that are unlikely to work
                 if failed_attempts:
                     raise Exception(
                         f"Configured inference profile(s) failed in region {self.region}. "
@@ -142,13 +159,7 @@ class BedrockService:
                     f"BEDROCK_INFERENCE_PROFILE_ARN in environment variables."
                 )
             else:
-                # For older models, use direct model ID
-                response = self.bedrock_client.invoke_model(
-                    modelId=self.model_id,
-                    body=json.dumps(body),
-                    contentType='application/json'
-                )
-                return json.loads(response['body'].read())
+                return self._invoke_with_retry(self.model_id, body)
 
         except Exception as e:
             logger.error(f"Error invoking model: {e}")
