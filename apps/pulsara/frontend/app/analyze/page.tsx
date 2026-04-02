@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import {
   ArrowLeft, Brain, TrendingUp, Sparkles, RefreshCw,
-  User, Hash, MessageSquare, AlertCircle, CheckCircle, ChevronRight
+  User, AlertCircle, CheckCircle, ChevronRight, Globe
 } from 'lucide-react'
 
 interface PersonalityProfile {
@@ -29,6 +29,7 @@ export default function AnalyzePage() {
   const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([])
   const [loadingTrends, setLoadingTrends] = useState(false)
   const [trendCategory, setTrendCategory] = useState('')
+  const [trendRegion, setTrendRegion] = useState('')
   const [trendsError, setTrendsError] = useState('')
 
   const [selectedTopics, setSelectedTopics] = useState<string[]>([])
@@ -54,8 +55,10 @@ export default function AnalyzePage() {
     setLoadingTrends(true)
     setTrendsError('')
     try {
-      const params = trendCategory ? `?category=${encodeURIComponent(trendCategory)}` : ''
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/ai/trending-topics${params}`)
+      const qs = new URLSearchParams()
+      if (trendCategory) qs.set('category', trendCategory)
+      if (trendRegion) qs.set('region', trendRegion)
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/ai/trending-topics?${qs.toString()}`)
       const data = await res.json()
       if (!res.ok) throw new Error(data.detail || 'Failed to fetch trends')
       setTrendingTopics(data.topics || [])
@@ -200,29 +203,76 @@ export default function AnalyzePage() {
               </div>
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">Trending Now</h2>
-                <p className="text-xs text-gray-500">AI-curated topics for Threads</p>
+                <p className="text-xs text-gray-500">
+                  {trendingTopics.length > 0
+                    ? `${trendRegion || 'Global'}${trendCategory ? ` · ${trendCategory}` : ''}`
+                    : 'AI-curated topics for Threads'}
+                </p>
               </div>
             </div>
 
-            <div className="flex space-x-2 mb-4">
+            <div className="space-y-2 mb-4">
               <input
                 type="text"
                 value={trendCategory}
                 onChange={e => setTrendCategory(e.target.value)}
-                placeholder="Niche (e.g. tech, fitness)..."
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                placeholder="Niche (e.g. tech, fitness, fashion)..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
-              <button
-                onClick={fetchTrending}
-                disabled={loadingTrends}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center space-x-1"
-              >
-                {loadingTrends ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                ) : (
-                  <RefreshCw className="w-4 h-4" />
-                )}
-              </button>
+              <div className="flex space-x-2">
+                <div className="relative flex-1">
+                  <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                  <select
+                    value={trendRegion}
+                    onChange={e => setTrendRegion(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent appearance-none bg-white"
+                  >
+                    <option value="">Global</option>
+                    <optgroup label="Asia Pacific">
+                      <option value="Indonesia">Indonesia</option>
+                      <option value="Malaysia">Malaysia</option>
+                      <option value="Singapore">Singapore</option>
+                      <option value="Philippines">Philippines</option>
+                      <option value="Thailand">Thailand</option>
+                      <option value="Vietnam">Vietnam</option>
+                      <option value="Japan">Japan</option>
+                      <option value="South Korea">South Korea</option>
+                      <option value="India">India</option>
+                      <option value="Australia">Australia</option>
+                    </optgroup>
+                    <optgroup label="Americas">
+                      <option value="United States">United States</option>
+                      <option value="Canada">Canada</option>
+                      <option value="Brazil">Brazil</option>
+                      <option value="Mexico">Mexico</option>
+                    </optgroup>
+                    <optgroup label="Europe">
+                      <option value="United Kingdom">United Kingdom</option>
+                      <option value="Germany">Germany</option>
+                      <option value="France">France</option>
+                      <option value="Spain">Spain</option>
+                      <option value="Italy">Italy</option>
+                    </optgroup>
+                    <optgroup label="Middle East & Africa">
+                      <option value="Saudi Arabia">Saudi Arabia</option>
+                      <option value="UAE">UAE</option>
+                      <option value="Nigeria">Nigeria</option>
+                      <option value="South Africa">South Africa</option>
+                    </optgroup>
+                  </select>
+                </div>
+                <button
+                  onClick={fetchTrending}
+                  disabled={loadingTrends}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center space-x-1 whitespace-nowrap"
+                >
+                  {loadingTrends ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                  ) : (
+                    <RefreshCw className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
             </div>
 
             {trendsError && (

@@ -409,7 +409,7 @@ class BedrockService:
             logger.error(f"Error analyzing personality: {e}")
             return {"error": f"Failed to analyze personality: {str(e)}"}
 
-    async def get_trending_topics(self, category: str = None) -> Dict:
+    async def get_trending_topics(self, category: str = None, region: str = None) -> Dict:
         """Get currently trending topics suitable for Threads content"""
         error_check = self._check_client()
         if error_check:
@@ -419,28 +419,31 @@ class BedrockService:
             from datetime import date
             today = date.today().strftime("%B %d, %Y")
             category_context = f" in the {category} niche" if category else ""
+            region_context = f" Focus on trends specific to {region}." if region else " Focus on global trends."
 
             system_prompt = f"""You are a social media trends analyst.
             Today is {today}.
 
             Generate 6 trending topics{category_context} that would perform well on Threads right now.
-            Consider tech, culture, wellness, AI, lifestyle, and current events.
+            {region_context}
+            Consider tech, culture, wellness, AI, lifestyle, and current events relevant to the specified location.
 
             Return ONLY a valid JSON array:
             [
                 {{
                     "topic": "Topic name",
                     "hashtags": ["#hashtag1", "#hashtag2", "#hashtag3"],
-                    "why_trending": "One sentence on why this topic is hot right now"
+                    "why_trending": "One sentence on why this topic is hot right now in the specified region"
                 }}
             ]
             """
 
+            region_label = region or "Global"
             body = {
                 "anthropic_version": "bedrock-2023-05-31",
                 "max_tokens": 800,
                 "system": system_prompt,
-                "messages": [{"role": "user", "content": f"Generate 6 trending topics for Threads{category_context} as of {today}"}],
+                "messages": [{"role": "user", "content": f"Generate 6 trending topics for Threads{category_context} in {region_label} as of {today}"}],
             }
 
             response_body = self._invoke_model(body)
@@ -453,7 +456,7 @@ class BedrockService:
                 m = re.search(r"\[.*\]", result_text, re.DOTALL)
                 topics = json.loads(m.group()) if m else []
 
-            return {"topics": topics, "category": category, "generated_at": datetime.now().isoformat()}
+            return {"topics": topics, "category": category, "region": region or "Global", "generated_at": datetime.now().isoformat()}
 
         except Exception as e:
             logger.error(f"Error getting trending topics: {e}")

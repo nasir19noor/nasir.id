@@ -1,12 +1,13 @@
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse
 from typing import Optional, List
 from datetime import datetime, timedelta
 import uvicorn
 import uuid
 import os
 import boto3
+import requests as http_requests
 
 from models import (
     PostCreate, PostUpdate, PostResponse, AnalyticsOverview,
@@ -366,6 +367,101 @@ async def analyze_sentiment(request: SentimentAnalysisRequest):
     
     return result
 
+THREADS_APP_ID = os.getenv("THREADS_CLIENT_ID", "905950879151394")
+THREADS_APP_SECRET = os.getenv("THREADS_CLIENT_SECRET", "")
+THREADS_REDIRECT_URI = os.getenv("THREADS_REDIRECT_URI", "https://api.pulsara.nasir.id/api/auth/threads/callback")
+
+
+@app.get("/api/auth/threads")
+async def threads_auth_start():
+    """Redirect to Threads OAuth authorization page"""
+    auth_url = (
+        f"https://threads.net/oauth/authorize"
+        f"?client_id={THREADS_APP_ID}"
+        f"&redirect_uri={THREADS_REDIRECT_URI}"
+        f"&scope=threads_basic,threads_content_publish"
+        f"&response_type=code"
+    )
+    return RedirectResponse(url=auth_url)
+
+
+@app.get("/api/auth/threads/callback")
+async def threads_auth_callback(code: str = None, error: str = None, error_description: str = None):
+    """Handle Threads OAuth callback and exchange code for access token"""
+    if error:
+        return HTMLResponse(content=f"""
+        <html><body style="font-family:sans-serif;padding:2rem;max-width:600px;margin:0 auto">
+            <h2 style="color:#dc2626">OAuth Error</h2>
+            <p><strong>{error}</strong>: {error_description or ''}</p>
+        </body></html>
+        """)
+
+    if not code:
+        raise HTTPException(status_code=400, detail="No authorization code received")
+
+    # Exchange code for short-lived token
+    try:
+        token_res = http_requests.post(
+            "https://graph.threads.net/oauth/access_token",
+            data={
+                "client_id": THREADS_APP_ID,
+                "client_secret": THREADS_APP_SECRET,
+                "grant_type": "authorization_code",
+                "redirect_uri": THREADS_REDIRECT_URI,
+                "code": code,
+            },
+            timeout=10,
+        )
+        token_data = token_res.json()
+        if "error" in token_data:
+            raise ValueError(token_data["error"].get("message", str(token_data["error"])))
+
+        short_token = token_data["access_token"]
+
+        # Exchange for long-lived token (60 days)
+        long_res = http_requests.get(
+            "https://graph.threads.net/access_token",
+            params={
+                "grant_type": "th_exchange_token",
+                "client_secret": THREADS_APP_SECRET,
+                "access_token": short_token,
+            },
+            timeout=10,
+        )
+        long_data = long_res.json()
+        if "error" in long_data:
+            raise ValueError(long_data["error"].get("message", str(long_data["error"])))
+
+        long_token = long_data.get("access_token", short_token)
+        expires_in = long_data.get("expires_in", 0)
+        days = round(expires_in / 86400)
+
+        return HTMLResponse(content=f"""
+        <html><body style="font-family:sans-serif;padding:2rem;max-width:700px;margin:0 auto">
+            <h2 style="color:#16a34a">✓ Threads Connected Successfully</h2>
+            <p>Copy this token into your backend <code>.env</code> file:</p>
+            <pre style="background:#f3f4f6;padding:1rem;border-radius:8px;word-break:break-all;white-space:pre-wrap;border:1px solid #e5e7eb"><code>THREADS_ACCESS_TOKEN={long_token}</code></pre>
+            <p style="color:#6b7280;font-size:0.875rem">This token is valid for <strong>{days} days</strong>. Restart your backend after updating <code>.env</code>.</p>
+            <script>
+              document.querySelector('pre').addEventListener('click', function() {{
+                navigator.clipboard.writeText('{long_token}');
+                this.style.background='#dcfce7';
+                setTimeout(()=>this.style.background='#f3f4f6', 1000);
+              }});
+            </script>
+            <p style="color:#6b7280;font-size:0.875rem">💡 Click the token box to copy.</p>
+        </body></html>
+        """)
+
+    except Exception as e:
+        return HTMLResponse(content=f"""
+        <html><body style="font-family:sans-serif;padding:2rem;max-width:600px;margin:0 auto">
+            <h2 style="color:#dc2626">Token Exchange Failed</h2>
+            <p>{str(e)}</p>
+        </body></html>
+        """)
+
+
 @app.get("/api/threads/my-posts")
 async def get_my_threads_posts(limit: int = 25):
     """Fetch the authenticated user's Threads posts for personality analysis"""
@@ -382,11 +478,15 @@ async def get_my_threads_posts(limit: int = 25):
 @app.post("/api/ai/analyze-personality")
 async def analyze_personality():
     """Fetch user's Threads posts and analyze their writing personality"""
-    posts = threads_service.get_user_posts_for_analysis(limit=25)
+    try:
+        posts = threads_service.get_user_posts_for_analysis(limit=25)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
     if not posts:
         raise HTTPException(
             status_code=400,
-            detail="No Threads posts found. Set THREADS_ACCESS_TOKEN in your environment.",
+            detail="No Threads posts found. Make sure THREADS_ACCESS_TOKEN is a valid user access token and your account has posts.",
         )
     result = await bedrock_service.analyze_personality(posts)
     if "error" in result:
@@ -395,9 +495,9 @@ async def analyze_personality():
 
 
 @app.get("/api/ai/trending-topics")
-async def get_trending_topics(category: Optional[str] = None):
-    """Get AI-generated trending topics for Threads content"""
-    result = await bedrock_service.get_trending_topics(category=category)
+async def get_trending_topics(category: Optional[str] = None, region: Optional[str] = None):
+    """Get AI-generated trending topics for Threads content, optionally filtered by category and region"""
+    result = await bedrock_service.get_trending_topics(category=category, region=region)
     if "error" in result:
         raise HTTPException(status_code=503, detail=result["error"])
     return result

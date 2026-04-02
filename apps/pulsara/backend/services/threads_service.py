@@ -33,19 +33,23 @@ class ThreadsService:
             response = requests.get(
                 f"{THREADS_API_BASE}/me/threads",
                 params={
-                    "fields": "id,text,timestamp,like_count,replies_count,reposts_count",
+                    "fields": "id,text,timestamp,media_type,permalink",
                     "limit": limit,
                     "access_token": self.access_token,
                 },
                 timeout=10,
             )
-            response.raise_for_status()
+            if not response.ok:
+                logger.error(f"Threads API error {response.status_code}: {response.text}")
+                raise ValueError(f"Threads API returned {response.status_code}: {response.json().get('error', {}).get('message', response.text)}")
             data = response.json()
-            # Filter out posts with no text (media-only posts)
+            # Filter out media-only posts that have no text
             return [p for p in data.get("data", []) if p.get("text")]
+        except ValueError:
+            raise
         except Exception as e:
             logger.error(f"Failed to fetch Threads posts: {e}")
-            return []
+            raise
 
     async def authenticate(self, client_id: str, client_secret: str) -> bool:
         """Authenticate with Threads API"""
