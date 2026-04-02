@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class BedrockService:
     def __init__(self):
         self.region = os.getenv('BEDROCK_REGION', 'us-east-1')
-        self.model_id = os.getenv('BEDROCK_MODEL_ID', 'anthropic.claude-3-sonnet-20240229-v1:0')
+        self.model_id = os.getenv('BEDROCK_MODEL_ID', 'anthropic.claude-sonnet-4-20250514-v1:0')
         
         # Initialize Bedrock client
         try:
