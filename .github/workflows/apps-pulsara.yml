@@ -44,7 +44,7 @@ jobs:
       run: |
         echo "Pulling .env from S3..."
         rm -f .env
-        aws s3 cp s3://assets.pulsara.nasir.id/pulsara/backend/.env .env || echo "No .env file found in S3, using defaults"
+        aws s3 cp s3://assets.pulsara.nasir.id/backend/.env .env || echo "No .env file found in S3, using defaults"
 
         echo "Stopping and removing existing backend container..."
         echo "$SSH_PASSWORD" | sudo -S docker stop pulsara-backend 2>/dev/null || true
