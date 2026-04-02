@@ -242,6 +242,15 @@ resource "cloudflare_record" "assets_pulsara_nasir_id_acm_validation" {
   ttl     = 3600
 }
 
+resource "cloudflare_record" "assets_pulsara_nasir_id" {
+  zone_id = data.cloudflare_zones.nasir_id.zones[0].id
+  name    = "assets.pulsara.nasir.id"
+  content = "d16s0060jmlqqo.cloudfront.net"
+  type    = "CNAME"
+  proxied = false
+  ttl     = 3600
+}
+
 
 
 
