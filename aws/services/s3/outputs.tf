@@ -25,3 +25,17 @@ output "s3_nasir_id" {
 output "s3_nasir_arn" {
   value = module.s3_nasir.s3_bucket_arn
 }
+
+output "s3_itung_id" {
+  value = module.s3_itung.s3_bucket_id
+}
+output "s3_nasir_arn" {
+  value = module.s3_itung.s3_bucket_arn
+}
+
+output "s3_pulsara_id" {
+  value = module.s3_pulsara.s3_bucket_id
+}
+output "s3_pulsara_arn" {
+  value = module.s3_pulsara.s3_bucket_arn
+}

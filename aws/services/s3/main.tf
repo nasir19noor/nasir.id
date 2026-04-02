@@ -126,6 +126,45 @@ resource "aws_s3_bucket_policy" "nasir_itung_cloudfront_only" {
   })
 }
 
+module "s3_pulsara" {
+  source = "git::https://github.com/nasir19noor/terraform.git//aws/modules/s3"
+  bucket = "assets.pulsara.nasir.id"
+  # Bucket remains private; CloudFront OAC has exclusive access via the policy below
+}
+
+resource "time_sleep" "wait_for_s3_pulsara" {
+  depends_on      = [module.s3_pulsara]
+  create_duration = "10s"
+}
+
+resource "aws_s3_bucket_policy" "nasir_pulsara_cloudfront_only" {
+  bucket = module.s3_pulsara.s3_bucket_id
+  depends_on = [time_sleep.wait_for_s3_pulsara]
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AllowCloudFrontOACUploads"
+        Effect = "Allow"
+        Principal = {
+          Service = "cloudfront.amazonaws.com"
+        }
+        Action   = "s3:GetObject"
+        Resource = [
+          "${module.s3_pulsara.s3_bucket_arn}/uploads/*"
+                   ]
+        Condition = {
+          StringEquals = {
+            "AWS:SourceArn" = data.terraform_remote_state.cloudfront.outputs.cloudfront_pulsara_distribution_arn
+          }
+        }
+      }
+    ]
+  })
+}
+
+
 
 
 
