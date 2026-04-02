@@ -1,0 +1,90 @@
+name: 'Deploy Pulsara'
+
+on:
+  push:
+    paths:
+      - 'apps/pulsara/frontend/**'
+      - 'apps/pulsara/backend/**'
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  changes:
+    runs-on: [self-hosted, nasir-contabo]
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+    - name: Remove stale nested .git directories
+      run: find "$GITHUB_WORKSPACE" -mindepth 2 -name ".git" -exec rm -rf {} + 2>/dev/null || true
+
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Detect changed paths
+      uses: dorny/paths-filter@v3
+      id: filter
+      with:
+        filters: |
+          backend:
+            - 'apps/pulsara/backend/**'
+          frontend:
+            - 'apps/pulsara/frontend/**'
+
+  deploy-backend:
+    needs: changes
+    if: ${{ needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch' }}
+    runs-on: [self-hosted, nasir-contabo]
+    steps:
+    - name: Deploy backend
+      env:
+        SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+      working-directory: apps/pulsara/backend
+      run: |
+        echo "Pulling .env from S3..."
+        rm -f .env
+        aws s3 cp s3://assets.pulsara.nasir.id/pulsara/backend/.env .env || echo "No .env file found in S3, using defaults"
+
+        echo "Stopping and removing existing backend container..."
+        echo "$SSH_PASSWORD" | sudo -S docker stop pulsara-backend 2>/dev/null || true
+        echo "$SSH_PASSWORD" | sudo -S docker rm pulsara-backend 2>/dev/null || true
+        echo "$SSH_PASSWORD" | sudo -S docker rmi pulsara-backend:latest 2>/dev/null || true
+
+        echo "Building backend image..."
+        echo "$SSH_PASSWORD" | sudo -S docker build -t pulsara-backend:latest .
+
+        echo "Running backend container..."
+        if [ -f .env ]; then
+          echo "$SSH_PASSWORD" | sudo -S docker run -d -p 9001:9001 \
+            --env-file .env --name pulsara-backend pulsara-backend:latest
+        else
+          echo "$SSH_PASSWORD" | sudo -S docker run -d -p 9001:9001 \
+            --name pulsara-backend pulsara-backend:latest
+        fi
+
+        echo "Backend deployed successfully"
+
+  deploy-frontend:
+    needs: changes
+    if: ${{ needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch' }}
+    runs-on: [self-hosted, nasir-contabo]
+    steps:
+    - name: Deploy frontend
+      env:
+        SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+      working-directory: apps/pulsara/frontend
+      run: |
+        echo "Stopping and removing existing frontend container..."
+        echo "$SSH_PASSWORD" | sudo -S docker stop pulsara-frontend 2>/dev/null || true
+        echo "$SSH_PASSWORD" | sudo -S docker rm pulsara-frontend 2>/dev/null || true
+
+        echo "Building frontend image..."
+        echo "$SSH_PASSWORD" | sudo -S docker build \
+          --build-arg NEXT_PUBLIC_API_URL=https://api.pulsara.nasir.id \
+          -t pulsara-frontend:latest .
+
+        echo "Running frontend container..."
+        echo "$SSH_PASSWORD" | sudo -S docker run -d -p 5001:5001 --name pulsara-frontend pulsara-frontend:latest
+
+        echo "Frontend deployed successfully"
