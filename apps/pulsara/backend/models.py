@@ -95,3 +95,28 @@ class PostingTimeRequest(BaseModel):
 
 class SentimentAnalysisRequest(BaseModel):
     content: str = Field(..., min_length=1, max_length=500)
+
+# Personality & Trending Models
+class PersonalityProfile(BaseModel):
+    tone: str
+    writing_style: str
+    common_topics: List[str]
+    personality_summary: str
+    analyzed_posts_count: int
+
+class TrendingTopic(BaseModel):
+    topic: str
+    hashtags: List[str]
+    why_trending: str
+
+class TrendingTopicsResponse(BaseModel):
+    topics: List[TrendingTopic]
+    category: Optional[str] = None
+    generated_at: str
+
+class PersonalizedContentRequest(BaseModel):
+    prompt: str = Field(..., min_length=1, max_length=500)
+    personality_summary: Optional[str] = None
+    trending_topics: Optional[List[str]] = None
+    tone: ContentTone = ContentTone.CASUAL
+    maxLength: int = Field(default=500, ge=50, le=500)

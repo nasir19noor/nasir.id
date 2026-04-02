@@ -363,6 +363,160 @@ class BedrockService:
             logger.error(f"Error suggesting posting time: {e}")
             return {"error": f"Failed to suggest posting time: {str(e)}"}
 
+    async def analyze_personality(self, posts: list) -> Dict:
+        """Analyze user's writing personality from their Threads posts"""
+        error_check = self._check_client()
+        if error_check:
+            return error_check
+
+        try:
+            posts_text = "\n---\n".join(p.get("text", p) if isinstance(p, dict) else p for p in posts[:25])
+
+            system_prompt = """You are a social media personality analyst.
+            Analyze the provided Threads posts and extract the user's authentic writing personality.
+
+            Return ONLY a valid JSON object with exactly these fields:
+            {
+                "tone": "dominant tone (e.g. casual, witty, inspirational, technical, conversational)",
+                "writing_style": "1-2 sentences describing their writing style",
+                "common_topics": ["topic1", "topic2", "topic3", "topic4", "topic5"],
+                "personality_summary": "2-3 sentences capturing their voice and what makes their content unique"
+            }
+            """
+
+            body = {
+                "anthropic_version": "bedrock-2023-05-31",
+                "max_tokens": 600,
+                "system": system_prompt,
+                "messages": [{"role": "user", "content": f"Analyze these Threads posts:\n\n{posts_text}"}],
+            }
+
+            response_body = self._invoke_model(body)
+            result_text = response_body["content"][0]["text"].strip()
+
+            try:
+                personality_data = json.loads(result_text)
+            except json.JSONDecodeError:
+                import re
+                m = re.search(r"\{.*\}", result_text, re.DOTALL)
+                personality_data = json.loads(m.group()) if m else {"personality_summary": result_text}
+
+            personality_data["analyzed_posts_count"] = len(posts)
+
+            return {"personality": personality_data, "analyzed_at": datetime.now().isoformat()}
+
+        except Exception as e:
+            logger.error(f"Error analyzing personality: {e}")
+            return {"error": f"Failed to analyze personality: {str(e)}"}
+
+    async def get_trending_topics(self, category: str = None) -> Dict:
+        """Get currently trending topics suitable for Threads content"""
+        error_check = self._check_client()
+        if error_check:
+            return error_check
+
+        try:
+            from datetime import date
+            today = date.today().strftime("%B %d, %Y")
+            category_context = f" in the {category} niche" if category else ""
+
+            system_prompt = f"""You are a social media trends analyst.
+            Today is {today}.
+
+            Generate 6 trending topics{category_context} that would perform well on Threads right now.
+            Consider tech, culture, wellness, AI, lifestyle, and current events.
+
+            Return ONLY a valid JSON array:
+            [
+                {{
+                    "topic": "Topic name",
+                    "hashtags": ["#hashtag1", "#hashtag2", "#hashtag3"],
+                    "why_trending": "One sentence on why this topic is hot right now"
+                }}
+            ]
+            """
+
+            body = {
+                "anthropic_version": "bedrock-2023-05-31",
+                "max_tokens": 800,
+                "system": system_prompt,
+                "messages": [{"role": "user", "content": f"Generate 6 trending topics for Threads{category_context} as of {today}"}],
+            }
+
+            response_body = self._invoke_model(body)
+            result_text = response_body["content"][0]["text"].strip()
+
+            try:
+                topics = json.loads(result_text)
+            except json.JSONDecodeError:
+                import re
+                m = re.search(r"\[.*\]", result_text, re.DOTALL)
+                topics = json.loads(m.group()) if m else []
+
+            return {"topics": topics, "category": category, "generated_at": datetime.now().isoformat()}
+
+        except Exception as e:
+            logger.error(f"Error getting trending topics: {e}")
+            return {"error": f"Failed to get trending topics: {str(e)}"}
+
+    async def generate_personalized_content(
+        self,
+        prompt: str,
+        personality_summary: str = None,
+        trending_topics: list = None,
+        tone: str = "casual",
+        max_length: int = 500,
+    ) -> Dict:
+        """Generate content that matches the user's personality and weaves in trending topics"""
+        error_check = self._check_client()
+        if error_check:
+            return error_check
+
+        try:
+            personality_context = (
+                f"\n\nUser's writing personality to match:\n{personality_summary}" if personality_summary else ""
+            )
+            trending_context = (
+                f"\n\nCurrently trending topics (weave in naturally if relevant): {', '.join(trending_topics)}"
+                if trending_topics else ""
+            )
+
+            system_prompt = f"""You are a ghostwriter who perfectly mimics the user's authentic social media voice.
+
+            Create a Threads post that:
+            - Sounds genuinely like the user, not AI-generated
+            - Stays under {max_length} characters
+            - Uses a {tone} tone
+            - Includes 2-3 relevant hashtags
+            {personality_context}
+            {trending_context}
+
+            Write ONLY the post text. No explanations, no quotes around it.
+            """
+
+            body = {
+                "anthropic_version": "bedrock-2023-05-31",
+                "max_tokens": 1000,
+                "system": system_prompt,
+                "messages": [{"role": "user", "content": f"Write a Threads post about: {prompt}"}],
+            }
+
+            response_body = self._invoke_model(body)
+            generated_content = response_body["content"][0]["text"].strip()
+
+            return {
+                "content": generated_content,
+                "character_count": len(generated_content),
+                "tone": tone,
+                "used_personality": bool(personality_summary),
+                "used_trending": bool(trending_topics),
+                "generated_at": datetime.now().isoformat(),
+            }
+
+        except Exception as e:
+            logger.error(f"Error generating personalized content: {e}")
+            return {"error": f"Failed to generate personalized content: {str(e)}"}
+
     async def analyze_sentiment(self, content: str) -> Dict:
         """Analyze sentiment and tone of content"""
         error_check = self._check_client()

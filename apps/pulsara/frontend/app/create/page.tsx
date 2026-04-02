@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { ArrowLeft, Image, Calendar, Send, Sparkles, Hash, Clock, BarChart3, Lightbulb, AlertCircle } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
+import { ArrowLeft, Image, Calendar, Send, Sparkles, Hash, Clock, BarChart3, Lightbulb, AlertCircle, Brain, TrendingUp, User } from 'lucide-react'
 import Link from 'next/link'
 
 const postSchema = z.object({
@@ -23,10 +24,18 @@ interface AIFeature {
 }
 
 export default function CreatePost() {
+  const searchParams = useSearchParams()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [preview, setPreview] = useState(false)
   const [aiPrompt, setAiPrompt] = useState('')
   const [selectedTone, setSelectedTone] = useState('casual')
+
+  // Personality & trending context passed from /analyze
+  const [personalitySummary, setPersonalitySummary] = useState(searchParams.get('personality') || '')
+  const [trendingTopics, setTrendingTopics] = useState<string[]>(
+    searchParams.get('trending') ? searchParams.get('trending')!.split(',') : []
+  )
+  const [generatingPersonalized, setGeneratingPersonalized] = useState(false)
   const [aiFeatures, setAiFeatures] = useState<AIFeature[]>([
     { id: 'generate', name: 'Generate Content', icon: <Sparkles className="w-4 h-4" />, description: 'Create content from prompt', loading: false },
     { id: 'hashtags', name: 'Generate Hashtags', icon: <Hash className="w-4 h-4" />, description: 'Add relevant hashtags', loading: false },
@@ -152,6 +161,38 @@ export default function CreatePost() {
       alert('Error processing AI request')
     } finally {
       updateFeatureLoading(featureId, false)
+    }
+  }
+
+  const handleGeneratePersonalized = async () => {
+    if (!aiPrompt.trim()) {
+      alert('Please enter a prompt first')
+      return
+    }
+    setGeneratingPersonalized(true)
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/ai/generate-personalized`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: aiPrompt,
+          personality_summary: personalitySummary || null,
+          trending_topics: trendingTopics.length ? trendingTopics : null,
+          tone: selectedTone,
+          maxLength: 500,
+        }),
+      })
+      const result = await response.json()
+      if (response.ok && result.content) {
+        setValue('content', result.content)
+        setAiResults({ type: 'personalized', data: result })
+      } else {
+        alert(`Error: ${result.detail || result.error || 'Failed to generate'}`)
+      }
+    } catch (e) {
+      alert('Error generating personalized content')
+    } finally {
+      setGeneratingPersonalized(false)
     }
   }
 
@@ -308,8 +349,36 @@ export default function CreatePost() {
                   </div>
                 )}
 
+                {/* Personality & Trending Context (from /analyze) */}
+                {(personalitySummary || trendingTopics.length > 0) && (
+                  <div className="mb-4 p-3 bg-purple-50 rounded-lg space-y-2">
+                    <p className="text-xs font-medium text-purple-800 flex items-center space-x-1">
+                      <Brain className="w-3 h-3" />
+                      <span>Personalization Active</span>
+                    </p>
+                    {personalitySummary && (
+                      <div className="flex items-start space-x-1">
+                        <User className="w-3 h-3 text-purple-500 mt-0.5 flex-shrink-0" />
+                        <p className="text-xs text-purple-700 line-clamp-2">{personalitySummary}</p>
+                      </div>
+                    )}
+                    {trendingTopics.length > 0 && (
+                      <div className="flex items-start space-x-1">
+                        <TrendingUp className="w-3 h-3 text-purple-500 mt-0.5 flex-shrink-0" />
+                        <p className="text-xs text-purple-700">{trendingTopics.join(', ')}</p>
+                      </div>
+                    )}
+                    <button
+                      onClick={() => { setPersonalitySummary(''); setTrendingTopics([]) }}
+                      className="text-xs text-purple-500 hover:text-purple-700"
+                    >
+                      Clear context
+                    </button>
+                  </div>
+                )}
+
                 {/* Content Generation */}
-                <div className="mb-6">
+                <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Generate Content
                   </label>
@@ -317,14 +386,10 @@ export default function CreatePost() {
                     value={aiPrompt}
                     onChange={(e) => setAiPrompt(e.target.value)}
                     rows={4}
-                    placeholder="Describe what you want to post about... Be specific about the topic, tone, and any key points you want to include."
+                    placeholder="Describe what you want to post about..."
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm resize-none"
                   />
-                  <div className="flex justify-between items-center mt-2">
-                    <span className="text-xs text-gray-500">
-                      {aiPrompt.length}/200 characters
-                    </span>
-                  </div>
+                  <span className="text-xs text-gray-500">{aiPrompt.length}/500 characters</span>
                   <select
                     value={selectedTone}
                     onChange={(e) => setSelectedTone(e.target.value)}
@@ -336,6 +401,27 @@ export default function CreatePost() {
                     <option value="inspirational">Inspirational</option>
                     <option value="educational">Educational</option>
                   </select>
+                </div>
+
+                {/* Generate with My Style button */}
+                <button
+                  onClick={handleGeneratePersonalized}
+                  disabled={generatingPersonalized}
+                  className="w-full mb-4 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center justify-center space-x-2 text-sm font-medium"
+                >
+                  {generatingPersonalized ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                  ) : (
+                    <Brain className="w-4 h-4" />
+                  )}
+                  <span>{generatingPersonalized ? 'Generating...' : 'Generate with My Style'}</span>
+                </button>
+
+                <div className="border-t border-gray-100 pt-4 mb-4">
+                  <Link href="/analyze" className="text-xs text-purple-600 hover:text-purple-800 flex items-center space-x-1">
+                    <TrendingUp className="w-3 h-3" />
+                    <span>Go to Threads Analyzer to load your profile & trends</span>
+                  </Link>
                 </div>
 
                 {/* AI Features */}
@@ -393,6 +479,22 @@ export default function CreatePost() {
                         <div>
                           <p className="mb-2">Sentiment analysis:</p>
                           <p className="whitespace-pre-wrap">{aiResults.data.analysis}</p>
+                        </div>
+                      )}
+                      {aiResults.type === 'personalized' && aiResults.data.content && (
+                        <div>
+                          <p className="mb-1 font-medium">Generated in your style:</p>
+                          {aiResults.data.used_personality && (
+                            <span className="inline-flex items-center space-x-1 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full mr-1 mb-2">
+                              <User className="w-3 h-3" /><span>Personality</span>
+                            </span>
+                          )}
+                          {aiResults.data.used_trending && (
+                            <span className="inline-flex items-center space-x-1 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full mb-2">
+                              <TrendingUp className="w-3 h-3" /><span>Trending</span>
+                            </span>
+                          )}
+                          <p className="italic mt-1">"{aiResults.data.content}"</p>
                         </div>
                       )}
                     </div>

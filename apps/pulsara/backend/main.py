@@ -9,10 +9,11 @@ import os
 import boto3
 
 from models import (
-    PostCreate, PostUpdate, PostResponse, AnalyticsOverview, 
+    PostCreate, PostUpdate, PostResponse, AnalyticsOverview,
     EngagementMetrics, PostStatus, PostType, AnalyticsTimeframe,
-    ContentGenerationRequest, ContentOptimizationRequest, 
-    HashtagGenerationRequest, PostingTimeRequest, SentimentAnalysisRequest
+    ContentGenerationRequest, ContentOptimizationRequest,
+    HashtagGenerationRequest, PostingTimeRequest, SentimentAnalysisRequest,
+    PersonalizedContentRequest, TrendingTopicsResponse
 )
 from services.threads_service import threads_service
 from services.bedrock_service import bedrock_service
@@ -364,6 +365,58 @@ async def analyze_sentiment(request: SentimentAnalysisRequest):
         raise HTTPException(status_code=503, detail=result["error"])
     
     return result
+
+@app.get("/api/threads/my-posts")
+async def get_my_threads_posts(limit: int = 25):
+    """Fetch the authenticated user's Threads posts for personality analysis"""
+    posts = threads_service.get_user_posts_for_analysis(limit=limit)
+    if not posts and not os.getenv('THREADS_ACCESS_TOKEN'):
+        return {
+            "posts": [],
+            "connected": False,
+            "message": "Set THREADS_ACCESS_TOKEN in your environment to fetch real posts.",
+        }
+    return {"posts": posts, "connected": True, "count": len(posts)}
+
+
+@app.post("/api/ai/analyze-personality")
+async def analyze_personality():
+    """Fetch user's Threads posts and analyze their writing personality"""
+    posts = threads_service.get_user_posts_for_analysis(limit=25)
+    if not posts:
+        raise HTTPException(
+            status_code=400,
+            detail="No Threads posts found. Set THREADS_ACCESS_TOKEN in your environment.",
+        )
+    result = await bedrock_service.analyze_personality(posts)
+    if "error" in result:
+        raise HTTPException(status_code=503, detail=result["error"])
+    return result
+
+
+@app.get("/api/ai/trending-topics")
+async def get_trending_topics(category: Optional[str] = None):
+    """Get AI-generated trending topics for Threads content"""
+    result = await bedrock_service.get_trending_topics(category=category)
+    if "error" in result:
+        raise HTTPException(status_code=503, detail=result["error"])
+    return result
+
+
+@app.post("/api/ai/generate-personalized")
+async def generate_personalized_content(request: PersonalizedContentRequest):
+    """Generate content matching the user's personality and trending topics"""
+    result = await bedrock_service.generate_personalized_content(
+        prompt=request.prompt,
+        personality_summary=request.personality_summary,
+        trending_topics=request.trending_topics,
+        tone=request.tone.value,
+        max_length=request.maxLength,
+    )
+    if "error" in result:
+        raise HTTPException(status_code=503, detail=result["error"])
+    return result
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=9001)

@@ -6,16 +6,47 @@ For now, it provides mock functionality for development.
 
 import asyncio
 import random
+import os
+import logging
+import requests
 from typing import List, Dict, Optional
 from datetime import datetime, timedelta
 from models import PostResponse, EngagementMetrics, PostStatus, PostType
+
+logger = logging.getLogger(__name__)
+
+THREADS_API_BASE = "https://graph.threads.net/v1.0"
 
 class ThreadsService:
     def __init__(self):
         self.client_id = None
         self.client_secret = None
-        self.access_token = None
+        self.access_token = os.getenv('THREADS_ACCESS_TOKEN')
     
+    def get_user_posts_for_analysis(self, limit: int = 25) -> List[Dict]:
+        """Fetch user's real Threads posts for personality analysis"""
+        if not self.access_token:
+            logger.warning("THREADS_ACCESS_TOKEN not set — cannot fetch real posts")
+            return []
+
+        try:
+            response = requests.get(
+                f"{THREADS_API_BASE}/me/threads",
+                params={
+                    "fields": "id,text,timestamp,like_count,replies_count,reposts_count",
+                    "limit": limit,
+                    "access_token": self.access_token,
+                },
+                timeout=10,
+            )
+            response.raise_for_status()
+            data = response.json()
+            # Filter out posts with no text (media-only posts)
+            return [p for p in data.get("data", []) if p.get("text")]
+        except Exception as e:
+            logger.error(f"Failed to fetch Threads posts: {e}")
+            return []
+
     async def authenticate(self, client_id: str, client_secret: str) -> bool:
         """Authenticate with Threads API"""
         # Mock authentication for now
