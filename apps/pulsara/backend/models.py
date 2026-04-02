@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 from datetime import datetime
 from enum import Enum
 
@@ -68,7 +68,7 @@ class AnalyticsTimeframe(str, Enum):
 
 class EngagementAnalytics(BaseModel):
     timeframe: AnalyticsTimeframe
-    data: List[Dict[str, any]]
+    data: List[Dict[str, Any]]
     totalEngagement: int
     averageEngagement: float
     bestPerformingDay: Optional[str] = None
