@@ -14,7 +14,21 @@ logger = logging.getLogger(__name__)
 class BedrockService:
     def __init__(self):
         self.region = os.getenv('BEDROCK_REGION', 'us-east-1')
-        self.model_id = os.getenv('BEDROCK_MODEL_ID', 'anthropic.claude-sonnet-4-20250514-v1:0')
+        self.model_id = os.getenv('BEDROCK_MODEL_ID', 'anthropic.claude-3-5-sonnet-20241022-v2:0')
+        self.inference_profile_id = os.getenv('BEDROCK_INFERENCE_PROFILE_ID')
+        self.inference_profile_arn = os.getenv('BEDROCK_INFERENCE_PROFILE_ARN')
+        
+        # Check if this is a Claude 4 model that needs inference profile
+        self.use_inference_profile = (
+            'claude-4' in self.model_id or 
+            'claude-sonnet-4' in self.model_id or
+            bool(self.inference_profile_id) or
+            bool(self.inference_profile_arn) or
+            self.model_id.startswith('apac.') or
+            self.model_id.startswith('us.') or
+            self.model_id.startswith('eu.') or
+            self.model_id.startswith('arn:aws:bedrock')
+        )
         
         # Initialize Bedrock client
         try:
@@ -26,6 +40,9 @@ class BedrockService:
             logger.info(f"AWS_SECRET_ACCESS_KEY present: {bool(aws_secret_key)}")
             logger.info(f"Bedrock region: {self.region}")
             logger.info(f"Bedrock model: {self.model_id}")
+            logger.info(f"Inference profile ID: {self.inference_profile_id}")
+            logger.info(f"Inference profile ARN: {self.inference_profile_arn}")
+            logger.info(f"Use inference profile: {self.use_inference_profile}")
             
             if not aws_access_key or not aws_secret_key:
                 logger.warning("AWS credentials not found in environment variables")
@@ -53,6 +70,103 @@ class BedrockService:
                 "error": "AWS Bedrock is not configured. Please set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables."
             }
         return None
+
+    def _invoke_model(self, body: dict) -> dict:
+        """Invoke model with proper handling for inference profiles"""
+        try:
+            if self.use_inference_profile:
+                # Priority 1: Use configured inference profile ARN if available
+                if self.inference_profile_arn:
+                    try:
+                        logger.info(f"Using configured inference profile ARN: {self.inference_profile_arn}")
+                        response = self.bedrock_client.invoke_model(
+                            modelId=self.inference_profile_arn,
+                            body=json.dumps(body),
+                            contentType='application/json'
+                        )
+                        logger.info(f"SUCCESS: Used inference profile ARN: {self.inference_profile_arn}")
+                        return json.loads(response['body'].read())
+                    except Exception as e:
+                        logger.warning(f"Failed with configured ARN {self.inference_profile_arn}: {str(e)[:100]}...")
+                
+                # Priority 2: Use configured inference profile ID if available
+                if self.inference_profile_id:
+                    try:
+                        logger.info(f"Using configured inference profile ID: {self.inference_profile_id}")
+                        response = self.bedrock_client.invoke_model(
+                            modelId=self.inference_profile_id,
+                            body=json.dumps(body),
+                            contentType='application/json'
+                        )
+                        logger.info(f"SUCCESS: Used inference profile ID: {self.inference_profile_id}")
+                        return json.loads(response['body'].read())
+                    except Exception as e:
+                        logger.warning(f"Failed with configured ID {self.inference_profile_id}: {str(e)[:100]}...")
+                
+                # Priority 3: If the model_id is already an inference profile ID or ARN, use it directly
+                if (self.model_id.startswith('apac.') or 
+                    self.model_id.startswith('us.') or 
+                    self.model_id.startswith('eu.') or 
+                    self.model_id.startswith('arn:aws:bedrock')):
+                    
+                    try:
+                        logger.info(f"Using model_id as inference profile: {self.model_id}")
+                        response = self.bedrock_client.invoke_model(
+                            modelId=self.model_id,
+                            body=json.dumps(body),
+                            contentType='application/json'
+                        )
+                        logger.info(f"SUCCESS: Used model_id as inference profile: {self.model_id}")
+                        return json.loads(response['body'].read())
+                    except Exception as e:
+                        logger.warning(f"Failed with model_id {self.model_id}: {str(e)[:100]}...")
+                
+                # Priority 4: Try common inference profile patterns as fallback
+                inference_profiles = [
+                    # APAC profiles (for Asia-Pacific region)
+                    "apac.anthropic.claude-4-sonnet-20250514-v1:0",
+                    "apac.anthropic.claude-sonnet-4-20250514-v1:0", 
+                    # Cross-region profiles
+                    "us.anthropic.claude-4-sonnet-20250514-v1:0",
+                    "us.anthropic.claude-sonnet-4-20250514-v1:0", 
+                    "cross-region.anthropic.claude-4-sonnet-20250514-v1:0",
+                    "cross-region.anthropic.claude-sonnet-4-20250514-v1:0",
+                    # Regional profiles
+                    f"us-east-1.anthropic.claude-4-sonnet-20250514-v1:0",
+                    f"us-west-2.anthropic.claude-4-sonnet-20250514-v1:0",
+                    # Generic patterns
+                    "us.anthropic.claude-4-sonnet-v1:0",
+                    "us.anthropic.claude-sonnet-4-v1:0",
+                ]
+                
+                for profile_id in inference_profiles:
+                    try:
+                        logger.info(f"Trying fallback inference profile: {profile_id}")
+                        response = self.bedrock_client.invoke_model(
+                            modelId=profile_id,
+                            body=json.dumps(body),
+                            contentType='application/json'
+                        )
+                        logger.info(f"SUCCESS: Used fallback inference profile: {profile_id}")
+                        return json.loads(response['body'].read())
+                    except Exception as e:
+                        logger.warning(f"Failed with profile {profile_id}: {str(e)[:100]}...")
+                        continue
+                
+                # If all inference profiles fail, provide helpful error message
+                raise Exception(f"No valid inference profile found. Please check BEDROCK_INFERENCE_PROFILE_ID or BEDROCK_INFERENCE_PROFILE_ARN in environment variables, or verify available profiles in AWS Bedrock console for region {self.region}")
+            else:
+                # For older models, use direct model ID
+                response = self.bedrock_client.invoke_model(
+                    modelId=self.model_id,
+                    body=json.dumps(body),
+                    contentType='application/json'
+                )
+                return json.loads(response['body'].read())
+                
+        except Exception as e:
+            logger.error(f"Error invoking model: {e}")
+            raise e
 
     async def generate_content(self, prompt: str, tone: str = "casual", max_length: int = 500) -> Dict:
         """Generate content using AWS Bedrock"""
@@ -87,14 +201,7 @@ class BedrockService:
             }
 
             # Call Bedrock
-            response = self.bedrock_client.invoke_model(
-                modelId=self.model_id,
-                body=json.dumps(body),
-                contentType='application/json'
-            )
-
-            # Parse response
-            response_body = json.loads(response['body'].read())
+            response_body = self._invoke_model(body)
             generated_content = response_body['content'][0]['text']
 
             return {
@@ -140,13 +247,7 @@ class BedrockService:
                 ]
             }
 
-            response = self.bedrock_client.invoke_model(
-                modelId=self.model_id,
-                body=json.dumps(body),
-                contentType='application/json'
-            )
-
-            response_body = json.loads(response['body'].read())
+            response_body = self._invoke_model(body)
             optimization_result = response_body['content'][0]['text']
 
             return {
@@ -191,13 +292,7 @@ class BedrockService:
                 ]
             }
 
-            response = self.bedrock_client.invoke_model(
-                modelId=self.model_id,
-                body=json.dumps(body),
-                contentType='application/json'
-            )
-
-            response_body = json.loads(response['body'].read())
+            response_body = self._invoke_model(body)
             hashtags_text = response_body['content'][0]['text']
             
             # Parse hashtags from response
@@ -247,13 +342,7 @@ class BedrockService:
                 ]
             }
 
-            response = self.bedrock_client.invoke_model(
-                modelId=self.model_id,
-                body=json.dumps(body),
-                contentType='application/json'
-            )
-
-            response_body = json.loads(response['body'].read())
+            response_body = self._invoke_model(body)
             timing_suggestions = response_body['content'][0]['text']
 
             return {
@@ -298,13 +387,7 @@ class BedrockService:
                 ]
             }
 
-            response = self.bedrock_client.invoke_model(
-                modelId=self.model_id,
-                body=json.dumps(body),
-                contentType='application/json'
-            )
-
-            response_body = json.loads(response['body'].read())
+            response_body = self._invoke_model(body)
             analysis_result = response_body['content'][0]['text']
 
             return {

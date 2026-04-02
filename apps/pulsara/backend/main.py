@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 import uvicorn
 import uuid
 import os
+import boto3
 
 from models import (
     PostCreate, PostUpdate, PostResponse, AnalyticsOverview, 
@@ -68,7 +69,9 @@ async def bedrock_health_check():
     aws_access_key = os.getenv('AWS_ACCESS_KEY_ID')
     aws_secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
     bedrock_region = os.getenv('BEDROCK_REGION', 'us-east-1')
-    bedrock_model = os.getenv('BEDROCK_MODEL_ID', 'anthropic.claude-3-sonnet-20240229-v1:0')
+    bedrock_model = os.getenv('BEDROCK_MODEL_ID', 'anthropic.claude-3-5-sonnet-20241022-v2:0')
+    inference_profile_id = os.getenv('BEDROCK_INFERENCE_PROFILE_ID')
+    inference_profile_arn = os.getenv('BEDROCK_INFERENCE_PROFILE_ARN')
     
     status = {
         "bedrock_configured": bool(aws_access_key and aws_secret_key),
@@ -76,7 +79,10 @@ async def bedrock_health_check():
         "aws_secret_key_set": bool(aws_secret_key),
         "bedrock_region": bedrock_region,
         "bedrock_model": bedrock_model,
-        "client_initialized": bedrock_service.bedrock_client is not None
+        "inference_profile_id": inference_profile_id,
+        "inference_profile_arn": inference_profile_arn,
+        "client_initialized": bedrock_service.bedrock_client is not None,
+        "use_inference_profile": bedrock_service.use_inference_profile if bedrock_service.bedrock_client else False
     }
     
     if not status["bedrock_configured"]:
@@ -85,6 +91,32 @@ async def bedrock_health_check():
         status["message"] = "AWS Bedrock is properly configured."
     
     return status
+
+@app.get("/api/bedrock/list-inference-profiles")
+async def list_inference_profiles():
+    """List available inference profiles"""
+    try:
+        if not bedrock_service.bedrock_client:
+            raise HTTPException(status_code=503, detail="Bedrock client not configured")
+        
+        # Try to list inference profiles using boto3
+        bedrock_client = boto3.client(
+            'bedrock',
+            region_name=bedrock_service.region,
+            aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
+            aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY')
+        )
+        
+        response = bedrock_client.list_inference_profiles()
+        return {
+            "inference_profiles": response.get('inferenceProfileSummaries', []),
+            "region": bedrock_service.region
+        }
+    except Exception as e:
+        return {
+            "error": f"Failed to list inference profiles: {str(e)}",
+            "suggestion": "Check AWS Bedrock console manually for available inference profiles"
+        }
 
 @app.post("/api/posts", response_model=PostResponse)
 async def create_post(post: PostCreate, background_tasks: BackgroundTasks):
