@@ -73,14 +73,22 @@ class BedrockService:
         return None
 
     def _is_throttling_error(self, error: Exception) -> bool:
-        """Detect throttling/rate-limit errors, including misleading ResourceNotFoundException from Bedrock"""
+        """Detect throttling/rate-limit errors"""
         err_str = str(error).lower()
         return (
             'throttling' in err_str or
             'toomanyrequests' in err_str or
             'rate exceeded' in err_str or
-            # Bedrock sometimes returns ResourceNotFoundException when throttled
-            ('resourcenotfoundexception' in err_str and 'use case details' in err_str)
+            'throttledexception' in err_str
+        )
+
+    def _is_access_error(self, error: Exception) -> bool:
+        """Detect permanent access/permission errors that should not be retried"""
+        err_str = str(error).lower()
+        return (
+            'use case details' in err_str or
+            'accessdeniedexception' in err_str or
+            ('resourcenotfoundexception' in err_str and 'use case' in err_str)
         )
 
     def _invoke_with_retry(self, model_id: str, body: dict, max_retries: int = 5) -> dict:
@@ -95,6 +103,9 @@ class BedrockService:
                 )
                 return json.loads(response['body'].read())
             except Exception as e:
+                if self._is_access_error(e):
+                    logger.error(f"Access denied — model not enabled or use case form not submitted: {e}")
+                    raise
                 if self._is_throttling_error(e) and attempt < max_retries - 1:
                     logger.warning(f"Throttled on attempt {attempt + 1}/{max_retries}, retrying in {delay}s...")
                     time.sleep(delay)
