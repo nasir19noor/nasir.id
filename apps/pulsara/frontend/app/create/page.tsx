@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { ArrowLeft, Image, Calendar, Send, Sparkles, Hash, Clock, BarChart3, Lightbulb } from 'lucide-react'
+import { ArrowLeft, Image, Calendar, Send, Sparkles, Hash, Clock, BarChart3, Lightbulb, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 
 const postSchema = z.object({
@@ -35,6 +35,22 @@ export default function CreatePost() {
     { id: 'sentiment', name: 'Analyze Sentiment', icon: <Lightbulb className="w-4 h-4" />, description: 'Check tone & mood', loading: false },
   ])
   const [aiResults, setAiResults] = useState<any>(null)
+  const [bedrockStatus, setBedrockStatus] = useState<any>(null)
+
+  useEffect(() => {
+    // Check Bedrock configuration status
+    const checkBedrockStatus = async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/health/bedrock`)
+        const status = await response.json()
+        setBedrockStatus(status)
+      } catch (error) {
+        console.error('Failed to check Bedrock status:', error)
+      }
+    }
+    
+    checkBedrockStatus()
+  }, [])
 
   const {
     register,
@@ -114,7 +130,7 @@ export default function CreatePost() {
 
       const result = await response.json()
 
-      if (response.ok) {
+      if (response.ok && !result.error) {
         setAiResults({ type: featureId, data: result })
         
         // Auto-apply results for certain features
@@ -126,7 +142,10 @@ export default function CreatePost() {
           setValue('content', `${currentContent}\n\n${hashtags}`.trim())
         }
       } else {
-        alert(`Error: ${result.error || 'Failed to process request'}`)
+        // Handle both HTTP errors and application errors
+        const errorMessage = result.detail || result.error || 'Failed to process request'
+        alert(`Error: ${errorMessage}`)
+        console.error('AI API Error:', result)
       }
     } catch (error) {
       console.error('AI feature error:', error)
@@ -272,6 +291,22 @@ export default function CreatePost() {
                   <Sparkles className="w-5 h-5 mr-2 text-blue-500" />
                   AI Assistant
                 </h3>
+
+                {/* Bedrock Status Indicator */}
+                {bedrockStatus && (
+                  <div className={`mb-4 p-3 rounded-lg flex items-center space-x-2 ${
+                    bedrockStatus.bedrock_configured 
+                      ? 'bg-green-50 text-green-800' 
+                      : 'bg-yellow-50 text-yellow-800'
+                  }`}>
+                    <AlertCircle className="w-4 h-4" />
+                    <span className="text-sm">
+                      {bedrockStatus.bedrock_configured 
+                        ? 'AWS Bedrock is configured and ready' 
+                        : 'AWS Bedrock not configured - AI features unavailable'}
+                    </span>
+                  </div>
+                )}
 
                 {/* Content Generation */}
                 <div className="mb-6">

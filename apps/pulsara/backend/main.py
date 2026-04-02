@@ -276,6 +276,10 @@ async def generate_content(request: ContentGenerationRequest):
         tone=request.tone.value,
         max_length=request.maxLength
     )
+    
+    if "error" in result:
+        raise HTTPException(status_code=503, detail=result["error"])
+    
     return result
 
 @app.post("/api/ai/optimize-content")
@@ -285,6 +289,10 @@ async def optimize_content(request: ContentOptimizationRequest):
         content=request.content,
         target_audience=request.targetAudience
     )
+    
+    if "error" in result:
+        raise HTTPException(status_code=503, detail=result["error"])
+    
     return result
 
 @app.post("/api/ai/generate-hashtags")
@@ -294,6 +302,10 @@ async def generate_hashtags(request: HashtagGenerationRequest):
         content=request.content,
         max_hashtags=request.maxHashtags
     )
+    
+    if "error" in result:
+        raise HTTPException(status_code=503, detail=result["error"])
+    
     return result
 
 @app.post("/api/ai/suggest-posting-time")
@@ -303,6 +315,10 @@ async def suggest_posting_time(request: PostingTimeRequest):
         content=request.content,
         target_audience=request.targetAudience
     )
+    
+    if "error" in result:
+        raise HTTPException(status_code=503, detail=result["error"])
+    
     return result
 
 @app.post("/api/ai/analyze-sentiment")
@@ -311,6 +327,10 @@ async def analyze_sentiment(request: SentimentAnalysisRequest):
     result = await bedrock_service.analyze_sentiment(
         content=request.content
     )
+    
+    if "error" in result:
+        raise HTTPException(status_code=503, detail=result["error"])
+    
     return result
 
 if __name__ == "__main__":
