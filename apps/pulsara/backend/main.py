@@ -5,6 +5,7 @@ from typing import Optional, List
 from datetime import datetime, timedelta
 import uvicorn
 import uuid
+import os
 
 from models import (
     PostCreate, PostUpdate, PostResponse, AnalyticsOverview, 
@@ -60,6 +61,30 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "timestamp": datetime.now()}
+
+@app.get("/api/health/bedrock")
+async def bedrock_health_check():
+    """Check AWS Bedrock configuration status"""
+    aws_access_key = os.getenv('AWS_ACCESS_KEY_ID')
+    aws_secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
+    bedrock_region = os.getenv('BEDROCK_REGION', 'us-east-1')
+    bedrock_model = os.getenv('BEDROCK_MODEL_ID', 'anthropic.claude-3-sonnet-20240229-v1:0')
+    
+    status = {
+        "bedrock_configured": bool(aws_access_key and aws_secret_key),
+        "aws_access_key_set": bool(aws_access_key),
+        "aws_secret_key_set": bool(aws_secret_key),
+        "bedrock_region": bedrock_region,
+        "bedrock_model": bedrock_model,
+        "client_initialized": bedrock_service.bedrock_client is not None
+    }
+    
+    if not status["bedrock_configured"]:
+        status["message"] = "AWS credentials not configured. Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables."
+    else:
+        status["message"] = "AWS Bedrock is properly configured."
+    
+    return status
 
 @app.post("/api/posts", response_model=PostResponse)
 async def create_post(post: PostCreate, background_tasks: BackgroundTasks):

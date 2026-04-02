@@ -18,20 +18,42 @@ class BedrockService:
         
         # Initialize Bedrock client
         try:
+            # Check if credentials are available
+            aws_access_key = os.getenv('AWS_ACCESS_KEY_ID')
+            aws_secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
+            
+            if not aws_access_key or not aws_secret_key:
+                logger.warning("AWS credentials not found in environment variables")
+                self.bedrock_client = None
+                return
+            
             self.bedrock_client = boto3.client(
                 'bedrock-runtime',
                 region_name=self.region,
-                aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
-                aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY')
+                aws_access_key_id=aws_access_key,
+                aws_secret_access_key=aws_secret_key
             )
+            
+            # Test the connection
+            logger.info(f"Bedrock client initialized for region: {self.region}")
+            
         except Exception as e:
             logger.error(f"Failed to initialize Bedrock client: {e}")
             self.bedrock_client = None
 
+    def _check_client(self) -> Dict:
+        """Check if Bedrock client is available"""
+        if not self.bedrock_client:
+            return {
+                "error": "AWS Bedrock is not configured. Please set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables."
+            }
+        return None
+
     async def generate_content(self, prompt: str, tone: str = "casual", max_length: int = 500) -> Dict:
         """Generate content using AWS Bedrock"""
-        if not self.bedrock_client:
-            return {"error": "Bedrock client not initialized"}
+        error_check = self._check_client()
+        if error_check:
+            return error_check
 
         try:
             # Construct the prompt for content generation
@@ -83,8 +105,9 @@ class BedrockService:
 
     async def optimize_content(self, content: str, target_audience: str = "general") -> Dict:
         """Optimize existing content for better engagement"""
-        if not self.bedrock_client:
-            return {"error": "Bedrock client not initialized"}
+        error_check = self._check_client()
+        if error_check:
+            return error_check
 
         try:
             system_prompt = f"""You are a social media optimization expert. 
@@ -133,8 +156,9 @@ class BedrockService:
 
     async def generate_hashtags(self, content: str, max_hashtags: int = 5) -> Dict:
         """Generate relevant hashtags for content"""
-        if not self.bedrock_client:
-            return {"error": "Bedrock client not initialized"}
+        error_check = self._check_client()
+        if error_check:
+            return error_check
 
         try:
             system_prompt = f"""You are a hashtag expert for social media.
@@ -188,8 +212,9 @@ class BedrockService:
 
     async def suggest_posting_time(self, content: str, target_audience: str = "general") -> Dict:
         """Suggest optimal posting times based on content and audience"""
-        if not self.bedrock_client:
-            return {"error": "Bedrock client not initialized"}
+        error_check = self._check_client()
+        if error_check:
+            return error_check
 
         try:
             system_prompt = f"""You are a social media timing expert.
@@ -238,8 +263,9 @@ class BedrockService:
 
     async def analyze_sentiment(self, content: str) -> Dict:
         """Analyze sentiment and tone of content"""
-        if not self.bedrock_client:
-            return {"error": "Bedrock client not initialized"}
+        error_check = self._check_client()
+        if error_check:
+            return error_check
 
         try:
             system_prompt = """You are a sentiment analysis expert.
