@@ -6,6 +6,8 @@ import {
   ArrowLeft, Brain, TrendingUp, Sparkles, RefreshCw,
   User, AlertCircle, CheckCircle, ChevronRight, Globe
 } from 'lucide-react'
+import AuthGuard from '@/components/AuthGuard'
+import { authHeaders } from '@/lib/auth'
 
 interface PersonalityProfile {
   tone: string
@@ -21,7 +23,7 @@ interface TrendingTopic {
   why_trending: string
 }
 
-export default function AnalyzePage() {
+function AnalyzeInner() {
   const [personality, setPersonality] = useState<PersonalityProfile | null>(null)
   const [analyzingPersonality, setAnalyzingPersonality] = useState(false)
   const [personalityError, setPersonalityError] = useState('')
@@ -42,6 +44,7 @@ export default function AnalyzePage() {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/ai/analyze-personality`, {
         method: 'POST',
+        headers: authHeaders(),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.detail || 'Failed to analyze personality')
@@ -67,7 +70,7 @@ export default function AnalyzePage() {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/ai/analyze-personality/manual`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ posts }),
       })
       const data = await res.json()
@@ -88,7 +91,7 @@ export default function AnalyzePage() {
       const qs = new URLSearchParams()
       if (trendCategory) qs.set('category', trendCategory)
       if (trendRegion) qs.set('region', trendRegion)
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/ai/trending-topics?${qs.toString()}`)
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/ai/trending-topics?${qs.toString()}`, { headers: authHeaders() })
       const data = await res.json()
       if (!res.ok) throw new Error(data.detail || 'Failed to fetch trends')
       setTrendingTopics(data.topics || [])
@@ -417,5 +420,13 @@ export default function AnalyzePage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function AnalyzePage() {
+  return (
+    <AuthGuard>
+      <AnalyzeInner />
+    </AuthGuard>
   )
 }

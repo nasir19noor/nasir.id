@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
+import AuthGuard from '@/components/AuthGuard'
+import { authHeaders } from '@/lib/auth'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -59,7 +61,7 @@ function CreatePostInner() {
     // Check Bedrock configuration status
     const checkBedrockStatus = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/health/bedrock`)
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/health/bedrock`, { headers: authHeaders() })
         const status = await response.json()
         setBedrockStatus(status)
       } catch (error) {
@@ -142,7 +144,7 @@ function CreatePostInner() {
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${endpoint}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(payload),
       })
 
@@ -182,7 +184,7 @@ function CreatePostInner() {
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/ai/generate-personalized`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({
           prompt: aiPrompt,
           personality_summary: personalitySummary || null,
@@ -215,6 +217,7 @@ function CreatePostInner() {
         formData.append('file', file)
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/media/upload`, {
           method: 'POST',
+          headers: authHeaders(),
           body: formData,
         })
         const data = await res.json()
@@ -235,7 +238,7 @@ function CreatePostInner() {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/ai/generate-image`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ prompt: imagePrompt, aspect_ratio: imageAspectRatio, count: 1, upload_to_s3: true }),
       })
       const data = await res.json()
@@ -253,7 +256,7 @@ function CreatePostInner() {
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/posts`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ ...data, images: attachedImages }),
       })
 
@@ -674,8 +677,10 @@ function CreatePostInner() {
 
 export default function CreatePost() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" /></div>}>
-      <CreatePostInner />
-    </Suspense>
+    <AuthGuard>
+      <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" /></div>}>
+        <CreatePostInner />
+      </Suspense>
+    </AuthGuard>
   )
 }

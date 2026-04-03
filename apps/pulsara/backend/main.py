@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, UploadFile, File, Form, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse
 from pydantic import BaseModel, Field
@@ -25,6 +25,7 @@ from services.threads_service import threads_service
 from services.bedrock_service import bedrock_service
 from services.s3_service import s3_service
 from services.vertex_service import vertex_image_service
+from auth import verify_credentials, create_access_token, get_current_user
 
 app = FastAPI(
     title="Pulsara API",
@@ -39,6 +40,33 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Public paths that don't require authentication
+PUBLIC_PATHS = {"/", "/health", "/api/auth/login", "/api/auth/threads", "/api/auth/threads/callback"}
+
+
+@app.middleware("http")
+async def auth_middleware(request, call_next):
+    from fastapi.responses import JSONResponse
+    path = request.url.path
+    if path in PUBLIC_PATHS or not path.startswith("/api/"):
+        return await call_next(request)
+    # Validate Bearer token for all other /api/* routes
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        return JSONResponse(status_code=401, content={"detail": "Not authenticated"})
+    from auth import get_current_user as _verify
+    from fastapi.security import HTTPAuthorizationCredentials
+    try:
+        token = auth_header.split(" ", 1)[1]
+        from jose import jwt as _jwt, JWTError
+        import os as _os
+        payload = _jwt.decode(token, _os.getenv("SECRET_KEY", "changeme"), algorithms=[_os.getenv("ALGORITHM", "HS256")])
+        if not payload.get("sub"):
+            raise ValueError
+    except Exception:
+        return JSONResponse(status_code=401, content={"detail": "Invalid or expired token"})
+    return await call_next(request)
 
 
 @app.on_event("startup")
@@ -124,6 +152,28 @@ async def bedrock_health_check():
         else "AWS credentials not configured. Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY."
     )
     return status
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+@app.post("/api/auth/login")
+async def login(request: LoginRequest):
+    """Authenticate and return a JWT token"""
+    if not verify_credentials(request.email, request.password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
+        )
+    token = create_access_token({"sub": request.email})
+    return {"access_token": token, "token_type": "bearer"}
+
+
+@app.get("/api/auth/me")
+async def me(current_user: str = Depends(get_current_user)):
+    return {"email": current_user}
 
 
 @app.get("/api/bedrock/list-inference-profiles")

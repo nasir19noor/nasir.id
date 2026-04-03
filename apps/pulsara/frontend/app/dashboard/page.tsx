@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { PlusCircle, BarChart3, Calendar, TrendingUp, Users, Heart } from 'lucide-react'
+import { PlusCircle, BarChart3, Calendar, TrendingUp, Users, Heart, LogOut } from 'lucide-react'
+import AuthGuard from '@/components/AuthGuard'
+import { authHeaders, logout } from '@/lib/auth'
 
 interface Post {
   id: string
@@ -24,7 +26,7 @@ interface Analytics {
   topPerformingPost: Post | null
 }
 
-export default function Dashboard() {
+function DashboardInner() {
   const [posts, setPosts] = useState<Post[]>([])
   const [analytics, setAnalytics] = useState<Analytics | null>(null)
   const [loading, setLoading] = useState(true)
@@ -35,9 +37,10 @@ export default function Dashboard() {
 
   const fetchData = async () => {
     try {
+      const headers = authHeaders()
       const [postsResponse, analyticsResponse] = await Promise.all([
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/posts`),
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/analytics/overview`)
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/posts`, { headers }),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/analytics/overview`, { headers })
       ])
 
       const postsData = await postsResponse.json()
@@ -68,10 +71,19 @@ export default function Dashboard() {
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <Link href="/create" className="btn-primary flex items-center space-x-2">
-            <PlusCircle className="w-4 h-4" />
-            <span>Create Post</span>
-          </Link>
+          <div className="flex items-center space-x-3">
+            <Link href="/create" className="btn-primary flex items-center space-x-2">
+              <PlusCircle className="w-4 h-4" />
+              <span>Create Post</span>
+            </Link>
+            <button
+              onClick={logout}
+              className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm text-gray-600"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Logout</span>
+            </button>
+          </div>
         </div>
 
         {/* Analytics Cards */}
@@ -187,5 +199,13 @@ export default function Dashboard() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function Dashboard() {
+  return (
+    <AuthGuard>
+      <DashboardInner />
+    </AuthGuard>
   )
 }
