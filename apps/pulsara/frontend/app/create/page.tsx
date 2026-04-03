@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useSearchParams } from 'next/navigation'
-import { ArrowLeft, Image, Calendar, Send, Sparkles, Hash, Clock, BarChart3, Lightbulb, AlertCircle, Brain, TrendingUp, User } from 'lucide-react'
+import { ArrowLeft, Image, Calendar, Send, Sparkles, Hash, Clock, BarChart3, Lightbulb, AlertCircle, Brain, TrendingUp, User, Upload, Wand2, X, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 
 const postSchema = z.object({
@@ -45,6 +45,15 @@ function CreatePostInner() {
   ])
   const [aiResults, setAiResults] = useState<any>(null)
   const [bedrockStatus, setBedrockStatus] = useState<any>(null)
+
+  // Image state
+  const [attachedImages, setAttachedImages] = useState<string[]>([]) // S3 URLs
+  const [showImagePanel, setShowImagePanel] = useState(false)
+  const [imageTab, setImageTab] = useState<'upload' | 'ai'>('upload')
+  const [imagePrompt, setImagePrompt] = useState('')
+  const [imageAspectRatio, setImageAspectRatio] = useState('1:1')
+  const [generatingImage, setGeneratingImage] = useState(false)
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   useEffect(() => {
     // Check Bedrock configuration status
@@ -196,20 +205,61 @@ function CreatePostInner() {
     }
   }
 
+  const handleLocalImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+    setUploadingImage(true)
+    try {
+      for (const file of Array.from(files)) {
+        const formData = new FormData()
+        formData.append('file', file)
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/media/upload`, {
+          method: 'POST',
+          body: formData,
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.detail || 'Upload failed')
+        setAttachedImages(prev => [...prev, data.url])
+      }
+    } catch (err: any) {
+      alert(`Upload error: ${err.message}`)
+    } finally {
+      setUploadingImage(false)
+      e.target.value = ''
+    }
+  }
+
+  const handleGenerateImage = async () => {
+    if (!imagePrompt.trim()) { alert('Enter an image prompt first'); return }
+    setGeneratingImage(true)
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/ai/generate-image`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: imagePrompt, aspect_ratio: imageAspectRatio, count: 1, upload_to_s3: true }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.detail || 'Generation failed')
+      setAttachedImages(prev => [...prev, ...data.images])
+    } catch (err: any) {
+      alert(`Image generation error: ${err.message}`)
+    } finally {
+      setGeneratingImage(false)
+    }
+  }
+
   const onSubmit = async (data: PostForm) => {
     setIsSubmitting(true)
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/posts`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...data, images: attachedImages }),
       })
 
       if (response.ok) {
         alert('Post created successfully!')
-        // Reset form or redirect
+        setAttachedImages([])
       } else {
         alert('Failed to create post')
       }
@@ -258,15 +308,128 @@ function CreatePostInner() {
                     </div>
                   </div>
 
-                  <div className="flex space-x-4">
+                  {/* Image Section */}
+                  <div>
                     <button
                       type="button"
+                      onClick={() => setShowImagePanel(!showImagePanel)}
                       className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
                     >
                       <Image className="w-4 h-4" />
                       <span>Add Image</span>
+                      {attachedImages.length > 0 && (
+                        <span className="ml-1 px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
+                          {attachedImages.length}
+                        </span>
+                      )}
                     </button>
-                    
+
+                    {showImagePanel && (
+                      <div className="mt-3 border border-gray-200 rounded-xl overflow-hidden">
+                        {/* Tabs */}
+                        <div className="flex border-b border-gray-200">
+                          <button
+                            type="button"
+                            onClick={() => setImageTab('upload')}
+                            className={`flex-1 flex items-center justify-center space-x-2 py-2.5 text-sm font-medium transition-colors ${imageTab === 'upload' ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}
+                          >
+                            <Upload className="w-4 h-4" />
+                            <span>Upload from device</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setImageTab('ai')}
+                            className={`flex-1 flex items-center justify-center space-x-2 py-2.5 text-sm font-medium transition-colors ${imageTab === 'ai' ? 'bg-purple-50 text-purple-700 border-b-2 border-purple-600' : 'text-gray-600 hover:bg-gray-50'}`}
+                          >
+                            <Wand2 className="w-4 h-4" />
+                            <span>Generate with AI</span>
+                          </button>
+                        </div>
+
+                        <div className="p-4">
+                          {imageTab === 'upload' ? (
+                            <div>
+                              <label className="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
+                                {uploadingImage ? (
+                                  <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
+                                ) : (
+                                  <>
+                                    <Upload className="w-6 h-6 text-gray-400 mb-2" />
+                                    <span className="text-sm text-gray-500">Click to upload or drag & drop</span>
+                                    <span className="text-xs text-gray-400 mt-1">PNG, JPG, WEBP up to 10MB</span>
+                                  </>
+                                )}
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  multiple
+                                  className="hidden"
+                                  onChange={handleLocalImageUpload}
+                                  disabled={uploadingImage}
+                                />
+                              </label>
+                            </div>
+                          ) : (
+                            <div className="space-y-3">
+                              <textarea
+                                value={imagePrompt}
+                                onChange={e => setImagePrompt(e.target.value)}
+                                rows={3}
+                                placeholder="Describe the image you want to generate..."
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                              />
+                              <div className="flex space-x-2">
+                                <select
+                                  value={imageAspectRatio}
+                                  onChange={e => setImageAspectRatio(e.target.value)}
+                                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                >
+                                  <option value="1:1">Square (1:1)</option>
+                                  <option value="4:3">Landscape (4:3)</option>
+                                  <option value="3:4">Portrait (3:4)</option>
+                                  <option value="16:9">Widescreen (16:9)</option>
+                                  <option value="9:16">Story (9:16)</option>
+                                </select>
+                                <button
+                                  type="button"
+                                  onClick={handleGenerateImage}
+                                  disabled={generatingImage || !imagePrompt.trim()}
+                                  className="flex-1 flex items-center justify-center space-x-2 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 text-sm font-medium"
+                                >
+                                  {generatingImage ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <Wand2 className="w-4 h-4" />
+                                  )}
+                                  <span>{generatingImage ? 'Generating...' : 'Generate'}</span>
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Attached images preview */}
+                          {attachedImages.length > 0 && (
+                            <div className="mt-3 grid grid-cols-3 gap-2">
+                              {attachedImages.map((url, i) => (
+                                <div key={i} className="relative group aspect-square">
+                                  <img src={url} alt="" className="w-full h-full object-cover rounded-lg" />
+                                  <button
+                                    type="button"
+                                    onClick={() => setAttachedImages(prev => prev.filter((_, idx) => idx !== i))}
+                                    className="absolute top-1 right-1 w-5 h-5 bg-black/60 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex space-x-4">
                     <button
                       type="button"
                       className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"

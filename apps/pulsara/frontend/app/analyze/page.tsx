@@ -25,6 +25,8 @@ export default function AnalyzePage() {
   const [personality, setPersonality] = useState<PersonalityProfile | null>(null)
   const [analyzingPersonality, setAnalyzingPersonality] = useState(false)
   const [personalityError, setPersonalityError] = useState('')
+  const [showManualInput, setShowManualInput] = useState(false)
+  const [manualPosts, setManualPosts] = useState('')
 
   const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([])
   const [loadingTrends, setLoadingTrends] = useState(false)
@@ -44,6 +46,34 @@ export default function AnalyzePage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.detail || 'Failed to analyze personality')
       setPersonality(data.personality)
+    } catch (err: any) {
+      setPersonalityError(err.message)
+    } finally {
+      setAnalyzingPersonality(false)
+    }
+  }
+
+  const analyzeManualPosts = async () => {
+    const posts = manualPosts
+      .split('\n')
+      .map(p => p.trim())
+      .filter(p => p.length > 0)
+    if (posts.length < 3) {
+      setPersonalityError('Please paste at least 3 posts (one per line).')
+      return
+    }
+    setAnalyzingPersonality(true)
+    setPersonalityError('')
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/ai/analyze-personality/manual`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ posts }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.detail || 'Failed to analyze personality')
+      setPersonality(data.personality)
+      setShowManualInput(false)
     } catch (err: any) {
       setPersonalityError(err.message)
     } finally {
@@ -109,20 +139,6 @@ export default function AnalyzePage() {
               </div>
             </div>
 
-            {!personality && !personalityError && (
-              <div className="mb-4 p-3 bg-blue-50 rounded-lg flex items-start space-x-2">
-                <AlertCircle className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                <p className="text-xs text-blue-700">
-                  Requires <code className="bg-blue-100 px-1 rounded">THREADS_ACCESS_TOKEN</code> in your backend
-                  <code className="bg-blue-100 px-1 rounded ml-1">.env</code> file.
-                  Get one from the{' '}
-                  <a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener noreferrer" className="underline">
-                    Meta Developer Portal
-                  </a>.
-                </p>
-              </div>
-            )}
-
             {personalityError && (
               <div className="mb-4 p-3 bg-red-50 rounded-lg flex items-start space-x-2">
                 <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
@@ -166,32 +182,71 @@ export default function AnalyzePage() {
                 </div>
 
                 <button
-                  onClick={analyzePersonality}
-                  disabled={analyzingPersonality}
+                  onClick={() => { setPersonality(null); setShowManualInput(false) }}
                   className="text-xs text-purple-600 hover:text-purple-800 flex items-center space-x-1"
                 >
                   <RefreshCw className="w-3 h-3" />
                   <span>Re-analyze</span>
                 </button>
               </div>
+            ) : showManualInput ? (
+              <div className="space-y-3">
+                <p className="text-xs text-gray-500">
+                  Paste your Threads posts below — one post per line. At least 3 posts needed.
+                </p>
+                <textarea
+                  value={manualPosts}
+                  onChange={e => setManualPosts(e.target.value)}
+                  rows={8}
+                  placeholder={"Post one...\nPost two...\nPost three..."}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                />
+                <div className="flex space-x-2">
+                  <button
+                    onClick={analyzeManualPosts}
+                    disabled={analyzingPersonality}
+                    className="flex-1 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center justify-center space-x-2 text-sm"
+                  >
+                    {analyzingPersonality ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                    ) : (
+                      <Brain className="w-4 h-4" />
+                    )}
+                    <span>{analyzingPersonality ? 'Analyzing...' : 'Analyze'}</span>
+                  </button>
+                  <button
+                    onClick={() => setShowManualInput(false)}
+                    className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
             ) : (
-              <button
-                onClick={analyzePersonality}
-                disabled={analyzingPersonality}
-                className="w-full py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center justify-center space-x-2"
-              >
-                {analyzingPersonality ? (
-                  <>
+              <div className="space-y-3">
+                <button
+                  onClick={analyzePersonality}
+                  disabled={analyzingPersonality}
+                  className="w-full py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center justify-center space-x-2"
+                >
+                  {analyzingPersonality ? (
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                    <span>Analyzing your posts...</span>
-                  </>
-                ) : (
-                  <>
+                  ) : (
                     <Brain className="w-4 h-4" />
-                    <span>Analyze My Writing Style</span>
-                  </>
-                )}
-              </button>
+                  )}
+                  <span>{analyzingPersonality ? 'Analyzing...' : 'Analyze via Threads API'}</span>
+                </button>
+                <button
+                  onClick={() => setShowManualInput(true)}
+                  className="w-full py-2.5 border border-purple-300 text-purple-700 rounded-lg hover:bg-purple-50 text-sm flex items-center justify-center space-x-2"
+                >
+                  <User className="w-4 h-4" />
+                  <span>Paste Posts Manually</span>
+                </button>
+                <p className="text-xs text-center text-gray-400">
+                  Can't connect Threads API? Paste your posts directly.
+                </p>
+              </div>
             )}
           </div>
 
