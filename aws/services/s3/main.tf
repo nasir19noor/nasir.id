@@ -115,7 +115,7 @@ resource "aws_s3_bucket_policy" "nasir_itung_cloudfront_only" {
           "${module.s3_itung.s3_bucket_arn}/uploads/*",
           "${module.s3_itung.s3_bucket_arn}/avatars/*",
           "${module.s3_itung.s3_bucket_arn}/questions/*",
-		  "${module.s3_itung.s3_bucket_arn}/android/*"]
+		      "${module.s3_itung.s3_bucket_arn}/android/*"]
         Condition = {
           StringEquals = {
             "AWS:SourceArn" = data.terraform_remote_state.cloudfront.outputs.cloudfront_itung_distribution_arn
