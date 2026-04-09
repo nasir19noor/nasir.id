@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { googleLogin, sendOtp } from '@/lib/api'
+import { googleLogin } from '@/lib/api'
 import { setToken } from '@/lib/auth'
 
 export default function GoogleUsernamePage() {
@@ -12,10 +12,6 @@ export default function GoogleUsernamePage() {
   const [birthMonth, setBirthMonth] = useState('')
   const [birthYear, setBirthYear] = useState('')
   const [phone, setPhone] = useState('')
-  const [otp, setOtp] = useState('')
-  const [otpSent, setOtpSent] = useState(false)
-  const [sendingOtp, setSendingOtp] = useState(false)
-  const [otpError, setOtpError] = useState('')
   const [fullName, setFullName] = useState('')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -37,29 +33,13 @@ export default function GoogleUsernamePage() {
     setFullName(googleName)
   }, [router])
 
-  async function handleSendOtp() {
-    if (!phone.trim()) { setOtpError('Masukkan nomor HP terlebih dahulu.'); return }
-    setOtpError('')
-    setSendingOtp(true)
-    try {
-      await sendOtp(phone.trim())
-      setOtpSent(true)
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
-      setOtpError(msg ?? 'Gagal mengirim OTP. Coba lagi.')
-    } finally {
-      setSendingOtp(false)
-    }
-  }
-
   async function handleSubmit(e: { preventDefault(): void }) {
     e.preventDefault()
-    if (!otpSent) { setError('Verifikasi nomor WhatsApp terlebih dahulu.'); return }
     setError('')
     setLoading(true)
     try {
       const birthDateISO = `${birthYear}-${birthMonth}-${birthDay}`
-      const res = await googleLogin(idToken, username.trim(), birthDateISO, phone.trim(), otp.trim(), fullName.trim())
+      const res = await googleLogin(idToken, username.trim(), birthDateISO, phone.trim(), fullName.trim())
       if (res.access_token) {
         sessionStorage.removeItem('google_id_token')
         sessionStorage.removeItem('google_email')
@@ -161,56 +141,26 @@ export default function GoogleUsernamePage() {
             <p className="text-xs text-gray-400 mt-1">Digunakan untuk menyesuaikan tingkat kesulitan soal.</p>
           </div>
 
-          {/* Phone + OTP */}
+          {/* Phone — required, no OTP (email already verified by Google) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Nomor WhatsApp <span className="text-red-400">*</span>
             </label>
-            <div className="flex gap-2">
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => { setPhone(e.target.value); setOtpSent(false) }}
-                required
-                placeholder="08xxxxxxxxxx"
-                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-              />
-              <button
-                type="button"
-                onClick={handleSendOtp}
-                disabled={sendingOtp || !phone.trim()}
-                className="shrink-0 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
-              >
-                {sendingOtp ? 'Mengirim...' : otpSent ? 'Kirim Ulang' : 'Kirim OTP'}
-              </button>
-            </div>
-            {otpError && <p className="text-xs text-red-500 mt-1">{otpError}</p>}
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              required
+              placeholder="08xxxxxxxxxx"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
           </div>
-
-          {otpSent && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Kode OTP <span className="text-red-400">*</span>
-              </label>
-              <input
-                type="text"
-                inputMode="numeric"
-                maxLength={6}
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                required
-                placeholder="6 digit kode dari WhatsApp"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-center tracking-widest font-mono focus:outline-none focus:ring-2 focus:ring-primary-500"
-              />
-              <p className="text-xs text-gray-400 mt-1">Cek WhatsApp nomor {phone} — berlaku 5 menit</p>
-            </div>
-          )}
 
           {error && <p className="text-sm text-red-600">{error}</p>}
 
           <button
             type="submit"
-            disabled={loading || !username.trim() || !fullName.trim() || !birthDay || !birthMonth || !birthYear || !otpSent || otp.length < 6}
+            disabled={loading || !username.trim() || !fullName.trim() || !birthDay || !birthMonth || !birthYear || !phone.trim()}
             className="w-full bg-primary-600 hover:bg-primary-700 text-white font-semibold py-2.5 rounded-lg transition-colors disabled:opacity-60"
           >
             {loading ? 'Membuat akun...' : 'Mulai Belajar'}

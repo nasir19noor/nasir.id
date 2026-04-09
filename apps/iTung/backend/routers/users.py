@@ -1,7 +1,9 @@
 # routers/users.py
 from datetime import timedelta, datetime, timezone, date
 from typing import Optional, Literal
-import os, random, requests
+import os, random, requests, smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -29,9 +31,12 @@ from auth import (
 )
 
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
-WAHA_URL         = os.getenv("WAHA_URL", "").rstrip("/")
-WAHA_API_KEY     = os.getenv("WAHA_API_KEY", "")
-WAHA_SESSION     = os.getenv("WAHA_SESSION", "default")
+
+SMTP_HOST     = os.getenv("SMTP_HOST", "")
+SMTP_PORT     = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USERNAME = os.getenv("SMTP_USERNAME", "")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+SMTP_FROM     = os.getenv("SMTP_FROM", SMTP_USERNAME)
 
 
 def normalize_phone(p: str) -> str:
@@ -41,6 +46,32 @@ def normalize_phone(p: str) -> str:
     elif not p.startswith("62"):
         p = "62" + p
     return p
+
+
+def send_email_otp(to_email: str, code: str) -> None:
+    """Send OTP code via SMTP email."""
+    if not SMTP_HOST or not SMTP_USERNAME or not SMTP_PASSWORD:
+        raise HTTPException(status_code=500, detail="Email OTP tidak dikonfigurasi")
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = f"Kode OTP iTung: {code}"
+    msg["From"]    = SMTP_FROM
+    msg["To"]      = to_email
+
+    body = (
+        f"Kode OTP iTung Anda: {code}\n"
+        "Berlaku 5 menit. Jangan bagikan ke siapapun."
+    )
+    msg.attach(MIMEText(body, "plain"))
+
+    try:
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as smtp:
+            smtp.ehlo()
+            smtp.starttls()
+            smtp.login(SMTP_USERNAME, SMTP_PASSWORD)
+            smtp.sendmail(SMTP_FROM, to_email, msg.as_string())
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Gagal mengirim OTP ke email. ({e})")
 
 
 # ─── Pydantic Schemas ─────────────────────────────────────────────
@@ -88,8 +119,7 @@ class GoogleCallbackRequest(BaseModel):
     username: Optional[str] = None
     full_name: Optional[str] = None
     birth_date: Optional[date] = None
-    phone_number: Optional[str] = None
-    otp_code: Optional[str] = None
+    phone_number: Optional[str] = None   # required when creating a new user
 
 
 class ApiKeyUpdate(BaseModel):
@@ -97,7 +127,7 @@ class ApiKeyUpdate(BaseModel):
 
 
 class SendOtpRequest(BaseModel):
-    phone: str
+    email: EmailStr
 
 
 # ─── Router ───────────────────────────────────────────────────────
@@ -107,37 +137,15 @@ router = APIRouter(tags=["Users"])
 @router.post("/send-otp", status_code=200)
 @limiter.limit("3/minute")
 def send_otp(request: Request, data: SendOtpRequest, db: Session = Depends(get_db)):
-    """Generate and send a WhatsApp OTP via WAHA."""
-    if not WAHA_URL:
-        raise HTTPException(status_code=500, detail="WhatsApp OTP tidak dikonfigurasi")
-    phone = normalize_phone(data.phone)
-    db.query(OtpCode).filter(OtpCode.phone == phone).delete()
+    """Generate and send an email OTP."""
+    email = data.email.lower().strip()
+    db.query(OtpCode).filter(OtpCode.phone == email).delete()
     code = f"{random.randint(0, 999999):06d}"
     expires = datetime.now(timezone.utc) + timedelta(minutes=5)
-    db.add(OtpCode(phone=phone, code=code, expires_at=expires))
+    db.add(OtpCode(phone=email, code=code, expires_at=expires))
     db.commit()
-    try:
-        headers = {"Content-Type": "application/json"}
-        if WAHA_API_KEY:
-            headers["X-Api-Key"] = WAHA_API_KEY
-        resp = requests.post(
-            f"{WAHA_URL}/api/sendText",
-            headers=headers,
-            json={
-                "session": WAHA_SESSION,
-                "chatId": f"{phone}@c.us",
-                "text": f"Kode OTP iTung Anda: *{code}*\nBerlaku 5 menit. Jangan bagikan ke siapapun.",
-            },
-            timeout=15,
-        )
-        print(f"[WAHA] status={resp.status_code} body={resp.text[:200]}")
-        if not resp.ok:
-            raise HTTPException(status_code=502, detail=f"WAHA: {resp.text[:200]}")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Gagal mengirim OTP. ({e})")
-    return {"message": "OTP telah dikirim ke WhatsApp Anda"}
+    send_email_otp(email, code)
+    return {"message": "OTP telah dikirim ke email Anda"}
 
 
 @router.post("/register", response_model=UserResponse, status_code=201)
@@ -146,24 +154,26 @@ def register(data: UserRegister, db: Session = Depends(get_db)):
     if db.query(User).filter(User.username == data.username).first():
         raise HTTPException(status_code=400, detail="Username sudah digunakan")
 
-    if db.query(User).filter(User.email == data.email).first():
+    email = data.email.lower().strip()
+    if db.query(User).filter(User.email == email).first():
         raise HTTPException(status_code=400, detail="Email sudah terdaftar")
 
-    phone = normalize_phone(data.phone_number)
-    if db.query(User).filter(User.phone_number == phone).first():
-        raise HTTPException(status_code=400, detail="Nomor HP sudah terdaftar")
-
+    # Verify email OTP
     otp = db.query(OtpCode).filter(
-        OtpCode.phone == phone,
+        OtpCode.phone == email,
         OtpCode.code == data.otp_code,
         OtpCode.expires_at > datetime.now(timezone.utc),
     ).first()
     if not otp:
         raise HTTPException(status_code=400, detail="Kode OTP tidak valid atau sudah kedaluwarsa")
 
+    phone = normalize_phone(data.phone_number)
+    if db.query(User).filter(User.phone_number == phone).first():
+        raise HTTPException(status_code=400, detail="Nomor HP sudah terdaftar")
+
     user = User(
         username=data.username,
-        email=data.email,
+        email=email,
         full_name=data.full_name,
         phone_number=phone,
         hashed_password=hash_password(data.password),
@@ -253,21 +263,12 @@ def google_login(data: GoogleCallbackRequest, db: Session = Depends(get_db)):
     if db.query(User).filter(User.username == data.username).first():
         raise HTTPException(status_code=400, detail="Username already taken")
 
-    # Validate phone + OTP
-    if not data.phone_number or not data.otp_code:
-        raise HTTPException(status_code=400, detail="Nomor WhatsApp dan kode OTP wajib diisi")
+    if not data.phone_number:
+        raise HTTPException(status_code=400, detail="Nomor WhatsApp wajib diisi")
 
     phone = normalize_phone(data.phone_number)
     if db.query(User).filter(User.phone_number == phone).first():
         raise HTTPException(status_code=400, detail="Nomor HP sudah terdaftar")
-
-    otp = db.query(OtpCode).filter(
-        OtpCode.phone == phone,
-        OtpCode.code == data.otp_code,
-        OtpCode.expires_at > datetime.now(timezone.utc),
-    ).first()
-    if not otp:
-        raise HTTPException(status_code=400, detail="Kode OTP tidak valid atau sudah kedaluwarsa")
 
     user = User(
         username=data.username,
@@ -279,7 +280,6 @@ def google_login(data: GoogleCallbackRequest, db: Session = Depends(get_db)):
         phone_number=phone,
     )
     db.add(user); db.commit()
-    db.delete(otp); db.commit()
     db.refresh(user)
     token = create_access_token({"sub": str(user.id), "username": user.username})
     return {"access_token": token, "token_type": "bearer", "user": user}

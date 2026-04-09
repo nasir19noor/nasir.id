@@ -28,11 +28,11 @@ export default function RegisterPage() {
   }
 
   async function handleSendOtp() {
-    if (!form.phone.trim()) { setOtpError('Masukkan nomor HP terlebih dahulu.'); return }
+    if (!form.email.trim()) { setOtpError('Masukkan email terlebih dahulu.'); return }
     setOtpError('')
     setSendingOtp(true)
     try {
-      await sendOtp(form.phone.trim())
+      await sendOtp(form.email.trim())
       setOtpSent(true)
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
@@ -63,7 +63,7 @@ export default function RegisterPage() {
 
   async function handleSubmit(e: { preventDefault(): void }) {
     e.preventDefault()
-    if (!otpSent) { setError('Verifikasi nomor WhatsApp terlebih dahulu.'); return }
+    if (!otpSent) { setError('Verifikasi email terlebih dahulu.'); return }
     setError('')
     setLoading(true)
     try {
@@ -96,27 +96,96 @@ export default function RegisterPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Standard fields */}
-          {[
-            { key: 'username',  label: 'Username',    type: 'text',     placeholder: 'Minimal 3 karakter',  required: true },
-            { key: 'email',     label: 'Email',        type: 'email',    placeholder: 'email@contoh.com',    required: true },
-            { key: 'full_name', label: 'Nama Lengkap', type: 'text',     placeholder: 'Masukkan nama lengkap', required: true },
-            { key: 'password',  label: 'Password',     type: 'password', placeholder: 'Minimal 6 karakter',  required: true },
-          ].map(({ key, label, type, placeholder, required }) => (
-            <div key={key}>
+          {/* Username */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Username <span className="text-red-400">*</span>
+            </label>
+            <input
+              type="text"
+              value={form.username}
+              onChange={(e) => set('username', e.target.value)}
+              required
+              placeholder="Minimal 3 karakter"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+          </div>
+
+          {/* Email + OTP button */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Email <span className="text-red-400">*</span>
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="email"
+                value={form.email}
+                onChange={(e) => { set('email', e.target.value); setOtpSent(false) }}
+                required
+                placeholder="email@contoh.com"
+                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+              <button
+                type="button"
+                onClick={handleSendOtp}
+                disabled={sendingOtp || !form.email.trim()}
+                className="shrink-0 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
+              >
+                {sendingOtp ? 'Mengirim...' : otpSent ? 'Kirim Ulang' : 'Kirim OTP'}
+              </button>
+            </div>
+            {otpError && <p className="text-xs text-red-500 mt-1">{otpError}</p>}
+          </div>
+
+          {/* OTP input — shown after sending */}
+          {otpSent && (
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                {label}{required && <span className="text-red-400 ml-0.5">*</span>}
+                Kode OTP <span className="text-red-400">*</span>
               </label>
               <input
-                type={type}
-                value={form[key as keyof typeof form]}
-                onChange={(e) => set(key, e.target.value)}
-                required={required}
-                placeholder={placeholder}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                value={form.otp}
+                onChange={(e) => set('otp', e.target.value.replace(/\D/g, ''))}
+                required
+                placeholder="6 digit kode dari email"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-center tracking-widest font-mono focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
+              <p className="text-xs text-gray-400 mt-1">Cek email {form.email} — berlaku 5 menit</p>
             </div>
-          ))}
+          )}
+
+          {/* Nama Lengkap */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Nama Lengkap <span className="text-red-400">*</span>
+            </label>
+            <input
+              type="text"
+              value={form.full_name}
+              onChange={(e) => set('full_name', e.target.value)}
+              required
+              placeholder="Masukkan nama lengkap"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+          </div>
+
+          {/* Password */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Password <span className="text-red-400">*</span>
+            </label>
+            <input
+              type="password"
+              value={form.password}
+              onChange={(e) => set('password', e.target.value)}
+              required
+              placeholder="Minimal 6 karakter"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+          </div>
 
           {/* Birth date */}
           <div>
@@ -161,50 +230,20 @@ export default function RegisterPage() {
             <p className="text-xs text-gray-400 mt-1">Digunakan untuk menyesuaikan tingkat kesulitan soal.</p>
           </div>
 
-          {/* Phone + OTP section */}
+          {/* Phone — required, no OTP */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Nomor WhatsApp <span className="text-red-400">*</span>
             </label>
-            <div className="flex gap-2">
-              <input
-                type="tel"
-                value={form.phone}
-                onChange={(e) => { set('phone', e.target.value); setOtpSent(false) }}
-                required
-                placeholder="08xxxxxxxxxx"
-                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-              />
-              <button
-                type="button"
-                onClick={handleSendOtp}
-                disabled={sendingOtp || !form.phone.trim()}
-                className="shrink-0 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
-              >
-                {sendingOtp ? 'Mengirim...' : otpSent ? 'Kirim Ulang' : 'Kirim OTP'}
-              </button>
-            </div>
-            {otpError && <p className="text-xs text-red-500 mt-1">{otpError}</p>}
+            <input
+              type="tel"
+              value={form.phone}
+              onChange={(e) => set('phone', e.target.value)}
+              required
+              placeholder="08xxxxxxxxxx"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
           </div>
-
-          {otpSent && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Kode OTP <span className="text-red-400">*</span>
-              </label>
-              <input
-                type="text"
-                inputMode="numeric"
-                maxLength={6}
-                value={form.otp}
-                onChange={(e) => set('otp', e.target.value.replace(/\D/g, ''))}
-                required
-                placeholder="6 digit kode dari WhatsApp"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-center tracking-widest font-mono focus:outline-none focus:ring-2 focus:ring-primary-500"
-              />
-              <p className="text-xs text-gray-400 mt-1">Cek WhatsApp nomor {form.phone} — berlaku 5 menit</p>
-            </div>
-          )}
 
           {error && <p className="text-sm text-red-600">{error}</p>}
 

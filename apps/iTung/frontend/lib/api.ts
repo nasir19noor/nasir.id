@@ -139,8 +139,8 @@ export async function login(username: string, password: string): Promise<LoginRe
   return res.data
 }
 
-export async function sendOtp(phone: string): Promise<void> {
-  await api.post('/api/users/send-otp', { phone })
+export async function sendOtp(email: string): Promise<void> {
+  await api.post('/api/users/send-otp', { email })
 }
 
 export async function register(data: {
@@ -175,7 +175,6 @@ export async function googleLogin(
   username?: string,
   birthDate?: string,
   phone?: string,
-  otp?: string,
   fullName?: string,
 ): Promise<{ needs_username?: boolean; google_email?: string; google_name?: string; access_token?: string; token_type?: string; user?: User }> {
   const res = await api.post('/api/users/google-login', {
@@ -184,7 +183,6 @@ export async function googleLogin(
     full_name: fullName,
     birth_date: birthDate,
     phone_number: phone,
-    otp_code: otp,
   })
   return res.data
 }
