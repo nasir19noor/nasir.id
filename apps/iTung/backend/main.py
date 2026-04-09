@@ -357,4 +357,3 @@ async def general_exception_handler(request: Request, exc: Exception):
 @app.get("/")
 def root():
     return {'app': 'iTung API', 'status': 'running'}
-
