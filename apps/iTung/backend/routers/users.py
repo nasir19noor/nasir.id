@@ -74,6 +74,35 @@ def send_email_otp(to_email: str, code: str) -> None:
         raise HTTPException(status_code=502, detail=f"Gagal mengirim OTP ke email. ({e})")
 
 
+ADMIN_NOTIFY_EMAIL = "nasir19noor@gmail.com"
+
+
+def notify_new_member(username: str, email: str, full_name: str, phone: str) -> None:
+    """Send a new-member notification to the admin email. Errors are silently logged."""
+    if not SMTP_HOST or not SMTP_USERNAME or not SMTP_PASSWORD:
+        return
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = f"[iTung] Anggota baru: {username}"
+        msg["From"]    = SMTP_FROM
+        msg["To"]      = ADMIN_NOTIFY_EMAIL
+        body = (
+            f"Anggota baru telah mendaftar di iTung.\n\n"
+            f"Username  : {username}\n"
+            f"Nama      : {full_name}\n"
+            f"Email     : {email}\n"
+            f"WhatsApp  : {phone}\n"
+        )
+        msg.attach(MIMEText(body, "plain"))
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as smtp:
+            smtp.ehlo()
+            smtp.starttls()
+            smtp.login(SMTP_USERNAME, SMTP_PASSWORD)
+            smtp.sendmail(SMTP_FROM, ADMIN_NOTIFY_EMAIL, msg.as_string())
+    except Exception as e:
+        print(f"[notify_new_member] Failed to send notification: {e}")
+
+
 # ─── Pydantic Schemas ─────────────────────────────────────────────
 class UserRegister(BaseModel):
     username: str
@@ -184,6 +213,7 @@ def register(data: UserRegister, db: Session = Depends(get_db)):
     db.delete(otp)
     db.commit()
     db.refresh(user)
+    notify_new_member(user.username, user.email, user.full_name or "", user.phone_number or "")
     return user
 
 
@@ -281,6 +311,7 @@ def google_login(data: GoogleCallbackRequest, db: Session = Depends(get_db)):
     )
     db.add(user); db.commit()
     db.refresh(user)
+    notify_new_member(user.username, user.email, user.full_name or "", user.phone_number or "")
     token = create_access_token({"sub": str(user.id), "username": user.username})
     return {"access_token": token, "token_type": "bearer", "user": user}
 
