@@ -7,7 +7,7 @@ from sqlalchemy import func, desc
 from typing import Optional
 
 from database import get_db
-from models import User, UserAnalytics, QuestionBank
+from models import User, UserAnalytics, QuestionBank, QuizSession, Question, UserAnswer
 from auth import decode_token
 from services.image_service import delete_from_s3
 
@@ -137,6 +137,12 @@ def delete_user(user_id: int,
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
+    # Delete child records in dependency order to satisfy FK constraints
+    db.query(UserAnswer).filter(UserAnswer.user_id == user_id).delete()
+    db.query(Question).filter(Question.user_id == user_id).delete()
+    db.query(QuizSession).filter(QuizSession.user_id == user_id).delete()
+    db.query(UserAnalytics).filter(UserAnalytics.user_id == user_id).delete()
     db.delete(user)
     db.commit()
 
