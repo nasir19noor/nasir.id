@@ -8,7 +8,7 @@ output "cloudfront_nasir_distribution_arn" {
   value       = module.cloudfront_nasir.cloudfront_distribution_arn
 }
 
-output "cloudfront_pulsara_distribution_arn" {
-  description = "ARN of the pulsaraCloudFront distribution (used for OAC bucket policy on assets.itung.nasir.id)"
-  value       = module.cloudfront_pulsara.cloudfront_distribution_arn
-}
+# output "cloudfront_pulsara_distribution_arn" {
+#   description = "ARN of the pulsaraCloudFront distribution (used for OAC bucket policy on assets.itung.nasir.id)"
+#   value       = module.cloudfront_pulsara.cloudfront_distribution_arn
+# }
