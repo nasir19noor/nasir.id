@@ -252,6 +252,25 @@ resource "cloudflare_record" "assets_pulsara_nasir_id" {
 }
 
 
+resource "cloudflare_record" "gcp_nasir_id_txt" {
+  zone_id = data.cloudflare_zones.nasir_id.zones[0].id
+  name    = "gcp.nasir.id"
+  content = "google-site-verification=pM5on4r7vlCKmOZnRsgNXzTu-L1VPYkrltCFqKRfong"
+  type    = "TXT"
+  proxied = false
+  ttl     = 3600
+}
+
+resource "cloudflare_record" "gcp_nasir_id_cname" {
+  zone_id = data.cloudflare_zones.nasir_id.zones[0].id
+  name    = "myzqcjqtipyw.gcp"
+  content = "gv-bl4ighyktetwfo.dv.googlehosted.com"
+  type    = "CNAME"
+  proxied = false
+  ttl     = 300
+}
+
+
 
 
 
