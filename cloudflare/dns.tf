@@ -271,6 +271,15 @@ resource "cloudflare_record" "gcp_nasir_id_cname" {
 }
 
 
+resource "cloudflare_record" "jakpro_nasir_id_source" {
+  zone_id = data.cloudflare_zones.nasir_id.zones[0].id
+  name    = "source.nasir.id"
+  content = "15.232.49.11"
+  type    = "A"
+  proxied = false
+  ttl     = 300
+}
+
 
 
 
