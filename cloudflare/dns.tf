@@ -280,6 +280,15 @@ resource "cloudflare_record" "jakpro_nasir_id_source" {
   ttl     = 300
 }
 
+resource "cloudflare_record" "jakpro_nasir_id_certificate" {
+  zone_id = data.cloudflare_zones.nasir_id.zones[0].id
+  name    = "_acme-challenge.jakpro.nasir.id."
+  content = "571ba4d0-34ca-48e3-88e1-e7259a9d2916.17.authorize.certificatemanager.goog."
+  type    = "CNAME"
+  proxied = false
+  ttl     = 300
+}
+
 
 
 
