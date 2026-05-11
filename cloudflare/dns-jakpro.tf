@@ -24,3 +24,30 @@ resource "cloudflare_record" "jppeka3_jakpro_nasir_id" {
   proxied = false
   ttl     = 300
 }
+
+resource "cloudflare_record" "performa1_jakpro_nasir_id" {
+  zone_id = data.cloudflare_zones.nasir_id.zones[0].id
+  name    = "performa1.jakpro.nasir.id"
+  content = "34.98.90.130"
+  type    = "A"
+  proxied = false
+  ttl     = 300
+}
+
+resource "cloudflare_record" "performa2_jakpro_nasir_id" {
+  zone_id = data.cloudflare_zones.nasir_id.zones[0].id
+  name    = "performa2.jakpro.nasir.id"
+  content = "34.98.90.130"
+  type    = "A"
+  proxied = false
+  ttl     = 300
+}
+
+resource "cloudflare_record" "performa3_jakpro_nasir_id" {
+  zone_id = data.cloudflare_zones.nasir_id.zones[0].id
+  name    = "performa3.jakpro.nasir.id"
+  content = "34.98.90.130"
+  type    = "A"
+  proxied = false
+  ttl     = 300
+}
