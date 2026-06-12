@@ -281,7 +281,7 @@ resource "cloudflare_record" "wc2026_nasir_id" {
 
 resource "cloudflare_record" "api_wc2026_nasir_id" {
   zone_id = data.cloudflare_zones.nasir_id.zones[0].id
-  name    = "wc2026.nasir.id"
+  name    = "api.wc2026.nasir.id"
   content = "207.180.248.214"
   type    = "A"
   proxied = true
