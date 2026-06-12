@@ -7,14 +7,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential libpq-dev curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Build context is apps/wc2026/, so paths below are relative to that dir.
-COPY backend/requirements.txt .
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY backend/ .
-
-# Curated squads source — ESPN doesn't expose this so we ship it in the image.
-COPY World_Cup_2026_Wall_Chart.xlsx /app/World_Cup_2026_Wall_Chart.xlsx
+# App code + curated squads spreadsheet (ESPN doesn't expose squads, so we
+# ship the .xlsx in the image).
+COPY . .
 
 EXPOSE 9002
 
