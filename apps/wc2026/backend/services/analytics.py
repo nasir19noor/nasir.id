@@ -9,6 +9,7 @@ from user_agents import parse as parse_user_agent
 
 from database import SessionLocal
 from models import PageView
+from services import geo
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +50,9 @@ def record_view(
     if _is_bot(user_agent or ""):
         return
     browser, osname, device = _classify_ua(user_agent or "")
+    # Prefer a proxy-provided country header (e.g. CF-IPCountry); otherwise
+    # geo-resolve from the IP (cached per IP).
+    resolved_country = country or geo.lookup_country(ip)
     db = SessionLocal()
     try:
         db.add(PageView(
@@ -56,7 +60,7 @@ def record_view(
             referrer=(referrer or None),
             ip=ip,
             user_agent=(user_agent or "")[:500] or None,
-            country=(country or None),
+            country=(resolved_country or None),
             browser=browser,
             os=osname,
             device=device,
