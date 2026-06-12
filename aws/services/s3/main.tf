@@ -165,6 +165,12 @@ resource "aws_s3_bucket_policy" "nasir_pulsara_cloudfront_only" {
 }
 
 
+module "s3_wc2026" {
+  source = "git::https://github.com/nasir19noor/terraform.git//aws/modules/s3"
+  bucket = "wc2026.nasir.id"
+}
+
+
 
 
 
