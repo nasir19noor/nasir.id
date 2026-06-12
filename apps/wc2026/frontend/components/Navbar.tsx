@@ -6,6 +6,7 @@ const links = [
   { href: '/knockout', label: 'Knockout' },
   { href: '/scorers',  label: 'Top Scorers' },
   { href: '/squads',   label: 'Squads' },
+  { href: '/admin',    label: 'Admin' },
 ]
 
 export default function Navbar() {
