@@ -1,23 +1,30 @@
 """
-Pull live World Cup scores from ESPN's public scoreboard endpoint.
+Pull World Cup 2026 data from ESPN's public scoreboard endpoint.
 
-Endpoint shape (no API key required):
-  GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard
-       ?dates=YYYYMMDD-YYYYMMDD
+This module is the **sole runtime data source**. It:
 
-We parse each event, look up the two competitor short-names, and update the
-matching Fixture / KnockoutMatch in our DB. We never insert new matches —
-seeding owns the structure; this overlay only writes scores / kickoff / status.
+  1. Ensures the 48 teams + empty knockout bracket exist
+     (using the small static FIFA draw constant in `wc2026_data.py`).
+  2. Pulls a wide date window from ESPN.
+  3. Upserts every event as either a group-stage Fixture or a KnockoutMatch
+     depending on whether the two competitors are in the same drawn group.
+
+No spreadsheet, no per-match seeding. Everything is dynamic.
 """
 import os
 import logging
+import unicodedata
+from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 
 import requests
 from sqlalchemy.orm import Session
 
 from database import SessionLocal
-from models import Fixture, KnockoutMatch, Team
+from models import Fixture, KnockoutMatch, Player, Team
+from services.wc2026_data import (
+    WC2026_GROUPS, TEAM_META, TEAM_GROUP, KNOCKOUT_SHAPE, team_lookup_code,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -25,21 +32,56 @@ ESPN_URL = os.getenv(
     "ESPN_SCOREBOARD_URL",
     "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard",
 )
-ESPN_WINDOW_DAYS = int(os.getenv("ESPN_WINDOW_DAYS", "14"))
+ESPN_BACK_DAYS    = int(os.getenv("ESPN_BACK_DAYS",    "10"))
+ESPN_FORWARD_DAYS = int(os.getenv("ESPN_FORWARD_DAYS", "40"))
 
-# ESPN sometimes uses names slightly different from our codes — map by
-# uppercase abbreviation; missing entries fall back to comparing names.
-ESPN_ABBR_OVERRIDES: dict[str, str] = {
-    "USA": "USA", "MEX": "MEX", "BRA": "BRA",
-    # add more as we find mismatches in production logs
-}
 
+# ─── Bootstrap: teams + empty knockout bracket ────────────────────
+
+def ensure_structure(db: Session) -> dict:
+    """Idempotently create the 48 teams and the empty knockout bracket."""
+    teams_added = 0
+    for letter, codes in WC2026_GROUPS.items():
+        for code in codes:
+            existing = db.query(Team).filter(Team.code == code).one_or_none()
+            name, iso2 = TEAM_META.get(code, (code, None))
+            if existing is None:
+                db.add(Team(code=code, name=name, iso2=iso2, group_letter=letter))
+                teams_added += 1
+            else:
+                # Backfill metadata on existing rows without overwriting good data.
+                if not existing.iso2:         existing.iso2 = iso2
+                if existing.group_letter != letter: existing.group_letter = letter
+                if existing.name in (None, "", code): existing.name = name
+
+    bracket_added = 0
+    for round_code, slot_count in KNOCKOUT_SHAPE:
+        for slot in range(1, slot_count + 1):
+            exists = (db.query(KnockoutMatch)
+                        .filter(KnockoutMatch.round_code == round_code,
+                                KnockoutMatch.slot       == slot)
+                        .one_or_none())
+            if exists is None:
+                db.add(KnockoutMatch(
+                    round_code=round_code,
+                    slot=slot,
+                    home_label=f"TBD {round_code.upper()} #{slot} home",
+                    away_label=f"TBD {round_code.upper()} #{slot} away",
+                ))
+                bracket_added += 1
+
+    db.commit()
+    logger.info("ensure_structure: %d new teams, %d new bracket slots",
+                teams_added, bracket_added)
+    return {"teams_added": teams_added, "bracket_added": bracket_added}
+
+
+# ─── ESPN fetch ───────────────────────────────────────────────────
 
 def _fetch_events() -> list[dict]:
-    """Return raw ESPN events covering ±ESPN_WINDOW_DAYS from now."""
     today = datetime.now(timezone.utc).date()
-    start = today - timedelta(days=2)
-    end   = today + timedelta(days=ESPN_WINDOW_DAYS)
+    start = today - timedelta(days=ESPN_BACK_DAYS)
+    end   = today + timedelta(days=ESPN_FORWARD_DAYS)
     params = {"dates": f"{start.strftime('%Y%m%d')}-{end.strftime('%Y%m%d')}"}
     try:
         r = requests.get(ESPN_URL, params=params, timeout=20)
@@ -50,21 +92,13 @@ def _fetch_events() -> list[dict]:
         return []
 
 
-def _team_lookup(db: Session) -> dict[str, Team]:
-    """Index teams by (uppercase code), (uppercase name), (uppercase short name)."""
-    idx: dict[str, Team] = {}
-    for t in db.query(Team).all():
-        idx[t.code.upper()] = t
-        idx[t.name.upper()] = t
-    return idx
-
-
 def _resolve_team(idx: dict[str, Team], competitor: dict) -> Team | None:
-    team_block = competitor.get("team", {}) or {}
+    block = competitor.get("team") or {}
     for key in ("abbreviation", "shortDisplayName", "displayName", "name"):
-        val = team_block.get(key)
+        val = block.get(key)
         if val:
-            t = idx.get(val.upper())
+            code = team_lookup_code(str(val))
+            t = idx.get(code) or idx.get(val.upper())
             if t:
                 return t
     return None
@@ -74,7 +108,7 @@ def _parse_event(ev: dict, idx: dict[str, Team]) -> dict | None:
     comp = (ev.get("competitions") or [{}])[0]
     home = away = None
     home_score = away_score = None
-    for c in comp.get("competitors", []) or []:
+    for c in comp.get("competitors") or []:
         team = _resolve_team(idx, c)
         if c.get("homeAway") == "home":
             home, home_score = team, c.get("score")
@@ -83,86 +117,249 @@ def _parse_event(ev: dict, idx: dict[str, Team]) -> dict | None:
     if not home or not away:
         return None
 
-    kickoff = ev.get("date")
+    iso = ev.get("date")
     try:
-        kickoff_dt = datetime.fromisoformat(kickoff.replace("Z", "+00:00")) if kickoff else None
+        kickoff = datetime.fromisoformat(iso.replace("Z", "+00:00")) if iso else None
     except ValueError:
-        kickoff_dt = None
+        kickoff = None
 
-    status = ((ev.get("status") or {}).get("type") or {}).get("state", "pre")
+    state = ((comp.get("status") or {}).get("type") or {}).get("state", "pre")
     status_map = {"pre": "scheduled", "in": "live", "post": "finished"}
+
+    def to_int(v):
+        if v is None or v == "":
+            return None
+        try:
+            return int(v)
+        except (TypeError, ValueError):
+            return None
+
     return {
         "espn_event_id": str(ev.get("id")),
-        "home_id":       home.id,
-        "away_id":       away.id,
-        "home_score":    int(home_score) if home_score not in (None, "") else None,
-        "away_score":    int(away_score) if away_score not in (None, "") else None,
-        "kickoff":       kickoff_dt,
-        "status":        status_map.get(status, "scheduled"),
+        "home":          home,
+        "away":          away,
+        "home_score":    to_int(home_score),
+        "away_score":    to_int(away_score),
+        "kickoff":       kickoff,
+        "status":        status_map.get(state, "scheduled"),
         "venue":         ((comp.get("venue") or {}).get("fullName")),
     }
 
 
+def _next_match_no(db: Session, group_letter: str) -> int:
+    last = (db.query(Fixture.match_no)
+              .filter(Fixture.group_letter == group_letter)
+              .order_by(Fixture.match_no.desc())
+              .first())
+    return (last[0] + 1) if (last and last[0]) else 1
+
+
+def _upsert_group_fixture(db: Session, group_letter: str, p: dict) -> bool:
+    """Insert or update one group-stage fixture. Returns True if changed."""
+    # Match either by ESPN event id (preferred) or by team pair within the group.
+    fx = None
+    if p["espn_event_id"]:
+        fx = (db.query(Fixture)
+                .filter(Fixture.espn_event_id == p["espn_event_id"])
+                .one_or_none())
+    if fx is None:
+        fx = (db.query(Fixture)
+                .filter(Fixture.group_letter == group_letter,
+                        Fixture.home_team_id == p["home"].id,
+                        Fixture.away_team_id == p["away"].id)
+                .one_or_none())
+    if fx is None:
+        fx = Fixture(
+            group_letter=group_letter,
+            match_no=_next_match_no(db, group_letter),
+            home_team_id=p["home"].id,
+            away_team_id=p["away"].id,
+        )
+        db.add(fx)
+    fx.espn_event_id = p["espn_event_id"] or fx.espn_event_id
+    if p["kickoff"]: fx.kickoff = p["kickoff"]
+    if p["venue"]:   fx.venue   = p["venue"]
+    fx.status = p["status"]
+    if p["home_score"] is not None and p["away_score"] is not None:
+        fx.home_score = p["home_score"]
+        fx.away_score = p["away_score"]
+    return True
+
+
+def _upsert_knockout(db: Session, p: dict) -> bool:
+    """Knockout match: locate next empty slot for this round and fill it."""
+    # Round inference: this fetcher is conservative. Until ESPN tags rounds we
+    # bucket all knockout games into 'r32' chronologically; when the front-end
+    # bracket needs r16/qf/sf we can refine the rule.
+    round_code = "r32"
+    # Reuse existing record if we already saw this ESPN event.
+    ko = None
+    if p["espn_event_id"]:
+        ko = (db.query(KnockoutMatch)
+                .filter(KnockoutMatch.espn_event_id == p["espn_event_id"])
+                .one_or_none())
+    if ko is None:
+        # First empty slot in the round (home_team_id IS NULL).
+        ko = (db.query(KnockoutMatch)
+                .filter(KnockoutMatch.round_code == round_code,
+                        KnockoutMatch.home_team_id.is_(None))
+                .order_by(KnockoutMatch.slot)
+                .first())
+        if ko is None:
+            return False
+    ko.home_team_id  = p["home"].id
+    ko.away_team_id  = p["away"].id
+    ko.espn_event_id = p["espn_event_id"] or ko.espn_event_id
+    if p["kickoff"]: ko.kickoff = p["kickoff"]
+    if p["venue"]:   ko.venue   = p["venue"]
+    ko.status = p["status"]
+    if p["home_score"] is not None and p["away_score"] is not None:
+        ko.home_score = p["home_score"]
+        ko.away_score = p["away_score"]
+        if p["status"] == "finished":
+            if p["home_score"] > p["away_score"]: ko.winner_team_id = p["home"].id
+            elif p["away_score"] > p["home_score"]: ko.winner_team_id = p["away"].id
+    return True
+
+
+def _normalize_name(s: str) -> str:
+    """Strip diacritics + case for fuzzy player matching."""
+    nfkd = unicodedata.normalize("NFKD", s or "")
+    return "".join(c for c in nfkd if not unicodedata.combining(c)).strip().upper()
+
+
+def _is_goal_play(detail: dict) -> bool:
+    """True if this play is a regular goal (penalty/header included, own goal excluded)."""
+    if not detail.get("scoringPlay"):
+        return False
+    text = ((detail.get("type") or {}).get("text") or "")
+    return "Goal" in text and "Own" not in text
+
+
+def _collect_goals(events: list[dict]) -> tuple[list[tuple[str, str]], dict[str, str]]:
+    """
+    Walk every ESPN event and return:
+      • [(espn_team_id, scorer_full_name), ...] for every regular goal,
+      • {espn_team_id: our_team_code} mapping discovered from competitor blocks.
+    """
+    goals: list[tuple[str, str]] = []
+    espn_team_to_code: dict[str, str] = {}
+
+    for ev in events:
+        comp = (ev.get("competitions") or [{}])[0]
+        # Learn ESPN team id ↔ our code from this event's competitors.
+        for c in comp.get("competitors") or []:
+            team_block = c.get("team") or {}
+            espn_id = str(team_block.get("id") or "")
+            abbr    = team_block.get("abbreviation")
+            if espn_id and abbr:
+                espn_team_to_code[espn_id] = team_lookup_code(str(abbr))
+        # Extract scorers.
+        for d in comp.get("details") or []:
+            if not _is_goal_play(d):
+                continue
+            athletes = d.get("athletesInvolved") or []
+            if not athletes:
+                continue
+            scorer = athletes[0]
+            scorer_name = scorer.get("fullName") or scorer.get("displayName") or ""
+            espn_team_id = str(
+                ((scorer.get("team") or {}).get("id"))
+                or ((d.get("team") or {}).get("id") or "")
+            )
+            if scorer_name and espn_team_id:
+                goals.append((espn_team_id, scorer_name))
+    return goals, espn_team_to_code
+
+
+def _apply_goal_counts(
+    db: Session,
+    goals: list[tuple[str, str]],
+    espn_team_to_code: dict[str, str],
+) -> dict:
+    """
+    Reset every player's wc_goals to 0, then bump it once per goal.
+    Players are matched by (team, diacritic-insensitive name).
+    """
+    db.query(Player).update({Player.wc_goals: 0})
+
+    # Build name index per team for fast matching.
+    code_to_team: dict[str, Team] = {t.code: t for t in db.query(Team).all()}
+    players_by_team: dict[int, list[Player]] = defaultdict(list)
+    for p in db.query(Player).all():
+        players_by_team[p.team_id].append(p)
+
+    counts: dict[tuple[int, str], int] = defaultdict(int)
+    unresolved_team   = 0
+    unresolved_player = []
+    for espn_team_id, scorer_name in goals:
+        our_code = espn_team_to_code.get(espn_team_id)
+        team     = code_to_team.get(our_code) if our_code else None
+        if not team:
+            unresolved_team += 1
+            continue
+        counts[(team.id, _normalize_name(scorer_name))] += 1
+
+    applied = 0
+    for (team_id, norm_name), n in counts.items():
+        matched = False
+        for p in players_by_team.get(team_id, []):
+            if _normalize_name(p.name) == norm_name:
+                p.wc_goals = n
+                applied += n
+                matched = True
+                break
+        if not matched:
+            unresolved_player.append((team_id, norm_name, n))
+
+    if unresolved_player:
+        logger.info("goals: %d unresolved scorers: %s",
+                    len(unresolved_player), unresolved_player[:10])
+    return {
+        "goals_seen":          len(goals),
+        "goals_applied":       applied,
+        "unresolved_team":     unresolved_team,
+        "unresolved_player":   len(unresolved_player),
+    }
+
+
 def refresh_from_espn() -> dict:
-    """Pull ESPN scoreboard and overlay scores onto our seeded fixtures."""
-    events = _fetch_events()
-    if not events:
-        return {"events": 0, "updated_group": 0, "updated_knockout": 0}
-
+    """Bootstrap structure if missing, then overlay ESPN events + goal scorers."""
     db = SessionLocal()
-    updated_group = updated_knockout = 0
+    summary = {"events": 0, "group": 0, "knockout": 0, "structure": {}, "scorers": {}}
     try:
-        idx = _team_lookup(db)
+        summary["structure"] = ensure_structure(db)
+
+        events = _fetch_events()
+        summary["events"] = len(events)
+        if not events:
+            return summary
+
+        idx: dict[str, Team] = {t.code: t for t in db.query(Team).all()}
+        idx.update({t.name.upper(): t for t in idx.values()})
+
         for ev in events:
-            parsed = _parse_event(ev, idx)
-            if not parsed:
+            p = _parse_event(ev, idx)
+            if not p:
                 continue
+            hg = TEAM_GROUP.get(p["home"].code)
+            ag = TEAM_GROUP.get(p["away"].code)
+            if hg and ag and hg == ag:
+                if _upsert_group_fixture(db, hg, p):
+                    summary["group"] += 1
+            else:
+                if _upsert_knockout(db, p):
+                    summary["knockout"] += 1
 
-            # Try group fixture first
-            fx = (db.query(Fixture)
-                    .filter(Fixture.home_team_id == parsed["home_id"],
-                            Fixture.away_team_id == parsed["away_id"])
-                    .one_or_none())
-            if fx:
-                _apply(fx, parsed)
-                updated_group += 1
-                continue
+        # Tally goal scorers from the same scoreboard payload — one SQL pass.
+        goals, espn_team_to_code = _collect_goals(events)
+        summary["scorers"] = _apply_goal_counts(db, goals, espn_team_to_code)
 
-            # Otherwise knockout
-            ko = (db.query(KnockoutMatch)
-                    .filter(KnockoutMatch.home_team_id == parsed["home_id"],
-                            KnockoutMatch.away_team_id == parsed["away_id"])
-                    .one_or_none())
-            if ko:
-                _apply(ko, parsed)
-                if parsed["status"] == "finished" and parsed["home_score"] is not None:
-                    if parsed["home_score"] > parsed["away_score"]:
-                        ko.winner_team_id = parsed["home_id"]
-                    elif parsed["away_score"] > parsed["home_score"]:
-                        ko.winner_team_id = parsed["away_id"]
-                updated_knockout += 1
         db.commit()
     except Exception as e:
         db.rollback()
         logger.exception("ESPN refresh failed: %s", e)
     finally:
         db.close()
-    summary = {
-        "events":            len(events),
-        "updated_group":     updated_group,
-        "updated_knockout":  updated_knockout,
-    }
     logger.info("ESPN refresh: %s", summary)
     return summary
-
-
-def _apply(row, parsed: dict):
-    row.espn_event_id = parsed["espn_event_id"]
-    if parsed["kickoff"]:
-        row.kickoff = parsed["kickoff"]
-    if parsed["venue"]:
-        row.venue = parsed["venue"]
-    row.status = parsed["status"]
-    if parsed["home_score"] is not None and parsed["away_score"] is not None:
-        row.home_score = parsed["home_score"]
-        row.away_score = parsed["away_score"]

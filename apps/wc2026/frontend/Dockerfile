@@ -28,5 +28,3 @@ COPY --from=builder /app/.next/static    ./.next/static
 EXPOSE 5002
 
 CMD ["node", "server.js"]
-
-
