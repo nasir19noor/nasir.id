@@ -146,36 +146,56 @@ def _parse_event(ev: dict, idx: dict[str, Team]) -> dict | None:
     }
 
 
-def _next_match_no(db: Session, group_letter: str) -> int:
-    last = (db.query(Fixture.match_no)
-              .filter(Fixture.group_letter == group_letter)
-              .order_by(Fixture.match_no.desc())
-              .first())
-    return (last[0] + 1) if (last and last[0]) else 1
+def _seed_match_counters(db: Session) -> dict[str, int]:
+    """Highest match_no currently in use per group letter — counter seed."""
+    counters: dict[str, int] = {}
+    rows = (db.query(Fixture.group_letter, Fixture.match_no)
+              .filter(Fixture.match_no.isnot(None))
+              .all())
+    for letter, n in rows:
+        if letter and (n is not None) and n > counters.get(letter, 0):
+            counters[letter] = n
+    return counters
 
 
-def _upsert_group_fixture(db: Session, group_letter: str, p: dict) -> bool:
-    """Insert or update one group-stage fixture. Returns True if changed."""
-    # Match either by ESPN event id (preferred) or by team pair within the group.
+def _upsert_group_fixture(
+    db: Session,
+    group_letter: str,
+    p: dict,
+    match_counters: dict[str, int],
+) -> bool:
+    """Insert or update one group-stage fixture. Returns True if changed.
+
+    `match_counters` holds the highest match_no in use per group. We
+    increment it locally before each new insert because the DB-side max
+    would otherwise miss rows we just added inside this transaction (they
+    aren't visible until the next flush) — causing a uniqueness collision.
+    """
     fx = None
     if p["espn_event_id"]:
         fx = (db.query(Fixture)
                 .filter(Fixture.espn_event_id == p["espn_event_id"])
                 .one_or_none())
     if fx is None:
+        # Match the team pair within the group — order-insensitive so the
+        # round-robin's reverse fixture isn't treated as a new row.
         fx = (db.query(Fixture)
-                .filter(Fixture.group_letter == group_letter,
-                        Fixture.home_team_id == p["home"].id,
-                        Fixture.away_team_id == p["away"].id)
+                .filter(Fixture.group_letter == group_letter)
+                .filter(
+                    ((Fixture.home_team_id == p["home"].id) & (Fixture.away_team_id == p["away"].id))
+                    | ((Fixture.home_team_id == p["away"].id) & (Fixture.away_team_id == p["home"].id))
+                )
                 .one_or_none())
     if fx is None:
+        match_counters[group_letter] = match_counters.get(group_letter, 0) + 1
         fx = Fixture(
             group_letter=group_letter,
-            match_no=_next_match_no(db, group_letter),
+            match_no=match_counters[group_letter],
             home_team_id=p["home"].id,
             away_team_id=p["away"].id,
         )
         db.add(fx)
+        db.flush()                  # surface DB errors per-row, not per-batch
     fx.espn_event_id = p["espn_event_id"] or fx.espn_event_id
     if p["kickoff"]: fx.kickoff = p["kickoff"]
     if p["venue"]:   fx.venue   = p["venue"]
@@ -353,6 +373,7 @@ def refresh_from_espn() -> dict:
 
         idx: dict[str, Team] = {t.code: t for t in db.query(Team).all()}
         idx.update({t.name.upper(): t for t in idx.values()})
+        match_counters = _seed_match_counters(db)
 
         def _upsert_loop():
             for ev in events:
@@ -362,7 +383,7 @@ def refresh_from_espn() -> dict:
                 hg = TEAM_GROUP.get(p["home"].code)
                 ag = TEAM_GROUP.get(p["away"].code)
                 if hg and ag and hg == ag:
-                    if _upsert_group_fixture(db, hg, p):
+                    if _upsert_group_fixture(db, hg, p, match_counters):
                         summary["group"] += 1
                 else:
                     if _upsert_knockout(db, p):
