@@ -1,0 +1,93 @@
+name: 'Deploy wc2026.nasir.id'
+
+on:
+  push:
+    paths:
+      - 'apps/wc2026/frontend/**'
+      - 'apps/wc2026/backend/**'
+      - 'apps/wc2026/World_Cup_2026_Wall_Chart.xlsx'
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  changes:
+    runs-on: [self-hosted, nasir-contabo]
+    outputs:
+      backend:  ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - name: Remove stale nested .git directories
+        run: find "$GITHUB_WORKSPACE" -mindepth 2 -name ".git" -exec rm -rf {} + 2>/dev/null || true
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Detect changed paths
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'apps/wc2026/backend/**'
+              - 'apps/wc2026/World_Cup_2026_Wall_Chart.xlsx'
+            frontend:
+              - 'apps/wc2026/frontend/**'
+
+  deploy-backend:
+    needs: changes
+    if: ${{ needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch' }}
+    runs-on: [self-hosted, nasir-contabo]
+    steps:
+      - name: Deploy backend
+        env:
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+        working-directory: apps/wc2026/backend
+        run: |
+          echo "Pulling .env from S3..."
+          rm -f .env
+          aws s3 cp s3://wc2026.nasir.id/backend/.env .env
+
+          echo "Copying seed spreadsheet into build context..."
+          cp ../World_Cup_2026_Wall_Chart.xlsx . || true
+
+          echo "Stopping and removing existing backend container..."
+          echo "$SSH_PASSWORD" | sudo -S docker stop wc2026-backend 2>/dev/null || true
+          echo "$SSH_PASSWORD" | sudo -S docker rm   wc2026-backend 2>/dev/null || true
+          echo "$SSH_PASSWORD" | sudo -S docker rmi  wc2026-backend:latest 2>/dev/null || true
+
+          echo "Building backend image..."
+          echo "$SSH_PASSWORD" | sudo -S docker build -t wc2026-backend:latest .
+
+          echo "Running backend container..."
+          echo "$SSH_PASSWORD" | sudo -S docker run -d -p 9002:9002 --env-file .env \
+              --restart unless-stopped \
+              --name wc2026-backend wc2026-backend:latest
+
+          echo "Backend deployed successfully"
+
+  deploy-frontend:
+    needs: changes
+    if: ${{ needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch' }}
+    runs-on: [self-hosted, nasir-contabo]
+    steps:
+      - name: Deploy frontend
+        env:
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+        working-directory: apps/wc2026/frontend
+        run: |
+          echo "Stopping and removing existing frontend container..."
+          echo "$SSH_PASSWORD" | sudo -S docker stop wc2026-frontend 2>/dev/null || true
+          echo "$SSH_PASSWORD" | sudo -S docker rm   wc2026-frontend 2>/dev/null || true
+
+          echo "Building frontend image..."
+          echo "$SSH_PASSWORD" | sudo -S docker build \
+              --build-arg NEXT_PUBLIC_API_URL=https://api.wc2026.nasir.id \
+              -t wc2026-frontend:latest .
+
+          echo "Running frontend container..."
+          echo "$SSH_PASSWORD" | sudo -S docker run -d -p 5002:5002 \
+              --restart unless-stopped \
+              --name wc2026-frontend wc2026-frontend:latest
+
+          echo "Frontend deployed successfully"
