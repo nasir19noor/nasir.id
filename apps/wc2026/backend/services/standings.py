@@ -18,8 +18,11 @@ def standings_for_group(db: Session, group_letter: str) -> list[dict]:
         for t in teams
     }
 
+    # Only count matches that have actually kicked off — a fixture with status
+    # "scheduled" can never contribute to standings even if it carries a score.
     fixtures = (db.query(Fixture)
                   .filter(Fixture.group_letter == group_letter,
+                          Fixture.status.in_(("live", "finished")),
                           Fixture.home_score.isnot(None),
                           Fixture.away_score.isnot(None))
                   .all())

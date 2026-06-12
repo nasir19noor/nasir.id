@@ -200,9 +200,16 @@ def _upsert_group_fixture(
     if p["kickoff"]: fx.kickoff = p["kickoff"]
     if p["venue"]:   fx.venue   = p["venue"]
     fx.status = p["status"]
-    if p["home_score"] is not None and p["away_score"] is not None:
+    # ESPN reports score "0" for matches that haven't kicked off. Only treat
+    # scores as real once the match is live or finished — otherwise clear
+    # them so standings don't count unplayed games as 0-0 draws.
+    if p["status"] in ("live", "finished") \
+       and p["home_score"] is not None and p["away_score"] is not None:
         fx.home_score = p["home_score"]
         fx.away_score = p["away_score"]
+    else:
+        fx.home_score = None
+        fx.away_score = None
     return True
 
 
@@ -233,12 +240,16 @@ def _upsert_knockout(db: Session, p: dict) -> bool:
     if p["kickoff"]: ko.kickoff = p["kickoff"]
     if p["venue"]:   ko.venue   = p["venue"]
     ko.status = p["status"]
-    if p["home_score"] is not None and p["away_score"] is not None:
+    if p["status"] in ("live", "finished") \
+       and p["home_score"] is not None and p["away_score"] is not None:
         ko.home_score = p["home_score"]
         ko.away_score = p["away_score"]
         if p["status"] == "finished":
-            if p["home_score"] > p["away_score"]: ko.winner_team_id = p["home"].id
+            if   p["home_score"] > p["away_score"]: ko.winner_team_id = p["home"].id
             elif p["away_score"] > p["home_score"]: ko.winner_team_id = p["away"].id
+    else:
+        ko.home_score = None
+        ko.away_score = None
     return True
 
 
