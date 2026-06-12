@@ -11,7 +11,9 @@ class Team(Base):
     id            = Column(Integer, primary_key=True)
     code          = Column(String(3), unique=True, index=True, nullable=False)  # MEX, KOR, ...
     name          = Column(String, nullable=False)
-    iso2          = Column(String(2))                  # for flagcdn.com (e.g. 'mx')
+    # flagcdn identifier — usually ISO-3166 alpha-2 ('mx', 'kr') but the home
+    # nations need regional codes ('gb-sct', 'gb-eng', 'gb-wls'), so keep it wide.
+    iso2          = Column(String(16))
     group_letter  = Column(String(1), index=True)      # A..L
     confederation = Column(String)                     # CONMEBOL, UEFA, ...
     venue_image   = Column(String)                     # optional

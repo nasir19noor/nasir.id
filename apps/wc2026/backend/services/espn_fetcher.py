@@ -324,13 +324,29 @@ def _apply_goal_counts(
 
 
 def refresh_from_espn() -> dict:
-    """Bootstrap structure if missing, then overlay ESPN events + goal scorers."""
-    db = SessionLocal()
-    summary = {"events": 0, "group": 0, "knockout": 0, "structure": {}, "scorers": {}}
-    try:
-        summary["structure"] = ensure_structure(db)
+    """Bootstrap structure if missing, then overlay ESPN events + goal scorers.
 
-        events = _fetch_events()
+    Errors are caught per-stage and surfaced in the response dict (with the
+    stage name and exception text) so /admin/refresh callers can see what
+    broke without having to read container logs.
+    """
+    db = SessionLocal()
+    summary: dict = {"events": 0, "group": 0, "knockout": 0,
+                     "structure": {}, "scorers": {}, "errors": []}
+
+    def _stage(name: str, fn):
+        try:
+            return fn()
+        except Exception as e:
+            db.rollback()
+            logger.exception("ESPN refresh stage '%s' failed: %s", name, e)
+            summary["errors"].append({"stage": name, "error": f"{type(e).__name__}: {e}"})
+            return None
+
+    try:
+        summary["structure"] = _stage("ensure_structure", lambda: ensure_structure(db)) or {}
+
+        events = _stage("fetch_events", _fetch_events) or []
         summary["events"] = len(events)
         if not events:
             return summary
@@ -338,27 +354,27 @@ def refresh_from_espn() -> dict:
         idx: dict[str, Team] = {t.code: t for t in db.query(Team).all()}
         idx.update({t.name.upper(): t for t in idx.values()})
 
-        for ev in events:
-            p = _parse_event(ev, idx)
-            if not p:
-                continue
-            hg = TEAM_GROUP.get(p["home"].code)
-            ag = TEAM_GROUP.get(p["away"].code)
-            if hg and ag and hg == ag:
-                if _upsert_group_fixture(db, hg, p):
-                    summary["group"] += 1
-            else:
-                if _upsert_knockout(db, p):
-                    summary["knockout"] += 1
+        def _upsert_loop():
+            for ev in events:
+                p = _parse_event(ev, idx)
+                if not p:
+                    continue
+                hg = TEAM_GROUP.get(p["home"].code)
+                ag = TEAM_GROUP.get(p["away"].code)
+                if hg and ag and hg == ag:
+                    if _upsert_group_fixture(db, hg, p):
+                        summary["group"] += 1
+                else:
+                    if _upsert_knockout(db, p):
+                        summary["knockout"] += 1
+        _stage("upsert_fixtures", _upsert_loop)
 
-        # Tally goal scorers from the same scoreboard payload — one SQL pass.
-        goals, espn_team_to_code = _collect_goals(events)
-        summary["scorers"] = _apply_goal_counts(db, goals, espn_team_to_code)
+        def _score_loop():
+            goals, espn_team_to_code = _collect_goals(events)
+            summary["scorers"] = _apply_goal_counts(db, goals, espn_team_to_code)
+        _stage("apply_goals", _score_loop)
 
         db.commit()
-    except Exception as e:
-        db.rollback()
-        logger.exception("ESPN refresh failed: %s", e)
     finally:
         db.close()
     logger.info("ESPN refresh: %s", summary)
