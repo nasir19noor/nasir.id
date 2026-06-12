@@ -13,6 +13,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+from sqlalchemy import inspect, text
 
 from database import engine, Base, SessionLocal
 from models import Team, Player, Fixture, KnockoutMatch  # noqa: F401 — register models
@@ -27,9 +28,36 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 logger = logging.getLogger(__name__)
 
 
+def run_migrations() -> None:
+    """
+    Bring legacy schemas up to date. create_all() only creates *new* tables,
+    so anything that needs to widen an existing column or add a missing one
+    goes here. Idempotent — each step checks current state first.
+    """
+    insp = inspect(engine)
+
+    if not insp.has_table("teams"):
+        return  # fresh DB — create_all will produce the right schema
+
+    teams_cols = {c["name"]: c for c in insp.get_columns("teams")}
+
+    # iso2 was originally VARCHAR(2). Some federations need wider ('gb-sct',
+    # 'gb-eng', 'gb-wls'). Widen if too narrow.
+    iso2_type = str(teams_cols.get("iso2", {}).get("type", ""))
+    if "VARCHAR(2)" in iso2_type.upper() or iso2_type.upper() == "VARCHAR(2)":
+        logger.info("Migration: widening teams.iso2 → VARCHAR(16)")
+        with engine.begin() as c:
+            c.execute(text("ALTER TABLE teams ALTER COLUMN iso2 TYPE VARCHAR(16)"))
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
+
+    try:
+        run_migrations()
+    except Exception as e:
+        logger.exception("Migrations failed: %s", e)
 
     # Order matters: structure → squads → ESPN. The ESPN refresh attributes
     # goal scorers to existing Player rows, so squads must be present first.
