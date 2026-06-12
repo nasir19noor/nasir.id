@@ -275,7 +275,7 @@ resource "cloudflare_record" "wc2026_nasir_id" {
   name    = "wc2026.nasir.id"
   content = "207.180.248.214"
   type    = "A"
-  proxied = true
+  proxied = false
   ttl     = 1
 }
 
@@ -284,7 +284,7 @@ resource "cloudflare_record" "api_wc2026_nasir_id" {
   name    = "api.wc2026.nasir.id"
   content = "207.180.248.214"
   type    = "A"
-  proxied = true
+  proxied = false
   ttl     = 1
 }
 
