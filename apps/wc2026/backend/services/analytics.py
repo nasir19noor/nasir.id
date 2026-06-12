@@ -50,9 +50,9 @@ def record_view(
     if _is_bot(user_agent or ""):
         return
     browser, osname, device = _classify_ua(user_agent or "")
-    # Prefer a proxy-provided country header (e.g. CF-IPCountry); otherwise
-    # geo-resolve from the IP (cached per IP).
-    resolved_country = country or geo.lookup_country(ip)
+    # Resolve full geo detail from the IP (cached per IP). A proxy-provided
+    # country header, if any, takes precedence for the country code.
+    g = geo.lookup_geo(ip)
     db = SessionLocal()
     try:
         db.add(PageView(
@@ -60,7 +60,12 @@ def record_view(
             referrer=(referrer or None),
             ip=ip,
             user_agent=(user_agent or "")[:500] or None,
-            country=(resolved_country or None),
+            country=(country or g.get("country_code") or None),
+            country_name=g.get("country") or None,
+            region=g.get("region") or None,
+            city=g.get("city") or None,
+            timezone=g.get("timezone") or None,
+            isp=g.get("isp") or None,
             browser=browser,
             os=osname,
             device=device,
@@ -122,17 +127,23 @@ def summary(days: int = 7, top: int = 10, recent: int = 20) -> dict:
             "top_browsers":  _top(PageView.browser),
             "top_os":        _top(PageView.os),
             "top_devices":   _top(PageView.device),
-            "top_countries": _top(PageView.country),
+            "top_countries": _top(PageView.country_name),
+            "top_cities":    _top(PageView.city),
             "recent":        [
                 {
-                    "timestamp":  r.timestamp.isoformat() if r.timestamp else None,
-                    "path":       r.path,
-                    "ip":         r.ip,
-                    "country":    r.country,
-                    "browser":    r.browser,
-                    "os":         r.os,
-                    "device":     r.device,
-                    "referrer":   r.referrer,
+                    "timestamp":    r.timestamp.isoformat() if r.timestamp else None,
+                    "path":         r.path,
+                    "ip":           r.ip,
+                    "country":      r.country,
+                    "country_name": r.country_name,
+                    "region":       r.region,
+                    "city":         r.city,
+                    "timezone":     r.timezone,
+                    "isp":          r.isp,
+                    "browser":      r.browser,
+                    "os":           r.os,
+                    "device":       r.device,
+                    "referrer":     r.referrer,
                 }
                 for r in recent_rows
             ],

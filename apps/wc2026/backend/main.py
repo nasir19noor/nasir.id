@@ -52,6 +52,15 @@ def run_migrations() -> None:
         with engine.begin() as c:
             c.execute(text("ALTER TABLE teams ALTER COLUMN iso2 TYPE VARCHAR(16)"))
 
+    # page_views gained geo-detail columns after first release. Add any missing.
+    if insp.has_table("page_views"):
+        pv_cols = {c["name"] for c in insp.get_columns("page_views")}
+        for col in ("country_name", "region", "city", "timezone", "isp"):
+            if col not in pv_cols:
+                logger.info("Migration: adding page_views.%s", col)
+                with engine.begin() as c:
+                    c.execute(text(f"ALTER TABLE page_views ADD COLUMN {col} VARCHAR"))
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

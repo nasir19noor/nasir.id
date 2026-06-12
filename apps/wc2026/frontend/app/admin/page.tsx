@@ -27,9 +27,13 @@ type Analytics = {
   top_os:        { label: string; views: number }[]
   top_devices:   { label: string; views: number }[]
   top_countries: { label: string; views: number }[]
+  top_cities:    { label: string; views: number }[]
   recent: {
     timestamp: string | null; path: string; ip: string | null
-    country: string | null; browser: string; os: string; device: string
+    country: string | null; country_name: string | null
+    region: string | null; city: string | null
+    timezone: string | null; isp: string | null
+    browser: string; os: string; device: string
     referrer: string | null
   }[]
 }
@@ -314,6 +318,7 @@ function AnalyticsView({ a }: { a: Analytics }) {
         <TopTable title="Operating systems" rows={a.top_os} />
         <TopTable title="Devices"       rows={a.top_devices} />
         <TopTable title="Countries"     rows={a.top_countries} />
+        <TopTable title="Cities"        rows={a.top_cities} />
       </div>
 
       {/* Recent visitors */}
@@ -321,13 +326,15 @@ function AnalyticsView({ a }: { a: Analytics }) {
         <h3 className="px-4 pt-4 pb-2 text-sm font-bold uppercase tracking-wide text-pitch">
           Recent visitors
         </h3>
+        <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead className="bg-pitch/5 text-pitch">
             <tr>
               <th className="px-3 py-2 text-left">When</th>
               <th className="px-3 py-2 text-left">Path</th>
               <th className="px-3 py-2 text-left">IP</th>
-              <th className="px-3 py-2 text-left">Country</th>
+              <th className="px-3 py-2 text-left">Location</th>
+              <th className="px-3 py-2 text-left">ISP</th>
               <th className="px-3 py-2 text-left">Device</th>
               <th className="px-3 py-2 text-left">Browser / OS</th>
             </tr>
@@ -340,7 +347,8 @@ function AnalyticsView({ a }: { a: Analytics }) {
                 </td>
                 <td className="px-3 py-1.5 font-mono">{r.path}</td>
                 <td className="px-3 py-1.5 font-mono text-black/50">{r.ip ?? '—'}</td>
-                <td className="px-3 py-1.5">{r.country ?? '—'}</td>
+                <td className="px-3 py-1.5 whitespace-nowrap">{formatLocation(r)}</td>
+                <td className="px-3 py-1.5 text-black/60">{r.isp ?? '—'}</td>
                 <td className="px-3 py-1.5">{r.device}</td>
                 <td className="px-3 py-1.5 text-black/70">
                   {r.browser}{r.os ? ` · ${r.os}` : ''}
@@ -348,12 +356,13 @@ function AnalyticsView({ a }: { a: Analytics }) {
               </tr>
             ))}
             {a.recent.length === 0 && (
-              <tr><td colSpan={6} className="px-3 py-6 text-center text-black/50">
+              <tr><td colSpan={7} className="px-3 py-6 text-center text-black/50">
                 No visitors recorded yet.
               </td></tr>
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   )
@@ -387,4 +396,14 @@ function Stat({ label, value }: { label: string; value: number | string }) {
       <div className="text-[10px] uppercase tracking-wide text-black/60">{label}</div>
     </div>
   )
+}
+
+/** "Jember, East Java, Indonesia" — skips empty parts; falls back to country code. */
+function formatLocation(r: {
+  city: string | null; region: string | null
+  country_name: string | null; country: string | null
+}): string {
+  const parts = [r.city, r.region, r.country_name].filter(Boolean)
+  if (parts.length) return parts.join(', ')
+  return r.country || '—'
 }

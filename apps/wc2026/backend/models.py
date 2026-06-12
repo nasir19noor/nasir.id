@@ -99,12 +99,17 @@ class PageView(Base):
     timestamp   = Column(DateTime(timezone=True), server_default=func.now(), index=True)
     path        = Column(String, index=True)
     referrer    = Column(String)
-    ip          = Column(String, index=True)
-    user_agent  = Column(String)
-    country     = Column(String(8), index=True)   # e.g. "ID" — set if Cloudflare/Caddy passes a country header
-    browser     = Column(String)
-    os          = Column(String)
-    device      = Column(String)                  # Mobile | Tablet | PC | Bot
+    ip            = Column(String, index=True)
+    user_agent    = Column(String)
+    country       = Column(String(8), index=True)  # ISO code, e.g. "ID"
+    country_name  = Column(String)                 # full name, e.g. "Indonesia"
+    region        = Column(String)                 # e.g. "East Java"
+    city          = Column(String)                 # e.g. "Jember"
+    timezone      = Column(String)                 # e.g. "Asia/Jakarta"
+    isp           = Column(String)                 # e.g. "Telkom Indonesia"
+    browser       = Column(String)
+    os            = Column(String)
+    device        = Column(String)                 # Mobile | Tablet | PC | Bot
 
     __table_args__ = (
         Index("ix_page_views_path_ts", "path", "timestamp"),
