@@ -11,6 +11,31 @@ export const API_BASE =
 
 const REVALIDATE_SECONDS = 300
 
+// ─── Admin auth (HTTP Basic) ──────────────────────────────────────
+// Credentials live only in browser sessionStorage — never cookies, never
+// localStorage — so they vanish when the tab closes.
+
+const ADMIN_KEY = 'wc2026.admin.basic'
+
+export function getAdminAuth(): string | null {
+  if (typeof window === 'undefined') return null
+  return sessionStorage.getItem(ADMIN_KEY)
+}
+
+export function setAdminAuth(user: string, pass: string) {
+  const token = btoa(`${user}:${pass}`)
+  sessionStorage.setItem(ADMIN_KEY, token)
+}
+
+export function clearAdminAuth() {
+  sessionStorage.removeItem(ADMIN_KEY)
+}
+
+export function adminHeaders(): HeadersInit {
+  const token = getAdminAuth()
+  return token ? { Authorization: `Basic ${token}` } : {}
+}
+
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const url = `${API_BASE}${path}`
   const res = await fetch(url, {
