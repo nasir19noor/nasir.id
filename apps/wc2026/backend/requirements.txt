@@ -7,3 +7,4 @@ python-dotenv
 requests
 apscheduler
 openpyxl
+user-agents

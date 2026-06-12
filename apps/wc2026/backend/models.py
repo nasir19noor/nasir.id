@@ -1,6 +1,6 @@
 """ORM models for the World Cup 2026 wall-chart."""
 from sqlalchemy import (
-    Column, Integer, String, Boolean, DateTime, ForeignKey, UniqueConstraint, func,
+    Column, Integer, String, Boolean, DateTime, ForeignKey, UniqueConstraint, Index, func,
 )
 from sqlalchemy.orm import relationship
 from database import Base
@@ -89,4 +89,23 @@ class KnockoutMatch(Base):
 
     __table_args__ = (
         UniqueConstraint("round_code", "slot", name="uq_round_slot"),
+    )
+
+
+class PageView(Base):
+    """One row per public page view — populated by the frontend beacon."""
+    __tablename__ = "page_views"
+    id          = Column(Integer, primary_key=True)
+    timestamp   = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+    path        = Column(String, index=True)
+    referrer    = Column(String)
+    ip          = Column(String, index=True)
+    user_agent  = Column(String)
+    country     = Column(String(8), index=True)   # e.g. "ID" — set if Cloudflare/Caddy passes a country header
+    browser     = Column(String)
+    os          = Column(String)
+    device      = Column(String)                  # Mobile | Tablet | PC | Bot
+
+    __table_args__ = (
+        Index("ix_page_views_path_ts", "path", "timestamp"),
     )

@@ -10,18 +10,21 @@ import os
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 from sqlalchemy import inspect, text
 
 from database import engine, Base, SessionLocal
-from models import Team, Player, Fixture, KnockoutMatch  # noqa: F401 — register models
+from models import Team, Player, Fixture, KnockoutMatch, PageView  # noqa: F401 — register models
 from routers import groups, fixtures, knockout, squads, scorers
 from schemas import StatusOut
 from services.scheduler import start_scheduler, get_last_refresh
 from services.espn_fetcher import refresh_from_espn, ensure_structure
 from services.squads_loader import load_squads
+from services.auth import require_admin
+from services import analytics
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -126,13 +129,57 @@ def status():
         db.close()
 
 
+# ─── Admin (Basic Auth) ────────────────────────────────────────────
+
+@app.get("/admin/check")
+def admin_check(user: str = Depends(require_admin)):
+    """Used by the frontend login form to verify credentials."""
+    return {"ok": True, "user": user}
+
+
 @app.post("/admin/refresh")
-def manual_refresh():
+def manual_refresh(user: str = Depends(require_admin)):
     """Trigger an immediate ESPN refresh (also runs hourly on the schedule)."""
     return refresh_from_espn()
 
 
 @app.post("/admin/load-squads")
-def manual_load_squads():
+def manual_load_squads(user: str = Depends(require_admin)):
     """Re-import squads + tournament goal totals from the wall-chart spreadsheet."""
     return load_squads()
+
+
+@app.get("/admin/analytics")
+def admin_analytics(
+    days: int = 7,
+    top:  int = 10,
+    recent: int = 20,
+    user: str = Depends(require_admin),
+):
+    """Aggregated visitor analytics + recent activity for the admin dashboard."""
+    return analytics.summary(days=days, top=top, recent=recent)
+
+
+# ─── Public tracking beacon ────────────────────────────────────────
+
+class TrackIn(BaseModel):
+    path:     str = Field(default="/")
+    referrer: str | None = None
+
+
+@app.post("/track")
+def track(payload: TrackIn, request: Request):
+    """Record one page view. Called by the frontend on every page mount."""
+    # Trust X-Forwarded-For when a reverse proxy sets it; otherwise use the
+    # direct peer. CF-IPCountry is set when the request goes through
+    # Cloudflare's proxy (orange-cloud). Both are optional.
+    xff = request.headers.get("x-forwarded-for", "")
+    ip  = xff.split(",")[0].strip() if xff else (request.client.host if request.client else None)
+    analytics.record_view(
+        path=payload.path or "/",
+        ip=ip,
+        user_agent=request.headers.get("user-agent", ""),
+        referrer=payload.referrer,
+        country=request.headers.get("cf-ipcountry"),
+    )
+    return {"ok": True}
