@@ -1,6 +1,8 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
-from services.predictions import get_prediction
+from services.predictions import (
+    get_prediction, get_match_history, get_overall_accuracy,
+)
 
 router = APIRouter(prefix="/predictions", tags=["predictions"])
 
@@ -21,3 +23,18 @@ def predictions_top_scorer():
     if not p:
         raise HTTPException(404, "No top-scorer prediction yet")
     return p
+
+
+@router.get("/accuracy")
+def predictions_accuracy():
+    """Overall match-winner accuracy across all stored prediction days."""
+    return get_overall_accuracy()
+
+
+@router.get("/history")
+def predictions_history(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=50),
+):
+    """Paginated day-by-day match predictions evaluated against actual results."""
+    return get_match_history(page=page, page_size=page_size)

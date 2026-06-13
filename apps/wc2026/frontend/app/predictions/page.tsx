@@ -1,17 +1,21 @@
+import Link from 'next/link'
 import {
   api, type Team, type Prediction, type MatchPrediction, type ScorerPrediction,
 } from '@/lib/api'
 import TeamBadge from '@/components/TeamBadge'
 
-export const revalidate = 600
+// Predictions change only once a day or on manual admin trigger. Render on
+// every request (no ISR cache) so a fresh trigger shows up immediately rather
+// than waiting out a revalidate window.
+export const dynamic = 'force-dynamic'
 
 type MatchData  = { predictions: MatchPrediction[] }
 type ScorerData = { ranking: ScorerPrediction[]; summary: string }
 
 export default async function PredictionsPage() {
   const [matchP, scorerP, teams] = await Promise.all([
-    api<Prediction<MatchData>>('/predictions/today').catch(() => null),
-    api<Prediction<ScorerData>>('/predictions/top-scorer').catch(() => null),
+    api<Prediction<MatchData>>('/predictions/today', { noStore: true }).catch(() => null),
+    api<Prediction<ScorerData>>('/predictions/top-scorer', { noStore: true }).catch(() => null),
     api<Team[]>('/squads').catch(() => [] as Team[]),
   ])
 
@@ -21,14 +25,20 @@ export default async function PredictionsPage() {
 
   return (
     <div className="space-y-8">
-      <header>
-        <h1 className="text-2xl font-extrabold">
-          AI Predictions <span className="text-accent">🔮</span>
-        </h1>
-        <p className="text-sm text-black/60">
-          Generated daily by Claude from FIFA ranking, squad strength, current
-          form, venue, and other signals. Predictions are for entertainment.
-        </p>
+      <header className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-extrabold">
+            AI Predictions <span className="text-accent">🔮</span>
+          </h1>
+          <p className="text-sm text-black/60">
+            Generated daily by Claude from FIFA ranking, squad strength, current
+            form, venue, and other signals. Predictions are for entertainment.
+          </p>
+        </div>
+        <Link href="/predictions/history"
+              className="shrink-0 rounded-lg bg-pitch px-3 py-2 text-sm font-bold text-chalk hover:bg-pitch/90">
+          Results &amp; accuracy →
+        </Link>
       </header>
 
       {/* Match winners */}

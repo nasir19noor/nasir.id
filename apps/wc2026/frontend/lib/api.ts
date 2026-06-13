@@ -36,12 +36,22 @@ export function adminHeaders(): HeadersInit {
   return token ? { Authorization: `Basic ${token}` } : {}
 }
 
-export async function api<T>(path: string, init?: RequestInit): Promise<T> {
+/**
+ * Server-side fetch helper.
+ *
+ * By default responses are cached for REVALIDATE_SECONDS. Pass
+ * `{ noStore: true }` to bypass the cache entirely — used by pages that must
+ * reflect an upstream change immediately (e.g. predictions after a manual
+ * admin trigger).
+ */
+export async function api<T>(
+  path: string,
+  opts?: { noStore?: boolean },
+): Promise<T> {
   const url = `${API_BASE}${path}`
-  const res = await fetch(url, {
-    ...init,
-    next: { revalidate: REVALIDATE_SECONDS },
-  })
+  const res = await fetch(url, opts?.noStore
+    ? { cache: 'no-store' }
+    : { next: { revalidate: REVALIDATE_SECONDS } })
   if (!res.ok) {
     throw new Error(`API ${res.status} ${path}`)
   }
@@ -138,5 +148,42 @@ export type Prediction<T> = {
   model: string
   generated_at: string | null
   data: T
+}
+
+export type ActualResult = {
+  status: string
+  home_score: number | null
+  away_score: number | null
+  winner: string | null
+  settled: boolean
+}
+
+export type EvaluatedMatch = MatchPrediction & {
+  actual: ActualResult
+  correct: boolean | null   // null = not played yet
+}
+
+export type DayAccuracy = {
+  evaluated: number; correct: number
+  exact_score: number; accuracy_pct: number | null
+}
+
+export type HistoryDay = {
+  date: string
+  model: string
+  generated_at: string | null
+  predictions: EvaluatedMatch[]
+  accuracy: DayAccuracy
+}
+
+export type HistoryPage = {
+  page: number; page_size: number; total: number; pages: number
+  days: HistoryDay[]
+}
+
+export type OverallAccuracy = {
+  total_days: number; days_evaluated: number
+  evaluated: number; correct: number; accuracy_pct: number | null
+  exact_score: number; exact_score_pct: number | null
 }
 

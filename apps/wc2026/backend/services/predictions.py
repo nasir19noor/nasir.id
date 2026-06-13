@@ -18,6 +18,7 @@ Design notes (per Anthropic SDK guidance):
 import os
 import json
 import logging
+import math
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -319,6 +320,110 @@ def get_prediction(kind: str, date_str: Optional[str] = None) -> Optional[dict]:
             "model": row.model,
             "generated_at": row.generated_at.isoformat() if row.generated_at else None,
             "data": json.loads(row.payload) if row.payload else None,
+        }
+    finally:
+        db.close()
+
+
+# ─── Evaluation vs actual results ──────────────────────────────────
+
+def _actual_for_fixture(db: Session, fixture_id: int) -> dict:
+    """Current actual state of a fixture. settled=True only when finished."""
+    f = db.query(Fixture).filter(Fixture.id == fixture_id).one_or_none()
+    if not f:
+        return {"status": "unknown", "home_score": None, "away_score": None,
+                "winner": None, "settled": False}
+    if f.status != "finished" or f.home_score is None or f.away_score is None:
+        return {"status": f.status, "home_score": f.home_score,
+                "away_score": f.away_score, "winner": None, "settled": False}
+    hs, as_ = int(f.home_score), int(f.away_score)
+    if hs > as_:
+        winner = f.home_team.code if f.home_team else "home"
+    elif as_ > hs:
+        winner = f.away_team.code if f.away_team else "away"
+    else:
+        winner = "draw"
+    return {"status": "finished", "home_score": hs, "away_score": as_,
+            "winner": winner, "settled": True}
+
+
+def _evaluate_match_payload(db: Session, payload: dict) -> tuple[list[dict], dict]:
+    """Annotate each prediction with the actual result + correctness; return day stats."""
+    items = payload.get("predictions", []) if payload else []
+    out, evaluated, correct, exact = [], 0, 0, 0
+    for it in items:
+        actual = _actual_for_fixture(db, it.get("fixture_id"))
+        is_correct = None
+        if actual["settled"]:
+            evaluated += 1
+            is_correct = (it.get("predicted_winner") == actual["winner"])
+            if is_correct:
+                correct += 1
+            if it.get("likely_score") == f'{actual["home_score"]}-{actual["away_score"]}':
+                exact += 1
+        out.append({**it, "actual": actual, "correct": is_correct})
+    pct = round(correct / evaluated * 100, 1) if evaluated else None
+    return out, {"evaluated": evaluated, "correct": correct,
+                 "exact_score": exact, "accuracy_pct": pct}
+
+
+def get_match_history(page: int = 1, page_size: int = 10) -> dict:
+    """Paginated day-by-day match predictions, each evaluated against actuals."""
+    page = max(1, page)
+    page_size = max(1, min(page_size, 50))
+    db = SessionLocal()
+    try:
+        q = (db.query(Prediction)
+               .filter(Prediction.kind == "match_winners")
+               .order_by(Prediction.prediction_date.desc()))
+        total = q.count()
+        rows = q.offset((page - 1) * page_size).limit(page_size).all()
+        days = []
+        for row in rows:
+            payload = json.loads(row.payload) if row.payload else {}
+            items, stats = _evaluate_match_payload(db, payload)
+            days.append({
+                "date": row.prediction_date,
+                "model": row.model,
+                "generated_at": row.generated_at.isoformat() if row.generated_at else None,
+                "predictions": items,
+                "accuracy": stats,
+            })
+        return {
+            "page": page, "page_size": page_size, "total": total,
+            "pages": max(1, math.ceil(total / page_size)),
+            "days": days,
+        }
+    finally:
+        db.close()
+
+
+def get_overall_accuracy() -> dict:
+    """Aggregate match-winner accuracy across every stored prediction day."""
+    db = SessionLocal()
+    try:
+        rows = (db.query(Prediction)
+                  .filter(Prediction.kind == "match_winners").all())
+        evaluated = correct = exact = 0
+        days_with_data = 0
+        for row in rows:
+            payload = json.loads(row.payload) if row.payload else {}
+            _, stats = _evaluate_match_payload(db, payload)
+            if stats["evaluated"]:
+                days_with_data += 1
+            evaluated += stats["evaluated"]
+            correct   += stats["correct"]
+            exact     += stats["exact_score"]
+        pct       = round(correct / evaluated * 100, 1) if evaluated else None
+        exact_pct = round(exact / evaluated * 100, 1) if evaluated else None
+        return {
+            "total_days": len(rows),
+            "days_evaluated": days_with_data,
+            "evaluated": evaluated,
+            "correct": correct,
+            "accuracy_pct": pct,
+            "exact_score": exact,
+            "exact_score_pct": exact_pct,
         }
     finally:
         db.close()
