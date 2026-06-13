@@ -36,6 +36,29 @@ export function adminHeaders(): HeadersInit {
   return token ? { Authorization: `Basic ${token}` } : {}
 }
 
+// ─── Time formatting (always WIB / Asia/Jakarta) ──────────────────
+// Server components format in the container's zone (UTC) unless told
+// otherwise, which is misleading for an Indonesian audience. Pin to WIB.
+
+const WIB_TZ = 'Asia/Jakarta'
+
+export function fmtWIB(value?: string | number | Date | null): string {
+  if (value === null || value === undefined || value === '') return '—'
+  return new Date(value).toLocaleString('en-GB', {
+    timeZone: WIB_TZ,
+    month: 'short', day: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }) + ' WIB'
+}
+
+export function fmtWIBTime(value?: string | number | Date | null): string {
+  if (value === null || value === undefined || value === '') return '—'
+  return new Date(value).toLocaleTimeString('en-GB', {
+    timeZone: WIB_TZ,
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+  }) + ' WIB'
+}
+
 /**
  * Server-side fetch helper.
  *

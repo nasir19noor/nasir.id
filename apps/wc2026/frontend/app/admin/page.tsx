@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
   API_BASE, adminHeaders, clearAdminAuth, getAdminAuth, setAdminAuth,
+  fmtWIB, fmtWIBTime,
 } from '@/lib/api'
 
 // ─── Types ─────────────────────────────────────────────────────────
@@ -175,7 +176,7 @@ function AdminAuthenticated({ onLogout }: { onLogout: () => void }) {
           loading: false,
           response: body,
           error: r.ok ? undefined : `HTTP ${r.status}`,
-          finishedAt: new Date().toLocaleTimeString(),
+          finishedAt: fmtWIBTime(Date.now()),
         },
       }))
       loadStatus(); loadStats()
@@ -183,7 +184,7 @@ function AdminAuthenticated({ onLogout }: { onLogout: () => void }) {
       setState(s => ({
         ...s,
         [key]: { loading: false, error: e instanceof Error ? e.message : String(e),
-                 finishedAt: new Date().toLocaleTimeString() },
+                 finishedAt: fmtWIBTime(Date.now()) },
       }))
     }
   }
@@ -224,7 +225,7 @@ function AdminAuthenticated({ onLogout }: { onLogout: () => void }) {
         )}
         {status?.last_refresh && (
           <p className="mt-3 text-xs text-black/50">
-            Last scheduler tick: {new Date(status.last_refresh).toLocaleString()}
+            Last scheduler tick: {fmtWIB(status.last_refresh)}
           </p>
         )}
       </section>
@@ -346,7 +347,7 @@ function AnalyticsView({ a }: { a: Analytics }) {
             {a.recent.map((r, i) => (
               <tr key={i} className="border-t border-black/5">
                 <td className="px-3 py-1.5 text-black/60 whitespace-nowrap">
-                  {r.timestamp ? new Date(r.timestamp).toLocaleString() : '—'}
+                  {fmtWIB(r.timestamp)}
                 </td>
                 <td className="px-3 py-1.5 font-mono">{r.path}</td>
                 <td className="px-3 py-1.5 font-mono text-black/50">{r.ip ?? '—'}</td>

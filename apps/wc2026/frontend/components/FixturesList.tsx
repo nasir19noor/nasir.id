@@ -1,4 +1,4 @@
-import type { Fixture } from '@/lib/api'
+import { type Fixture, fmtWIB } from '@/lib/api'
 import TeamBadge from './TeamBadge'
 
 function statusBadge(status: Fixture['status']) {
@@ -8,12 +8,7 @@ function statusBadge(status: Fixture['status']) {
 }
 
 function fmtKickoff(iso?: string | null) {
-  if (!iso) return ''
-  const d = new Date(iso)
-  return d.toLocaleString(undefined, {
-    month: 'short', day: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  })
+  return iso ? fmtWIB(iso) : ''
 }
 
 export default function FixturesList({ fixtures }: { fixtures: Fixture[] }) {

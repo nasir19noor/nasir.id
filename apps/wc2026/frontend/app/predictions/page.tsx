@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import {
-  api, type Team, type Prediction, type MatchPrediction, type ScorerPrediction,
+  api, fmtWIB, type Team, type Prediction, type MatchPrediction, type ScorerPrediction,
 } from '@/lib/api'
 import TeamBadge from '@/components/TeamBadge'
 
@@ -50,7 +50,7 @@ export default async function PredictionsPage() {
           </h2>
           {matchP?.generated_at && (
             <span className="text-xs text-black/40">
-              {new Date(matchP.generated_at).toLocaleString()} · {matchP.model}
+              {fmtWIB(matchP.generated_at)} · {matchP.model}
             </span>
           )}
         </div>
@@ -74,7 +74,7 @@ export default async function PredictionsPage() {
           <h2 className="text-lg font-bold">Golden Boot forecast</h2>
           {scorerP?.generated_at && (
             <span className="text-xs text-black/40">
-              {new Date(scorerP.generated_at).toLocaleString()} · {scorerP.model}
+              {fmtWIB(scorerP.generated_at)} · {scorerP.model}
             </span>
           )}
         </div>
