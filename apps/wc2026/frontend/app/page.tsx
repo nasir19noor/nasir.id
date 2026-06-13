@@ -1,16 +1,18 @@
 import Link from 'next/link'
-import { api, type Group, type Scorer, type Fixture } from '@/lib/api'
+import { api, type Group, type Scorer, type Fixture, type Bracket } from '@/lib/api'
 import TeamBadge from '@/components/TeamBadge'
 import FixturesList from '@/components/FixturesList'
+import KnockoutBracket from '@/components/KnockoutBracket'
 
 export const revalidate = 300
 
 export default async function HomePage() {
   // Pull everything in parallel for speed.
-  const [groups, scorers, todayFixtures] = await Promise.all([
+  const [groups, scorers, todayFixtures, bracket] = await Promise.all([
     api<Group[]>('/groups').catch(() => [] as Group[]),
     api<Scorer[]>('/scorers?limit=5').catch(() => [] as Scorer[]),
     api<Fixture[]>('/fixtures/today').catch(() => [] as Fixture[]),
+    api<Bracket[]>('/knockout').catch(() => [] as Bracket[]),
   ])
 
   return (
@@ -34,19 +36,12 @@ export default async function HomePage() {
       <section>
         <div className="mb-3 flex items-baseline justify-between">
           <h2 className="text-lg font-bold">Tournament wall chart</h2>
-          <a href="/wc2026-wall-chart.webp" target="_blank" rel="noopener noreferrer"
-             className="text-sm text-pitch underline">
-            Open full size →
-          </a>
+          <Link href="/knockout" className="text-sm text-pitch underline">
+            Full bracket →
+          </Link>
         </div>
-        <div className="card overflow-hidden p-2">
-          <a href="/wc2026-wall-chart.webp" target="_blank" rel="noopener noreferrer">
-            {/* Static asset in public/ — plain img keeps it simple and zoomable. */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/wc2026-wall-chart.webp"
-                 alt="World Cup 2026 wall chart — full knockout bracket and group stage"
-                 className="w-full rounded-lg" />
-          </a>
+        <div className="card p-4">
+          <KnockoutBracket bracket={bracket} />
         </div>
       </section>
 
