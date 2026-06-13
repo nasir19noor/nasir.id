@@ -130,3 +130,22 @@ class Prediction(Base):
     __table_args__ = (
         UniqueConstraint("prediction_date", "kind", name="uq_pred_date_kind"),
     )
+
+
+class MatchPredictionRow(Base):
+    """One AI prediction per fixture — upserted while the match is still
+    scheduled, then frozen once it kicks off. Keyed by fixture so history
+    accumulates per match instead of being overwritten per day."""
+    __tablename__ = "match_predictions"
+    id               = Column(Integer, primary_key=True)
+    fixture_id       = Column(Integer, ForeignKey("fixtures.id"), unique=True, index=True)
+    predicted_winner = Column(String)
+    home_win_pct     = Column(Integer)
+    draw_pct         = Column(Integer)
+    away_win_pct     = Column(Integer)
+    likely_score     = Column(String)
+    confidence       = Column(String)
+    reasoning        = Column(String)
+    model            = Column(String)
+    predicted_at     = Column(DateTime(timezone=True),
+                              server_default=func.now(), onupdate=func.now())

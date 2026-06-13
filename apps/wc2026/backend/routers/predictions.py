@@ -1,7 +1,8 @@
 from fastapi import APIRouter, HTTPException, Query
 
 from services.predictions import (
-    get_prediction, get_match_history, get_overall_accuracy,
+    get_prediction, get_today_match_predictions,
+    get_match_history, get_overall_accuracy,
 )
 
 router = APIRouter(prefix="/predictions", tags=["predictions"])
@@ -9,10 +10,10 @@ router = APIRouter(prefix="/predictions", tags=["predictions"])
 
 @router.get("/today")
 def predictions_today():
-    """Latest match-winner predictions (most recent generated day)."""
-    p = get_prediction("match_winners")
+    """Predictions for fixtures kicking off within the next window."""
+    p = get_today_match_predictions()
     if not p:
-        raise HTTPException(404, "No match predictions yet")
+        raise HTTPException(404, "No upcoming match predictions yet")
     return p
 
 

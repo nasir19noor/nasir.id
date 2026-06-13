@@ -25,8 +25,10 @@ from typing import Optional
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from collections import defaultdict
+
 from database import SessionLocal
-from models import Fixture, Player, Team, Prediction
+from models import Fixture, Player, Team, Prediction, MatchPredictionRow
 from services.standings import standings_for_group
 from services.wc2026_data import TEAM_FACTS, TEAM_GROUP, team_fact
 
@@ -259,13 +261,37 @@ def predict_match_winners() -> dict:
         cache_read = getattr(resp.usage, "cache_read_input_tokens", 0) or 0
         parsed = resp.parsed_output
         payload = parsed.model_dump() if parsed else {"predictions": []}
-        _persist(db, date_str, "match_winners", payload, cache_read)
+        _persist_match_rows(db, payload.get("predictions", []))
         logger.info("match_winners: %d fixtures, cache_read=%d",
                     len(matches), cache_read)
         return {"kind": "match_winners", "date": date_str,
                 "fixtures": len(matches), "cache_read": cache_read, **payload}
     finally:
         db.close()
+
+
+def _persist_match_rows(db: Session, items: list[dict]) -> None:
+    """Upsert one prediction row per fixture. Only ever called for scheduled
+    fixtures, so a finished match keeps its last pre-kickoff prediction."""
+    for it in items:
+        fid = it.get("fixture_id")
+        if fid is None:
+            continue
+        row = (db.query(MatchPredictionRow)
+                 .filter(MatchPredictionRow.fixture_id == fid).one_or_none())
+        if row is None:
+            row = MatchPredictionRow(fixture_id=fid)
+            db.add(row)
+        row.predicted_winner = it.get("predicted_winner")
+        row.home_win_pct     = it.get("home_win_pct")
+        row.draw_pct         = it.get("draw_pct")
+        row.away_win_pct     = it.get("away_win_pct")
+        row.likely_score     = it.get("likely_score")
+        row.confidence       = it.get("confidence")
+        row.reasoning        = it.get("reasoning")
+        row.model            = MODEL
+        row.predicted_at     = datetime.now(timezone.utc)
+    db.commit()
 
 
 def predict_top_scorer() -> dict:
@@ -363,78 +389,169 @@ def _actual_for_fixture(db: Session, fixture_id: int) -> dict:
             "winner": winner, "settled": True}
 
 
-def _evaluate_match_payload(db: Session, payload: dict) -> tuple[list[dict], dict]:
-    """Annotate each prediction with the actual result + correctness; return day stats."""
-    items = payload.get("predictions", []) if payload else []
-    out, evaluated, correct, exact = [], 0, 0, 0
+def _build_item(db: Session, row: MatchPredictionRow, f: Optional[Fixture]) -> dict:
+    """Build an evaluated prediction item from a stored row + its fixture."""
+    home = f.home_team.code if (f and f.home_team) else "?"
+    away = f.away_team.code if (f and f.away_team) else "?"
+    actual = _actual_for_fixture(db, row.fixture_id)
+    correct: Optional[bool] = None
+    exact = False
+    if actual["settled"]:
+        correct = (row.predicted_winner == actual["winner"])
+        exact = (row.likely_score == f'{actual["home_score"]}-{actual["away_score"]}')
+    return {
+        "fixture_id":       row.fixture_id,
+        "home":             home,
+        "away":             away,
+        "predicted_winner": row.predicted_winner,
+        "home_win_pct":     row.home_win_pct,
+        "draw_pct":         row.draw_pct,
+        "away_win_pct":     row.away_win_pct,
+        "likely_score":     row.likely_score,
+        "confidence":       row.confidence,
+        "reasoning":        row.reasoning,
+        "kickoff":          f.kickoff.isoformat() if (f and f.kickoff) else None,
+        "actual":           actual,
+        "correct":          correct,
+        "_exact":           exact,
+    }
+
+
+def _match_day(f: Optional[Fixture]) -> str:
+    if f and f.kickoff:
+        return f.kickoff.astimezone(WIB).strftime("%Y-%m-%d")
+    return "TBD"
+
+
+def get_today_match_predictions() -> Optional[dict]:
+    """Predictions for fixtures kicking off within the next window (the live view)."""
+    db = SessionLocal()
+    try:
+        now = datetime.now(timezone.utc)
+        end = now + timedelta(hours=PREDICTION_WINDOW_HOURS)
+        fixtures = (db.query(Fixture)
+                      .filter(Fixture.status == "scheduled",
+                              Fixture.kickoff.isnot(None),
+                              Fixture.kickoff >= now - timedelta(hours=1),
+                              Fixture.kickoff <= end)
+                      .order_by(Fixture.kickoff).all())
+        if not fixtures:
+            return None
+        fids = [f.id for f in fixtures]
+        rows = {r.fixture_id: r for r in
+                db.query(MatchPredictionRow)
+                  .filter(MatchPredictionRow.fixture_id.in_(fids)).all()}
+        items, latest, model = [], None, None
+        for f in fixtures:
+            r = rows.get(f.id)
+            if not r:
+                continue
+            it = _build_item(db, r, f)
+            it.pop("_exact", None)
+            items.append(it)
+            if r.predicted_at and (latest is None or r.predicted_at > latest):
+                latest, model = r.predicted_at, r.model
+        if not items:
+            return None
+        return {
+            "kind": "match_winners",
+            "date": datetime.now(WIB).strftime("%Y-%m-%d"),
+            "model": model,
+            "generated_at": latest.isoformat() if latest else None,
+            "data": {"predictions": items},
+        }
+    finally:
+        db.close()
+
+
+def _day_stats(items: list[dict]) -> dict:
+    ev = cor = ex = 0
     for it in items:
-        actual = _actual_for_fixture(db, it.get("fixture_id"))
-        is_correct = None
-        if actual["settled"]:
-            evaluated += 1
-            is_correct = (it.get("predicted_winner") == actual["winner"])
-            if is_correct:
-                correct += 1
-            if it.get("likely_score") == f'{actual["home_score"]}-{actual["away_score"]}':
-                exact += 1
-        out.append({**it, "actual": actual, "correct": is_correct})
-    pct = round(correct / evaluated * 100, 1) if evaluated else None
-    return out, {"evaluated": evaluated, "correct": correct,
-                 "exact_score": exact, "accuracy_pct": pct}
+        if it.get("correct") is not None:
+            ev += 1
+            if it["correct"]:
+                cor += 1
+            if it.get("_exact"):
+                ex += 1
+    pct = round(cor / ev * 100, 1) if ev else None
+    return {"evaluated": ev, "correct": cor, "exact_score": ex, "accuracy_pct": pct}
 
 
 def get_match_history(page: int = 1, page_size: int = 10) -> dict:
-    """Paginated day-by-day match predictions, each evaluated against actuals."""
+    """Paginated day-by-day match predictions (grouped by kickoff day), evaluated."""
     page = max(1, page)
     page_size = max(1, min(page_size, 50))
     db = SessionLocal()
     try:
-        q = (db.query(Prediction)
-               .filter(Prediction.kind == "match_winners")
-               .order_by(Prediction.prediction_date.desc()))
-        total = q.count()
-        rows = q.offset((page - 1) * page_size).limit(page_size).all()
-        days = []
-        for row in rows:
-            payload = json.loads(row.payload) if row.payload else {}
-            items, stats = _evaluate_match_payload(db, payload)
-            days.append({
-                "date": row.prediction_date,
-                "model": row.model,
-                "generated_at": row.generated_at.isoformat() if row.generated_at else None,
-                "predictions": items,
+        rows = db.query(MatchPredictionRow).all()
+        if not rows:
+            return {"page": page, "page_size": page_size, "total": 0,
+                    "pages": 1, "days": []}
+        fmap = {f.id: f for f in db.query(Fixture)
+                  .filter(Fixture.id.in_([r.fixture_id for r in rows])).all()}
+
+        by_day: dict[str, list[dict]] = defaultdict(list)
+        meta: dict[str, tuple] = {}   # day -> (latest predicted_at, model)
+        for r in rows:
+            f = fmap.get(r.fixture_id)
+            day = _match_day(f)
+            by_day[day].append(_build_item(db, r, f))
+            pa = r.predicted_at
+            if day not in meta or (pa and meta[day][0] and pa > meta[day][0]):
+                meta[day] = (pa, r.model)
+
+        # Newest day first; "TBD" (no kickoff yet) sorts last.
+        days_sorted = sorted((d for d in by_day if d != "TBD"), reverse=True)
+        if "TBD" in by_day:
+            days_sorted.append("TBD")
+        total = len(days_sorted)
+        page_days = days_sorted[(page - 1) * page_size: page * page_size]
+
+        out = []
+        for day in page_days:
+            items = sorted(by_day[day], key=lambda x: x["kickoff"] or "")
+            stats = _day_stats(items)
+            pa, model = meta.get(day, (None, None))
+            out.append({
+                "date": day,
+                "model": model,
+                "generated_at": pa.isoformat() if pa else None,
+                "predictions": [{k: v for k, v in it.items() if k != "_exact"} for it in items],
                 "accuracy": stats,
             })
         return {
             "page": page, "page_size": page_size, "total": total,
             "pages": max(1, math.ceil(total / page_size)),
-            "days": days,
+            "days": out,
         }
     finally:
         db.close()
 
 
 def get_overall_accuracy() -> dict:
-    """Aggregate match-winner accuracy across every stored prediction day."""
+    """Aggregate match-winner accuracy across every predicted fixture."""
     db = SessionLocal()
     try:
-        rows = (db.query(Prediction)
-                  .filter(Prediction.kind == "match_winners").all())
+        rows = db.query(MatchPredictionRow).all()
+        fmap = {f.id: f for f in db.query(Fixture)
+                  .filter(Fixture.id.in_([r.fixture_id for r in rows])).all()} if rows else {}
         evaluated = correct = exact = 0
-        days_with_data = 0
-        for row in rows:
-            payload = json.loads(row.payload) if row.payload else {}
-            _, stats = _evaluate_match_payload(db, payload)
-            if stats["evaluated"]:
-                days_with_data += 1
-            evaluated += stats["evaluated"]
-            correct   += stats["correct"]
-            exact     += stats["exact_score"]
+        days = set()
+        for r in rows:
+            f = fmap.get(r.fixture_id)
+            days.add(_match_day(f))
+            it = _build_item(db, r, f)
+            if it["correct"] is not None:
+                evaluated += 1
+                if it["correct"]:
+                    correct += 1
+                if it["_exact"]:
+                    exact += 1
         pct       = round(correct / evaluated * 100, 1) if evaluated else None
         exact_pct = round(exact / evaluated * 100, 1) if evaluated else None
         return {
-            "total_days": len(rows),
-            "days_evaluated": days_with_data,
+            "total_days": len(days),
+            "days_evaluated": len(days),
             "evaluated": evaluated,
             "correct": correct,
             "accuracy_pct": pct,

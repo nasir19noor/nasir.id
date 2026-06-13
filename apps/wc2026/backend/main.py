@@ -17,7 +17,9 @@ from dotenv import load_dotenv
 from sqlalchemy import inspect, text
 
 from database import engine, Base, SessionLocal
-from models import Team, Player, Fixture, KnockoutMatch, PageView, Prediction  # noqa: F401
+from models import (  # noqa: F401 — register models for create_all
+    Team, Player, Fixture, KnockoutMatch, PageView, Prediction, MatchPredictionRow,
+)
 from routers import groups, fixtures, knockout, squads, scorers, predictions
 from schemas import StatusOut
 from services.scheduler import start_scheduler, get_last_refresh
