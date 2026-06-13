@@ -114,3 +114,19 @@ class PageView(Base):
     __table_args__ = (
         Index("ix_page_views_path_ts", "path", "timestamp"),
     )
+
+
+class Prediction(Base):
+    """One AI prediction artifact per (WIB date, kind)."""
+    __tablename__ = "predictions"
+    id              = Column(Integer, primary_key=True)
+    prediction_date = Column(String(10), index=True)   # YYYY-MM-DD (WIB)
+    kind            = Column(String, index=True)        # match_winners | top_scorer
+    payload         = Column(String)                    # JSON string
+    model           = Column(String)
+    cache_read      = Column(Integer, default=0)        # tokens served from cache
+    generated_at    = Column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("prediction_date", "kind", name="uq_pred_date_kind"),
+    )

@@ -8,3 +8,4 @@ requests
 apscheduler
 openpyxl
 user-agents
+anthropic>=0.40.0

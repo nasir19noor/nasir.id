@@ -17,14 +17,15 @@ from dotenv import load_dotenv
 from sqlalchemy import inspect, text
 
 from database import engine, Base, SessionLocal
-from models import Team, Player, Fixture, KnockoutMatch, PageView  # noqa: F401 — register models
-from routers import groups, fixtures, knockout, squads, scorers
+from models import Team, Player, Fixture, KnockoutMatch, PageView, Prediction  # noqa: F401
+from routers import groups, fixtures, knockout, squads, scorers, predictions
 from schemas import StatusOut
 from services.scheduler import start_scheduler, get_last_refresh
 from services.espn_fetcher import refresh_from_espn, ensure_structure
 from services.squads_loader import load_squads
 from services.auth import require_admin
 from services import analytics
+from services.predictions import run_daily_predictions
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -115,6 +116,7 @@ app.include_router(fixtures.router)
 app.include_router(knockout.router)
 app.include_router(squads.router)
 app.include_router(scorers.router)
+app.include_router(predictions.router)
 
 
 @app.get("/")
@@ -156,6 +158,12 @@ def manual_refresh(user: str = Depends(require_admin)):
 def manual_load_squads(user: str = Depends(require_admin)):
     """Re-import squads + tournament goal totals from the wall-chart spreadsheet."""
     return load_squads()
+
+
+@app.post("/admin/predict")
+def manual_predict(user: str = Depends(require_admin)):
+    """Force-generate today's AI predictions now (also runs daily at 00:0X WIB)."""
+    return run_daily_predictions()
 
 
 @app.get("/admin/analytics")

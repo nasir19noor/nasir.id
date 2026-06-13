@@ -111,3 +111,29 @@ TEAM_GROUP: dict[str, str] = {
     for letter, teams in WC2026_GROUPS.items()
     for code in teams
 }
+
+# Static reference signals fed to the prediction model. These are approximate
+# public facts (FIFA men's ranking position and nominal GDP in USD billions),
+# used only as *inputs* to Claude's reasoning — not authoritative. Update freely.
+#   code: (fifa_rank, gdp_usd_billion)
+TEAM_FACTS: dict[str, tuple[int, float]] = {
+    "ARG": (1, 640),   "ESP": (2, 1580),  "FRA": (3, 3030),  "ENG": (4, 3340),
+    "BRA": (5, 2170),  "POR": (6, 287),   "NED": (7, 1120),  "BEL": (8, 630),
+    "GER": (9, 4460),  "CRO": (10, 80),   "URU": (15, 77),   "COL": (16, 360),
+    "USA": (11, 27000),"MEX": (12, 1790), "ITA": (13, 2250), "SUI": (19, 885),
+    "JPN": (17, 4210), "SEN": (18, 31),   "IRN": (20, 405),  "KOR": (22, 1710),
+    "ECU": (23, 119),  "AUT": (24, 516),  "AUS": (25, 1690), "MAR": (12, 144),
+    "CIV": (40, 79),   "IVC": (40, 79),   "NOR": (29, 485),  "SCO": (35, 250),
+    "PAR": (45, 42),   "TUN": (44, 49),   "EGY": (33, 396),  "ALG": (38, 240),
+    "NZL": (86, 250),  "QAT": (37, 235),  "SAU": (58, 1110), "GHA": (70, 76),
+    "CPV": (66, 2.6),  "UZB": (57, 102),  "JOR": (62, 50),   "IRQ": (58, 264),
+    "DRC": (60, 67),   "PAN": (39, 83),   "HAI": (90, 21),   "BIH": (74, 28),
+    "RSA": (61, 405),  "CZE": (43, 343),  "SWE": (28, 600),  "TUR": (27, 1110),
+    "CAN": (31, 2240), "CUR": (90, 3.5),
+}
+
+
+def team_fact(code: str) -> dict:
+    """Return {fifa_rank, gdp_usd_b} for a team code, with safe fallbacks."""
+    rank, gdp = TEAM_FACTS.get(code, (99, 0.0))
+    return {"fifa_rank": rank, "gdp_usd_b": gdp}

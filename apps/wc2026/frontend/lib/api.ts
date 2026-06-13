@@ -113,3 +113,30 @@ export type Scorer = {
   rank: number; player: string; team: Team
   club?: string | null; goals: number
 }
+
+// ─── AI predictions ─────────────────────────────────────────────
+
+export type MatchPrediction = {
+  fixture_id: number
+  home: string; away: string
+  predicted_winner: string
+  home_win_pct: number; draw_pct: number; away_win_pct: number
+  likely_score: string
+  confidence: string
+  reasoning: string
+}
+
+export type ScorerPrediction = {
+  rank: number; player: string; team: string
+  current_goals: number; projected_final_goals: number
+  reasoning: string
+}
+
+export type Prediction<T> = {
+  kind: string
+  date: string
+  model: string
+  generated_at: string | null
+  data: T
+}
+
