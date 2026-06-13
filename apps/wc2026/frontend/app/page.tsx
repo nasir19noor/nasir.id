@@ -32,6 +32,25 @@ export default async function HomePage() {
       </section>
 
       <section>
+        <div className="mb-3 flex items-baseline justify-between">
+          <h2 className="text-lg font-bold">Tournament wall chart</h2>
+          <a href="/wc2026-wall-chart.webp" target="_blank" rel="noopener noreferrer"
+             className="text-sm text-pitch underline">
+            Open full size →
+          </a>
+        </div>
+        <div className="card overflow-hidden p-2">
+          <a href="/wc2026-wall-chart.webp" target="_blank" rel="noopener noreferrer">
+            {/* Static asset in public/ — plain img keeps it simple and zoomable. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/wc2026-wall-chart.webp"
+                 alt="World Cup 2026 wall chart — full knockout bracket and group stage"
+                 className="w-full rounded-lg" />
+          </a>
+        </div>
+      </section>
+
+      <section>
         <h2 className="mb-3 text-lg font-bold">Today</h2>
         <div className="card">
           <FixturesList fixtures={todayFixtures} />
