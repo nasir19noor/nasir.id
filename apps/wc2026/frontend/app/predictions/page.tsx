@@ -44,7 +44,10 @@ export default async function PredictionsPage() {
       {/* Match winners */}
       <section className="space-y-3">
         <div className="flex items-baseline justify-between">
-          <h2 className="text-lg font-bold">Today’s matches</h2>
+          <h2 className="text-lg font-bold">
+            Upcoming matches
+            <span className="ml-2 text-sm font-normal text-black/50">next 24 hours</span>
+          </h2>
           {matchP?.generated_at && (
             <span className="text-xs text-black/40">
               {new Date(matchP.generated_at).toLocaleString()} · {matchP.model}
@@ -53,7 +56,7 @@ export default async function PredictionsPage() {
         </div>
         {!matchP || !matchP.data?.predictions?.length ? (
           <p className="card p-4 text-sm text-black/60">
-            No match predictions available — either no fixtures today or the
+            No match predictions available — either no upcoming fixtures or the
             daily run hasn’t happened yet.
           </p>
         ) : (

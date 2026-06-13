@@ -40,6 +40,8 @@ except ImportError:
 
 MODEL = os.getenv("PREDICTION_MODEL", "claude-opus-4-8")
 WIB   = timezone(timedelta(hours=7))
+# Predict every scheduled fixture kicking off within this many hours from now.
+PREDICTION_WINDOW_HOURS = int(os.getenv("PREDICTION_WINDOW_HOURS", "24"))
 
 
 # ─── Pydantic output schemas (structured outputs) ──────────────────
@@ -146,20 +148,34 @@ def _key_players(db: Session, team_id: int, limit: int = 5) -> list[dict]:
             for p in players]
 
 
-def _today_window_utc() -> tuple[datetime, datetime, str]:
-    now_wib = datetime.now(WIB)
-    start_wib = now_wib.replace(hour=0, minute=0, second=0, microsecond=0)
-    end_wib   = start_wib + timedelta(days=1)
-    return (start_wib.astimezone(timezone.utc),
-            end_wib.astimezone(timezone.utc),
-            start_wib.strftime("%Y-%m-%d"))
+def _upcoming_fixtures(db: Session) -> list[Fixture]:
+    """
+    Scheduled fixtures kicking off within the next PREDICTION_WINDOW_HOURS.
+
+    A rolling forward window (rather than a WIB/UTC calendar day) is
+    timezone-robust: a North-American evening match day spills past WIB
+    midnight, so a calendar window would drop the very games a WIB viewer
+    is about to watch. The 6-hourly run keeps this list fresh as games
+    finish and drop off the front.
+    """
+    now = datetime.now(timezone.utc)
+    end = now + timedelta(hours=PREDICTION_WINDOW_HOURS)
+    return (db.query(Fixture)
+              .filter(Fixture.kickoff.isnot(None),
+                      Fixture.kickoff >= now - timedelta(hours=1),
+                      Fixture.kickoff <= end,
+                      Fixture.status == "scheduled")
+              .order_by(Fixture.kickoff).all())
+
+
+def _run_date() -> str:
+    """Storage/label key for a run: the WIB date it was generated."""
+    return datetime.now(WIB).strftime("%Y-%m-%d")
 
 
 def _match_context(db: Session) -> tuple[list[dict], str]:
-    start_utc, end_utc, date_str = _today_window_utc()
-    fixtures = (db.query(Fixture)
-                  .filter(Fixture.kickoff >= start_utc, Fixture.kickoff < end_utc)
-                  .order_by(Fixture.kickoff).all())
+    fixtures = _upcoming_fixtures(db)
+    date_str = _run_date()
     out = []
     for f in fixtures:
         if not f.home_team or not f.away_team:
@@ -255,7 +271,7 @@ def predict_match_winners() -> dict:
 def predict_top_scorer() -> dict:
     db = SessionLocal()
     try:
-        _, _, date_str = _today_window_utc()
+        date_str = _run_date()
         candidates = _scorer_candidates(db)
         if not candidates:
             return {"kind": "top_scorer", "date": date_str,
