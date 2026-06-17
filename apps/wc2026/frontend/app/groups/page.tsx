@@ -2,10 +2,13 @@ import { api, type Group } from '@/lib/api'
 import StandingsTable from '@/components/StandingsTable'
 import FixturesList from '@/components/FixturesList'
 
-export const revalidate = 300
+// Standings and fixtures change live during matches, so render on every
+// request (no ISR cache) with an uncached fetch — results show up immediately
+// rather than waiting out a revalidate window.
+export const dynamic = 'force-dynamic'
 
 export default async function GroupsPage() {
-  const groups = await api<Group[]>('/groups').catch(() => [] as Group[])
+  const groups = await api<Group[]>('/groups', { noStore: true }).catch(() => [] as Group[])
   return (
     <div className="space-y-8">
       <h1 className="text-2xl font-extrabold">Groups</h1>

@@ -4,15 +4,18 @@ import TeamBadge from '@/components/TeamBadge'
 import FixturesList from '@/components/FixturesList'
 import KnockoutBracket from '@/components/KnockoutBracket'
 
-export const revalidate = 300
+// Standings, scorers and fixtures change live during matches, so render on
+// every request (no ISR cache) with uncached fetches — results show up
+// immediately rather than waiting out a revalidate window.
+export const dynamic = 'force-dynamic'
 
 export default async function HomePage() {
   // Pull everything in parallel for speed.
   const [groups, scorers, todayFixtures, bracket] = await Promise.all([
-    api<Group[]>('/groups').catch(() => [] as Group[]),
-    api<Scorer[]>('/scorers?limit=5').catch(() => [] as Scorer[]),
-    api<Fixture[]>('/fixtures/today').catch(() => [] as Fixture[]),
-    api<Bracket[]>('/knockout').catch(() => [] as Bracket[]),
+    api<Group[]>('/groups', { noStore: true }).catch(() => [] as Group[]),
+    api<Scorer[]>('/scorers?limit=5', { noStore: true }).catch(() => [] as Scorer[]),
+    api<Fixture[]>('/fixtures/today', { noStore: true }).catch(() => [] as Fixture[]),
+    api<Bracket[]>('/knockout', { noStore: true }).catch(() => [] as Bracket[]),
   ])
 
   return (
