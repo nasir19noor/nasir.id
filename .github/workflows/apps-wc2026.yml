@@ -5,7 +5,6 @@ on:
     paths:
       - 'apps/wc2026/frontend/**'
       - 'apps/wc2026/backend/**'
-      - 'apps/wc2026/World_Cup_2026_Wall_Chart.xlsx'
     branches:
       - main
   workflow_dispatch:
@@ -30,7 +29,6 @@ jobs:
           filters: |
             backend:
               - 'apps/wc2026/backend/**'
-              - 'apps/wc2026/World_Cup_2026_Wall_Chart.xlsx'
             frontend:
               - 'apps/wc2026/frontend/**'
 
@@ -48,8 +46,9 @@ jobs:
           rm -f .env
           aws s3 cp s3://wc2026.nasir.id/backend/.env .env
 
-          echo "Copying seed spreadsheet into build context..."
-          cp ../World_Cup_2026_Wall_Chart.xlsx . || true
+          # Fail loud if the curated squads source is missing.
+          test -f World_Cup_2026_Wall_Chart.xlsx \
+              || (echo "Missing World_Cup_2026_Wall_Chart.xlsx in apps/wc2026/backend/"; exit 1)
 
           echo "Stopping and removing existing backend container..."
           echo "$SSH_PASSWORD" | sudo -S docker stop wc2026-backend 2>/dev/null || true

@@ -10,14 +10,14 @@ export default async function ScorersPage() {
       <h1 className="text-2xl font-extrabold">
         Golden Boot Race <span className="text-accent">⚽</span>
       </h1>
-      <div className="card overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="card overflow-x-auto">
+        <table className="w-full min-w-[18rem] text-sm">
           <thead className="bg-pitch/5 text-xs uppercase tracking-wide text-pitch">
             <tr>
               <th className="py-2 pl-3 text-left">#</th>
               <th className="py-2 text-left">Player</th>
               <th className="py-2 text-left">Country</th>
-              <th className="py-2 text-left">Club</th>
+              <th className="hidden py-2 text-left sm:table-cell">Club</th>
               <th className="py-2 pr-3 text-right">Goals</th>
             </tr>
           </thead>
@@ -27,7 +27,7 @@ export default async function ScorersPage() {
                 <td className="py-2 pl-3 font-mono text-black/40">{s.rank}</td>
                 <td className="py-2 font-medium">{s.player}</td>
                 <td className="py-2"><TeamBadge team={s.team} size="sm" /></td>
-                <td className="py-2 text-black/60">{s.club ?? '—'}</td>
+                <td className="hidden py-2 text-black/60 sm:table-cell">{s.club ?? '—'}</td>
                 <td className="py-2 pr-3 text-right font-bold">{s.goals}</td>
               </tr>
             ))}

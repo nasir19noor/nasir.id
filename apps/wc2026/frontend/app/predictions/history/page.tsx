@@ -72,8 +72,8 @@ export default async function PredictionHistoryPage(
                   )}
                 </span>
               </div>
-              <div className="card overflow-hidden">
-                <table className="w-full text-sm">
+              <div className="card overflow-x-auto">
+                <table className="w-full min-w-[22rem] text-sm">
                   <thead className="bg-pitch/5 text-xs uppercase text-pitch">
                     <tr>
                       <th className="py-2 pl-3 text-left">Match</th>
