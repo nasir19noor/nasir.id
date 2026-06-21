@@ -36,13 +36,6 @@ resource "aws_iam_role_policy_attachment" "lambda_logs" {
 data "aws_iam_policy_document" "lambda_dynamodb" {
   statement {
     actions   = ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:UpdateItem"]
-    resources = [local.table_arn]
-  }
-}
-
-data "aws_iam_policy_document" "lambda_dynamodb" {
-  statement {
-    actions   = ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:UpdateItem"]
     resources = [data.terraform_remote_state.dynamodb.outputs.table_arn]
   }
 }
