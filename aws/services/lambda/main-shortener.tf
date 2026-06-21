@@ -22,6 +22,6 @@ resource "aws_lambda_permission" "apigw" {
   action        = "lambda:InvokeFunction"
   function_name = module.shortener_lambda.function_name
   principal     = "apigateway.amazonaws.com"
-  source_arn    = "${module.shortener_api.execution_arn}/*/*"
+  source_arn    = "${data.terraform_remote_state.api_gateway.outputs.api_execution_arn}/*/*"
 }
 
