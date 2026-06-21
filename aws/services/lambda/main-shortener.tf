@@ -25,5 +25,10 @@ resource "aws_lambda_permission" "apigw" {
   source_arn    = "${data.terraform_remote_state.api_gateway.outputs.api_execution_arn}/*/*"
 }
 
+resource "aws_iam_role_policy" "lambda_dynamodb" {
+  name   = "shortener-dynamodb-access"
+  role   = aws_iam_role.lambda.id
+  policy = data.aws_iam_policy_document.lambda_dynamodb.json
+}
 
 
