@@ -288,6 +288,16 @@ resource "cloudflare_record" "api_wc2026_nasir_id" {
   ttl     = 1
 }
 
+# s.nasir.id
+resource "cloudflare_record" "shortener_nasir_id" {
+  zone_id = data.cloudflare_zones.nasir_id.zones[0].id
+  name    = "_52742479075e8d897356d1b0304980cf.s.nasir.id."
+  content = "_8cff517c4c630ae6fe02a6e896852172.jkddzztszm.acm-validations.aws."
+  type    = "CNAME"
+  proxied = false
+  ttl     = 1
+}
+
 
 
 
