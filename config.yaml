@@ -40,7 +40,9 @@ aws:
   api-gateway:
     name-shortener: "shortener-api-gateway" 
   lambda:    
-    name-shortener: "shortener-lambda"     
+    name-shortener: "shortener-lambda" 
+  dynamodb:
+    name-shortener: "shortener-dynamodb"    
 cloudflare:
   zone_name: "nasir.id"
   root: "@"
