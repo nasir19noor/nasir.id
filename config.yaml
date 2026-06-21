@@ -38,7 +38,9 @@ aws:
       delete_on_termination: true
       encrypted: true
   api-gateway:
-    name-shortener: "shortener-api-gateway"    
+    name-shortener: "shortener-api-gateway" 
+  lambda:    
+    name-shortener: "shortener-lambda"     
 cloudflare:
   zone_name: "nasir.id"
   root: "@"
