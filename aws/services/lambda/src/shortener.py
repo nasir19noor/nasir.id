@@ -16,7 +16,10 @@ CODE_LENGTH = 7
 
 
 def _response(status, body=None, headers=None):
-    h = {"Content-Type": "application/json"}
+    h = {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+    }
     if headers:
         h.update(headers)
     return {"statusCode": status, "headers": h,

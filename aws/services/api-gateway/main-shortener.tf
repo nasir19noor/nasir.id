@@ -74,14 +74,6 @@ resource "aws_api_gateway_integration" "redirect" {
   uri                     = local.lambda_invoke_arn
 }
 
-# resource "aws_lambda_permission" "apigw" {
-#   statement_id  = "AllowAPIGatewayInvoke"
-#   action        = "lambda:InvokeFunction"
-#   function_name = data.terraform_remote_state.lambda.outputs.function_name
-#   principal     = "apigateway.amazonaws.com"
-#   source_arn    = "${module.shortener_api.api_execution_arn}/*/*"
-# }
-
 resource "aws_api_gateway_deployment" "this" {
   rest_api_id = local.rest_api_id
 
@@ -92,6 +84,8 @@ resource "aws_api_gateway_deployment" "this" {
       aws_api_gateway_integration.create.id,
       aws_api_gateway_method.redirect.id,
       aws_api_gateway_integration.redirect.id,
+      aws_api_gateway_method.options.id,
+      aws_api_gateway_integration.options.id
     ]))
   }
 
@@ -109,4 +103,50 @@ resource "aws_api_gateway_stage" "this" {
   rest_api_id   = local.rest_api_id
   deployment_id = aws_api_gateway_deployment.this.id
   stage_name    = "prd"
+}
+
+resource "aws_api_gateway_method" "options" {
+  rest_api_id   = local.rest_api_id
+  resource_id   = local.root_resource_id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "options" {
+  rest_api_id = local.rest_api_id
+  resource_id = local.root_resource_id
+  http_method = aws_api_gateway_method.options.http_method
+  type        = "MOCK"
+
+  request_templates = {
+    "application/json" = "{\"statusCode\": 200}"
+  }
+}
+
+resource "aws_api_gateway_method_response" "options" {
+  rest_api_id = local.rest_api_id
+  resource_id = local.root_resource_id
+  http_method = aws_api_gateway_method.options.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Headers" = true
+  }
+}
+
+resource "aws_api_gateway_integration_response" "options" {
+  rest_api_id = local.rest_api_id
+  resource_id = local.root_resource_id
+  http_method = aws_api_gateway_method.options.http_method
+  status_code = aws_api_gateway_method_response.options.status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+    "method.response.header.Access-Control-Allow-Methods" = "'POST,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type'"
+  }
+
+  depends_on = [aws_api_gateway_integration.options]
 }
