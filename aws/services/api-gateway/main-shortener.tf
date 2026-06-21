@@ -85,7 +85,9 @@ resource "aws_api_gateway_deployment" "this" {
       aws_api_gateway_method.redirect.id,
       aws_api_gateway_integration.redirect.id,
       aws_api_gateway_method.options.id,
-      aws_api_gateway_integration.options.id
+      aws_api_gateway_integration.options.id,
+      aws_api_gateway_method.home.id,
+      aws_api_gateway_integration.home.id      
     ]))
   }
 
@@ -149,4 +151,20 @@ resource "aws_api_gateway_integration_response" "options" {
   }
 
   depends_on = [aws_api_gateway_integration.options]
+}
+
+resource "aws_api_gateway_method" "home" {
+  rest_api_id   = local.rest_api_id
+  resource_id   = local.root_resource_id
+  http_method   = "GET"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "home" {
+  rest_api_id             = local.rest_api_id
+  resource_id             = local.root_resource_id
+  http_method             = aws_api_gateway_method.home.http_method
+  type                    = "AWS_PROXY"
+  integration_http_method = "POST"
+  uri                     = local.lambda_invoke_arn
 }
