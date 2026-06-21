@@ -10,7 +10,7 @@ module "shortener_lambda" {
 
   environment_variables = {
     TABLE_NAME = data.terraform_remote_state.dynamodb.outputs.table_name
-    BASE_URL   = "https://m6gw7phdn5.execute-api.ap-southeast-1.amazonaws.com/prd"
+    BASE_URL   = "https://s.nasir.id"
   }
 
   tags = local.tags
