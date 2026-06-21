@@ -289,10 +289,19 @@ resource "cloudflare_record" "api_wc2026_nasir_id" {
 }
 
 # s.nasir.id
-resource "cloudflare_record" "shortener_nasir_id" {
+resource "cloudflare_record" "shortener_nasir_id_acm_validation" {
   zone_id = data.cloudflare_zones.nasir_id.zones[0].id
   name    = "_52742479075e8d897356d1b0304980cf.s.nasir.id."
   content = "_8cff517c4c630ae6fe02a6e896852172.jkddzztszm.acm-validations.aws."
+  type    = "CNAME"
+  proxied = false
+  ttl     = 1
+}
+
+resource "cloudflare_record" "shortener_nasir_id" {
+  zone_id = data.cloudflare_zones.nasir_id.zones[0].id
+  name    = "s.nasir.id"
+  content = "d-ads25ai974.execute-api.ap-southeast-1.amazonaws.com"
   type    = "CNAME"
   proxied = false
   ttl     = 1
