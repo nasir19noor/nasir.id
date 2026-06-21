@@ -9,7 +9,7 @@ module "shortener_lambda" {
   source_code_path = "src/shortener.py"
 
   environment_variables = {
-    TABLE_NAME = local.table_name
+    TABLE_NAME = data.terraform_remote_state.dynamodb.outputs.table_name
     BASE_URL   = "" # set once the stage URL or custom domain exists
   }
 
