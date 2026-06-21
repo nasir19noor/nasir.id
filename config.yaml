@@ -37,6 +37,8 @@ aws:
       volume_type: "gp3"
       delete_on_termination: true
       encrypted: true
+  api-gateway:
+    name-shortener: "shortener-api-gateway"    
 cloudflare:
   zone_name: "nasir.id"
   root: "@"
