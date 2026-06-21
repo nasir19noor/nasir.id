@@ -40,8 +40,9 @@ data "aws_iam_policy_document" "lambda_dynamodb" {
   }
 }
 
-resource "aws_iam_role_policy" "lambda_dynamodb" {
-  name   = "shortener-dynamodb-access"
-  role   = aws_iam_role.lambda.id
-  policy = data.aws_iam_policy_document.lambda_dynamodb.json
+data "aws_iam_policy_document" "lambda_dynamodb" {
+  statement {
+    actions   = ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:UpdateItem"]
+    resources = [data.terraform_remote_state.dynamodb.outputs.table_arn]
+  }
 }

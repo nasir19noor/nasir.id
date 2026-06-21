@@ -25,3 +25,5 @@ resource "aws_lambda_permission" "apigw" {
   source_arn    = "${data.terraform_remote_state.api_gateway.outputs.api_execution_arn}/*/*"
 }
 
+
+
