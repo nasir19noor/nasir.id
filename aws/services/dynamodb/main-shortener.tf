@@ -13,3 +13,5 @@ module "shortener_table" {
   hash_key   = "shortCode"
   tags       = local.tags
 }
+
+
