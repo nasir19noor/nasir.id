@@ -1,5 +1,5 @@
 module "shortener_lambda" {
-  source = "git::https://github.com/nasir19noor/terraform.git//aws/modules/lambda"
+  source = "git::https://github.com/nasir19noor/terraform.git//aws/modules/lambda?ref=main"
 
   function_name    = "shortener"
   handler          = "shortener.lambda_handler"
