@@ -49,19 +49,19 @@ module "acm_pulsara_nasir" {
   wait_for_validation    = false
 }
 
-# module "acm_shortener_nasir" {
-#   source = "git::https://github.com/nasir19noor/terraform.git//aws/modules/acm"
+module "acm_shortener_nasir" {
+  source = "git::https://github.com/nasir19noor/terraform.git//aws/modules/acm"
 
-#   providers = {
-#     aws = aws.acm_provider
-#   }
+  providers = {
+    aws = aws.sg
+  }
 
-#   domain_name = local.domain_name_shortener_nasir
-#   subject_alternative_names = [
-#     local.domain_name_shortener_nasir
-#   ]
+  domain_name = local.domain_name_shortener_nasir
+  subject_alternative_names = [
+    local.domain_name_shortener_nasir
+  ]
 
-#   create_route53_records = local.create_route53_records
-#   validation_method      = local.validation_method
-#   wait_for_validation    = false
-# }
+  create_route53_records = local.create_route53_records
+  validation_method      = local.validation_method
+  wait_for_validation    = false
+}

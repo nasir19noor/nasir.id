@@ -10,6 +10,7 @@ terraform {
 }
 
 provider "aws" {
+  alias  = "sg"
   region = local.region
 }
 
