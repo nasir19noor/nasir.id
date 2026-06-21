@@ -59,13 +59,13 @@ resource "aws_api_gateway_integration" "redirect" {
   uri                     = local.lambda_invoke_arn
 }
 
-resource "aws_lambda_permission" "apigw" {
-  statement_id  = "AllowAPIGatewayInvoke"
-  action        = "lambda:InvokeFunction"
-  function_name = data.terraform_remote_state.lambda.outputs.function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${module.shortener_api.api_execution_arn}/*/*"
-}
+# resource "aws_lambda_permission" "apigw" {
+#   statement_id  = "AllowAPIGatewayInvoke"
+#   action        = "lambda:InvokeFunction"
+#   function_name = data.terraform_remote_state.lambda.outputs.function_name
+#   principal     = "apigateway.amazonaws.com"
+#   source_arn    = "${module.shortener_api.api_execution_arn}/*/*"
+# }
 
 resource "aws_api_gateway_deployment" "this" {
   rest_api_id = local.rest_api_id
