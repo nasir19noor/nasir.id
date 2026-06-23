@@ -315,9 +315,16 @@ resource "cloudflare_record" "mbg_nasir_id" {
   type    = "CNAME"
   proxied = true
   ttl     = 1
+}
+
+resource "cloudflare_page_rule" "mbg_flexible_ssl" {
+  zone_id  = data.cloudflare_zones.nasir_id.zones[0].id
+  target   = "mbg.nasir.id/*"
+  priority = 1
+
   actions {
     ssl = "flexible"
-  }  
+  }
 }
 
 
