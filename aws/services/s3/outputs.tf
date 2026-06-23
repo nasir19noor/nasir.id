@@ -39,3 +39,11 @@ output "s3_pulsara_id" {
 output "s3_pulsara_arn" {
   value = module.s3_pulsara.s3_bucket_arn
 }
+
+output "s3_mbg_id" {
+  value = module.s3_mbg.s3_bucket_id
+}
+
+output "s3_mbg_arn" {
+  value = module.s3_mbg.s3_bucket_arn
+}
