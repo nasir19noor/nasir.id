@@ -27,7 +27,7 @@ data "aws_iam_policy_document" "mbg_cloudflare_only" {
     }
 
     actions   = ["s3:GetObject"]
-    resources = ["${module.s3_mbg.arn}/*"]
+    resources = ["${module.s3_mbg.s3_bucket_arn}/*"]
 
     condition {
       test     = "IpAddress"
@@ -41,6 +41,6 @@ data "aws_iam_policy_document" "mbg_cloudflare_only" {
 }
 
 resource "aws_s3_bucket_policy" "mbg" {
-  bucket = module.s3_mbg.id
+  bucket = module.s3_mbg.s3_bucket_id
   policy = data.aws_iam_policy_document.mbg_cloudflare_only.json
 }
