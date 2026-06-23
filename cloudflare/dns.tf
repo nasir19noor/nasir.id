@@ -1,3 +1,11 @@
+resource "cloudflare_zone_settings_override" "nasir_id" {
+  zone_id = data.cloudflare_zones.nasir_id.zones[0].id
+
+  settings {
+    always_use_https = "on"
+  }
+}
+
 resource "cloudflare_record" "mx-1" {
   zone_id = data.cloudflare_zones.nasir_id.zones[0].id
   name    = local.root
