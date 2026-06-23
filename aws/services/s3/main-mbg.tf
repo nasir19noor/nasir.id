@@ -4,7 +4,7 @@ module "s3_mbg" {
 
   # Disable all public access blocking to allow public access
   block_public_acls       = true
-  block_public_policy     = true
+  block_public_policy     = false
   ignore_public_acls      = false
   restrict_public_buckets = false
 
@@ -27,7 +27,7 @@ data "aws_iam_policy_document" "mbg_cloudflare_only" {
     }
 
     actions   = ["s3:GetObject"]
-    resources = ["${aws_s3_bucket.s3_mbg.arn}/*"]
+    resources = ["${module.s3_mbg.arn}/*"]
 
     condition {
       test     = "IpAddress"
@@ -41,6 +41,6 @@ data "aws_iam_policy_document" "mbg_cloudflare_only" {
 }
 
 resource "aws_s3_bucket_policy" "mbg" {
-  bucket = aws_s3_bucket.s3_mbg.id
+  bucket = module.s3_mbg.id
   policy = data.aws_iam_policy_document.mbg_cloudflare_only.json
 }
