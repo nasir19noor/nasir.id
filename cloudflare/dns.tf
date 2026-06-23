@@ -315,6 +315,9 @@ resource "cloudflare_record" "mbg_nasir_id" {
   type    = "CNAME"
   proxied = true
   ttl     = 1
+  actions {
+    ssl = "flexible"
+  }  
 }
 
 
