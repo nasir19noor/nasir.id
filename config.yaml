@@ -44,7 +44,9 @@ aws:
   lambda:    
     name-shortener: "shortener-lambda" 
   dynamodb:
-    name-shortener: "shortener-dynamodb"    
+    name-shortener: "shortener-dynamodb"  
+  cognito:
+    cognito_name_mbg: "mbg"      
 cloudflare:
   zone_name: "nasir.id"
   root: "@"
