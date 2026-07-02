@@ -21,9 +21,9 @@ function flagUrl(t: Team) {
   return t.iso2 ? `https://flagcdn.com/w40/${t.iso2}.png` : null
 }
 
-function Side({ team, label, score, winner }: {
+function Side({ team, label, score, shootout, winner }: {
   team?: Team | null; label?: string | null
-  score?: number | null; winner: boolean
+  score?: number | null; shootout?: number | null; winner: boolean
 }) {
   const url = team ? flagUrl(team) : null
   return (
@@ -47,6 +47,9 @@ function Side({ team, label, score, winner }: {
       </span>
       <span className="shrink-0 font-mono tabular-nums">
         {score ?? ''}
+        {shootout != null && (
+          <span className="ml-0.5 text-accent" title="penalty shootout">({shootout})</span>
+        )}
       </span>
     </div>
   )
@@ -59,10 +62,12 @@ function Cell({ m }: { m: Knockout }) {
   return (
     <div className="w-36 overflow-hidden rounded-md border border-black/15 bg-white text-[11px] shadow-sm">
       <Side team={m.home} label={m.home_label}
-            score={showScore ? m.home_score : null} winner={homeWin} />
+            score={showScore ? m.home_score : null}
+            shootout={showScore ? m.home_shootout : null} winner={homeWin} />
       <div className="border-t border-black/10" />
       <Side team={m.away} label={m.away_label}
-            score={showScore ? m.away_score : null} winner={awayWin} />
+            score={showScore ? m.away_score : null}
+            shootout={showScore ? m.away_shootout : null} winner={awayWin} />
     </div>
   )
 }

@@ -23,6 +23,8 @@ def _to_out(m: KnockoutMatch) -> KnockoutOut:
         away=TeamBase.model_validate(m.away_team) if m.away_team else None,
         home_score=m.home_score,
         away_score=m.away_score,
+        home_shootout=m.home_shootout,
+        away_shootout=m.away_shootout,
         winner=TeamBase.model_validate(m.winner_team) if m.winner_team else None,
         status=m.status,
         kickoff=m.kickoff,

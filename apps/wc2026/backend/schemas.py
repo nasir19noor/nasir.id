@@ -82,6 +82,8 @@ class KnockoutOut(BaseModel):
     away:         Optional[TeamBase] = None
     home_score:   Optional[int]
     away_score:   Optional[int]
+    home_shootout: Optional[int] = None
+    away_shootout: Optional[int] = None
     winner:       Optional[TeamBase] = None
     status:       str
     kickoff:      Optional[datetime]

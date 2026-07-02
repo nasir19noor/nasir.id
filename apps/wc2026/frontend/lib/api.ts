@@ -127,6 +127,8 @@ export type Knockout = {
   away?: Team | null
   home_score?: number | null
   away_score?: number | null
+  home_shootout?: number | null
+  away_shootout?: number | null
   winner?: Team | null
   status: string
   kickoff?: string | null

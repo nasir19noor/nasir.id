@@ -151,12 +151,13 @@ def _parse_event(ev: dict, idx: dict[str, Team]) -> dict | None:
     comp = (ev.get("competitions") or [{}])[0]
     home = away = None
     home_score = away_score = None
+    home_so = away_so = None
     for c in comp.get("competitors") or []:
         team = _resolve_team(idx, c)
         if c.get("homeAway") == "home":
-            home, home_score = team, c.get("score")
+            home, home_score, home_so = team, c.get("score"), c.get("shootoutScore")
         elif c.get("homeAway") == "away":
-            away, away_score = team, c.get("score")
+            away, away_score, away_so = team, c.get("score"), c.get("shootoutScore")
     if not home or not away:
         return None
 
@@ -183,6 +184,8 @@ def _parse_event(ev: dict, idx: dict[str, Team]) -> dict | None:
         "away":          away,
         "home_score":    to_int(home_score),
         "away_score":    to_int(away_score),
+        "home_shootout": to_int(home_so),
+        "away_shootout": to_int(away_so),
         "kickoff":       kickoff,
         "status":        status_map.get(state, "scheduled"),
         "venue":         ((comp.get("venue") or {}).get("fullName")),
@@ -294,12 +297,21 @@ def _upsert_knockout(db: Session, p: dict) -> bool:
        and p["home_score"] is not None and p["away_score"] is not None:
         ko.home_score = p["home_score"]
         ko.away_score = p["away_score"]
+        ko.home_shootout = p.get("home_shootout")
+        ko.away_shootout = p.get("away_shootout")
         if p["status"] == "finished":
             if   p["home_score"] > p["away_score"]: ko.winner_team_id = p["home"].id
             elif p["away_score"] > p["home_score"]: ko.winner_team_id = p["away"].id
+            else:
+                # Level in regulation → decided on penalties. Use the shootout score.
+                hso, aso = p.get("home_shootout"), p.get("away_shootout")
+                if hso is not None and aso is not None and hso != aso:
+                    ko.winner_team_id = p["home"].id if hso > aso else p["away"].id
     else:
         ko.home_score = None
         ko.away_score = None
+        ko.home_shootout = None
+        ko.away_shootout = None
     return True
 
 

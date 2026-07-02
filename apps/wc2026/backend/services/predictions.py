@@ -28,7 +28,7 @@ from sqlalchemy.orm import Session
 from collections import defaultdict
 
 from database import SessionLocal
-from models import Fixture, Player, Team, Prediction, MatchPredictionRow
+from models import Fixture, Player, Team, Prediction, MatchPredictionRow, KnockoutMatch
 from services.standings import standings_for_group
 from services.wc2026_data import TEAM_FACTS, TEAM_GROUP, team_fact
 
@@ -429,12 +429,17 @@ def _champion_context(db: Session) -> list[dict]:
             if gf > ga:   r["won"] += 1
             elif gf < ga: r["lost"] += 1
             else:         r["drawn"] += 1
-        # Knockout (group_letter is NULL): the side that lost in regulation is out.
-        # A draw goes to penalties — winner unknown from the score, so we don't
-        # mark either eliminated (the model can weigh it).
-        if f.group_letter is None:
-            if hs > as_:   rec[f.away_team_id]["eliminated"] = True
-            elif as_ > hs: rec[f.home_team_id]["eliminated"] = True
+
+    # Eliminations come from the knockout bracket winner — authoritative and
+    # correct for penalty shootouts (where the regulation score is level, so a
+    # score-based check would wrongly keep the losing side "alive").
+    for ko in (db.query(KnockoutMatch)
+                 .filter(KnockoutMatch.status == "finished",
+                         KnockoutMatch.winner_team_id.isnot(None))
+                 .all()):
+        loser = ko.away_team_id if ko.winner_team_id == ko.home_team_id else ko.home_team_id
+        if loser in rec:
+            rec[loser]["eliminated"] = True
 
     out = []
     for r in rec.values():

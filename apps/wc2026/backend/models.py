@@ -75,6 +75,8 @@ class KnockoutMatch(Base):
     away_team_id    = Column(Integer, ForeignKey("teams.id"), nullable=True)
     home_score      = Column(Integer)
     away_score      = Column(Integer)
+    home_shootout   = Column(Integer)   # penalty-shootout score, if it went to pens
+    away_shootout   = Column(Integer)
     winner_team_id  = Column(Integer, ForeignKey("teams.id"), nullable=True)
     status          = Column(String, default="scheduled")
     kickoff         = Column(DateTime(timezone=True))

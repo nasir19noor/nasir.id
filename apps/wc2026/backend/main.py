@@ -64,6 +64,15 @@ def run_migrations() -> None:
                 with engine.begin() as c:
                     c.execute(text(f"ALTER TABLE page_views ADD COLUMN {col} VARCHAR"))
 
+    # knockout_matches gained penalty-shootout score columns. Add if missing.
+    if insp.has_table("knockout_matches"):
+        ko_cols = {c["name"] for c in insp.get_columns("knockout_matches")}
+        for col in ("home_shootout", "away_shootout"):
+            if col not in ko_cols:
+                logger.info("Migration: adding knockout_matches.%s", col)
+                with engine.begin() as c:
+                    c.execute(text(f"ALTER TABLE knockout_matches ADD COLUMN {col} INTEGER"))
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
