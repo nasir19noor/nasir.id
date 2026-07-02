@@ -26,6 +26,15 @@ def predictions_top_scorer():
     return p
 
 
+@router.get("/champion")
+def predictions_champion():
+    """Latest projected tournament champion + contenders."""
+    p = get_prediction("champion")
+    if not p:
+        raise HTTPException(404, "No champion prediction yet")
+    return p
+
+
 @router.get("/accuracy")
 def predictions_accuracy():
     """Overall match-winner accuracy across all stored prediction days."""

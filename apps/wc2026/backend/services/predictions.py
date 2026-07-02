@@ -87,6 +87,19 @@ class TopScorerForecast(BaseModel):
     summary: str
 
 
+class ChampionPrediction(BaseModel):
+    rank:                int
+    team:                str   # team code
+    win_probability_pct: int
+    reasoning:           str
+
+
+class ChampionForecast(BaseModel):
+    champion: str                        # single most likely winner (team code)
+    ranking:  list[ChampionPrediction]   # top contenders with win probabilities
+    summary:  str
+
+
 # ─── Cached system prefix ──────────────────────────────────────────
 
 def _reference_table() -> str:
@@ -394,11 +407,76 @@ def predict_top_scorer() -> dict:
         db.close()
 
 
+def _champion_context(db: Session) -> list[dict]:
+    """Per-team tournament record + FIFA facts, with an 'eliminated' flag derived
+    from decisive knockout losses — the input for the champion forecast."""
+    teams = {t.id: t for t in db.query(Team).all()}
+    rec: dict[int, dict] = {}
+    for tid, t in teams.items():
+        rec[tid] = {"code": t.code, "name": t.name, **team_fact(t.code),
+                    "played": 0, "won": 0, "drawn": 0, "lost": 0,
+                    "gf": 0, "ga": 0, "eliminated": False}
+
+    for f in db.query(Fixture).filter(Fixture.status == "finished").all():
+        if f.home_score is None or f.away_score is None:
+            continue
+        if f.home_team_id not in rec or f.away_team_id not in rec:
+            continue
+        hs, as_ = f.home_score, f.away_score
+        for tid, gf, ga in ((f.home_team_id, hs, as_), (f.away_team_id, as_, hs)):
+            r = rec[tid]
+            r["played"] += 1; r["gf"] += gf; r["ga"] += ga
+            if gf > ga:   r["won"] += 1
+            elif gf < ga: r["lost"] += 1
+            else:         r["drawn"] += 1
+        # Knockout (group_letter is NULL): the side that lost in regulation is out.
+        # A draw goes to penalties — winner unknown from the score, so we don't
+        # mark either eliminated (the model can weigh it).
+        if f.group_letter is None:
+            if hs > as_:   rec[f.away_team_id]["eliminated"] = True
+            elif as_ > hs: rec[f.home_team_id]["eliminated"] = True
+
+    out = []
+    for r in rec.values():
+        if r["played"] > 0:
+            r["gd"] = r["gf"] - r["ga"]
+            out.append(r)
+    out.sort(key=lambda r: (r["eliminated"], -r["won"], -r["gd"]))
+    return out
+
+
+def predict_champion() -> dict:
+    db = SessionLocal()
+    try:
+        date_str = _run_date()
+        teams = _champion_context(db)
+        if not teams:
+            return {"kind": "champion", "date": date_str, "skipped": "no results yet"}
+        parsed, cache_read, model_used = _predict_structured(
+            "From the teams below, predict who will WIN the FIFA World Cup 2026. "
+            "Return the single most likely champion and a ranked top 6 of contenders "
+            "with win probabilities (a sensible distribution). Base it mainly on "
+            "current tournament form/results, then squad quality and FIFA ranking. "
+            "Exclude any team marked eliminated=true.",
+            {"date_wib": date_str, "teams": teams},
+            ChampionForecast, 3000,
+        )
+        payload = parsed.model_dump() if parsed else {"champion": "", "ranking": [], "summary": ""}
+        _persist(db, date_str, "champion", payload, cache_read, model_used)
+        logger.info("champion: %d teams, cache_read=%d, model=%s",
+                    len(teams), cache_read, model_used)
+        return {"kind": "champion", "date": date_str,
+                "cache_read": cache_read, "model": model_used, **payload}
+    finally:
+        db.close()
+
+
 def run_daily_predictions() -> dict:
-    """Generate both prediction artifacts. Errors are isolated per artifact."""
-    out: dict = {"match_winners": None, "top_scorer": None, "errors": []}
+    """Generate all prediction artifacts. Errors are isolated per artifact."""
+    out: dict = {"match_winners": None, "top_scorer": None, "champion": None, "errors": []}
     for key, fn in (("match_winners", predict_match_winners),
-                    ("top_scorer", predict_top_scorer)):
+                    ("top_scorer", predict_top_scorer),
+                    ("champion", predict_champion)):
         try:
             out[key] = fn()
         except Exception as e:
