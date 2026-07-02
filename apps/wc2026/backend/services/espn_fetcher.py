@@ -259,6 +259,12 @@ def _normalize_name(s: str) -> str:
     return "".join(c for c in nfkd if not unicodedata.combining(c)).strip().upper()
 
 
+def _name_tokens(norm: str) -> set[str]:
+    """Word tokens of a normalized name, dropping common suffixes/initials noise."""
+    drop = {"JR", "JNR", "JUNIOR", "SR", "II", "III"}
+    return {t for t in norm.replace(".", " ").split() if t and t not in drop}
+
+
 def _is_goal_play(detail: dict) -> bool:
     """True if this play is a regular goal (penalty/header included, own goal excluded)."""
     if not detail.get("scoringPlay"):
@@ -321,6 +327,7 @@ def _apply_goal_counts(
         players_by_team[p.team_id].append(p)
 
     counts: dict[tuple[int, str], int] = defaultdict(int)
+    orig_name: dict[tuple[int, str], str] = {}   # keep the original name for reporting
     unresolved_team   = 0
     unresolved_player = []
     for espn_team_id, scorer_name in goals:
@@ -329,19 +336,37 @@ def _apply_goal_counts(
         if not team:
             unresolved_team += 1
             continue
-        counts[(team.id, _normalize_name(scorer_name))] += 1
+        norm = _normalize_name(scorer_name)
+        counts[(team.id, norm)] += 1
+        orig_name[(team.id, norm)] = scorer_name
 
     applied = 0
     for (team_id, norm_name), n in counts.items():
-        matched = False
-        for p in players_by_team.get(team_id, []):
-            if _normalize_name(p.name) == norm_name:
-                p.wc_goals = n
-                applied += n
-                matched = True
-                break
-        if not matched:
-            unresolved_player.append((team_id, norm_name, n))
+        roster = players_by_team.get(team_id, [])
+        # 1) exact normalized match
+        match = next((p for p in roster if _normalize_name(p.name) == norm_name), None)
+        # 2) fallback: token-subset match (handles extra/missing name parts like
+        #    "Kylian Mbappé Lottin" vs "Kylian Mbappé"), accepted only when it
+        #    resolves to exactly ONE roster player (avoids mis-attribution).
+        if match is None:
+            en = _name_tokens(norm_name)
+            if en:
+                cands = []
+                for p in roster:
+                    pn = _name_tokens(_normalize_name(p.name))
+                    if pn and (pn <= en or en <= pn):
+                        cands.append(p)
+                if len(cands) == 1:
+                    match = cands[0]
+        if match is not None:
+            match.wc_goals = n
+            applied += n
+        else:
+            unresolved_player.append({
+                "team_id": team_id,
+                "scorer": orig_name[(team_id, norm_name)],
+                "goals": n,
+            })
 
     if unresolved_player:
         logger.info("goals: %d unresolved scorers: %s",
@@ -351,6 +376,9 @@ def _apply_goal_counts(
         "goals_applied":       applied,
         "unresolved_team":     unresolved_team,
         "unresolved_player":   len(unresolved_player),
+        # Names of scorers whose goals couldn't be matched to a squad player —
+        # these are the goals missing from /scorers. Fix the squad entry or alias.
+        "unresolved_scorers":  [u["scorer"] for u in unresolved_player],
     }
 
 
