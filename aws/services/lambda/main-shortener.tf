@@ -30,3 +30,5 @@ resource "aws_iam_role_policy" "lambda_dynamodb" {
   role   = aws_iam_role.lambda.id
   policy = data.aws_iam_policy_document.lambda_dynamodb.json
 }
+
+
