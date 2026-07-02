@@ -172,9 +172,16 @@ def _openrouter_structured(system_text: str, user_text: str,
         timeout=120,
     )
     resp.raise_for_status()
-    content = (resp.json()["choices"][0]["message"]["content"] or "").strip()
-    if content.startswith("```"):  # defensively strip accidental markdown fences
-        content = content[content.find("\n") + 1: content.rfind("```")].strip()
+    msg = resp.json()["choices"][0]["message"]
+    content = (msg.get("content") or "").strip()
+    if not content:
+        raise RuntimeError("OpenRouter returned empty content "
+                           "(model may have exhausted max_tokens on reasoning)")
+    # Extract the JSON object even if wrapped in ```json fences or extra prose —
+    # reasoning models (e.g. claude-sonnet-5) often fence their output.
+    start, end = content.find("{"), content.rfind("}")
+    if start != -1 and end > start:
+        content = content[start:end + 1]
     return output_model.model_validate_json(content)
 
 
