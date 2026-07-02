@@ -12,6 +12,8 @@ This module is the **sole runtime data source**. It:
 No spreadsheet, no per-match seeding. Everything is dynamic.
 """
 import os
+import re
+import difflib
 import logging
 import unicodedata
 from collections import defaultdict
@@ -265,12 +267,33 @@ def _name_tokens(norm: str) -> set[str]:
     return {t for t in norm.replace(".", " ").split() if t and t not in drop}
 
 
-def _is_goal_play(detail: dict) -> bool:
-    """True if this play is a regular goal (penalty/header included, own goal excluded)."""
+SHOOTOUT_CLOCK = 7200.0  # 120' — ESPN stamps every shootout kick at this clock
+
+
+def _is_goal_play(detail: dict, match_has_shootout: bool = False) -> bool:
+    """True if this play counts as a tournament goal.
+
+    Includes open-play goals, headers, free-kicks, volleys, and IN-GAME
+    penalties. Excludes own goals and PENALTY-SHOOTOUT kicks. ESPN types both
+    in-game and shootout penalties as 'Penalty - Scored', but shootout kicks are
+    all stamped at 120' (clock 7200s) while in-game penalties carry their real
+    minute — so we count a penalty only when it occurred before the 120' mark.
+    """
     if not detail.get("scoringPlay"):
         return False
     text = ((detail.get("type") or {}).get("text") or "")
-    return "Goal" in text and "Own" not in text
+    if "Own" in text:
+        return False
+    if "Goal" in text:
+        return True
+    if "Penalty - Scored" in text:
+        if not match_has_shootout:
+            return True  # no shootout in this match → it's an in-game penalty goal
+        # In a shootout match, exclude the kicks (stamped at 120'); keep any
+        # penalty scored earlier in regulation/extra time.
+        clock = (detail.get("clock") or {}).get("value")
+        return clock is not None and clock < SHOOTOUT_CLOCK
+    return False
 
 
 def _collect_goals(events: list[dict]) -> tuple[list[tuple[str, str]], dict[str, str]]:
@@ -284,8 +307,10 @@ def _collect_goals(events: list[dict]) -> tuple[list[tuple[str, str]], dict[str,
 
     for ev in events:
         comp = (ev.get("competitions") or [{}])[0]
+        competitors = comp.get("competitors") or []
+        has_shootout = any(c.get("shootoutScore") not in (None, "") for c in competitors)
         # Learn ESPN team id ↔ our code from this event's competitors.
-        for c in comp.get("competitors") or []:
+        for c in competitors:
             team_block = c.get("team") or {}
             espn_id = str(team_block.get("id") or "")
             abbr    = team_block.get("abbreviation")
@@ -293,7 +318,7 @@ def _collect_goals(events: list[dict]) -> tuple[list[tuple[str, str]], dict[str,
                 espn_team_to_code[espn_id] = team_lookup_code(str(abbr))
         # Extract scorers.
         for d in comp.get("details") or []:
-            if not _is_goal_play(d):
+            if not _is_goal_play(d, has_shootout):
                 continue
             athletes = d.get("athletesInvolved") or []
             if not athletes:
@@ -358,6 +383,19 @@ def _apply_goal_counts(
                         cands.append(p)
                 if len(cands) == 1:
                     match = cands[0]
+        # 3) fallback: fuzzy match for transliteration variants (e.g. ESPN
+        #    "Mousa Al-Tamari" vs squad "Musa Al-Taamari"). High threshold +
+        #    unique-candidate guard so we never mis-credit a similar teammate.
+        if match is None:
+            key = re.sub(r"[^A-Z0-9]", "", norm_name)
+            if key:
+                close = [p for p in roster
+                         if difflib.SequenceMatcher(
+                             None, key,
+                             re.sub(r"[^A-Z0-9]", "", _normalize_name(p.name))
+                         ).ratio() >= 0.88]
+                if len(close) == 1:
+                    match = close[0]
         if match is not None:
             match.wc_goals = n
             applied += n
