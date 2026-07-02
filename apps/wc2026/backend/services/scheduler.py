@@ -54,8 +54,8 @@ def start_scheduler() -> BackgroundScheduler:
     sched.add_job(_job, "interval", minutes=minutes, id="espn_refresh",
                   next_run_time=datetime.now(timezone.utc))
 
-    # AI predictions every 6 hours at 00:00 / 06:00 / 12:00 / 18:00 WIB.
-    pred_hours  = os.getenv("PREDICTION_HOURS", "0,6,12,18")
+    # AI predictions once a day at 00:00 WIB.
+    pred_hours  = os.getenv("PREDICTION_HOURS", "0")
     pred_minute = int(os.getenv("PREDICTION_MINUTE", "0"))
     sched.add_job(
         _prediction_job,
@@ -64,6 +64,6 @@ def start_scheduler() -> BackgroundScheduler:
     )
 
     sched.start()
-    logger.info("Scheduler started — ESPN every %d min; predictions at "
+    logger.info("Scheduler started — ESPN every %d min; predictions daily at "
                 "%s:%02d WIB", minutes, pred_hours, pred_minute)
     return sched

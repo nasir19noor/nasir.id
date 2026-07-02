@@ -45,6 +45,14 @@ WIB   = timezone(timedelta(hours=7))
 # Predict every scheduled fixture kicking off within this many hours from now.
 PREDICTION_WINDOW_HOURS = int(os.getenv("PREDICTION_WINDOW_HOURS", "24"))
 
+# OpenRouter fallback — used automatically if the Anthropic (Claude) call fails,
+# e.g. the ANTHROPIC_API_KEY is missing/invalid/expired or rate-limited.
+# OpenRouter exposes an OpenAI-compatible API; we validate its JSON response
+# against the same Pydantic schemas.
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "").strip()
+OPENROUTER_MODEL   = os.getenv("OPENROUTER_MODEL", "anthropic/claude-sonnet-4")
+OPENROUTER_URL     = "https://openrouter.ai/api/v1/chat/completions"
+
 
 # ─── Pydantic output schemas (structured outputs) ──────────────────
 
@@ -132,6 +140,74 @@ def _system_blocks() -> list[dict]:
         "text": SYSTEM_METHODOLOGY + _reference_table(),
         "cache_control": {"type": "ephemeral"},
     }]
+
+
+def _openrouter_structured(system_text: str, user_text: str,
+                           output_model: type[BaseModel], max_tokens: int) -> BaseModel:
+    """Fallback: call OpenRouter's OpenAI-compatible chat API and validate the
+    JSON response against the same Pydantic schema used for Claude."""
+    import requests
+
+    schema = json.dumps(output_model.model_json_schema(), ensure_ascii=False)
+    resp = requests.post(
+        OPENROUTER_URL,
+        headers={
+            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            "Content-Type": "application/json",
+            "X-Title": "wc2026-predictions",
+        },
+        json={
+            "model": OPENROUTER_MODEL,
+            "max_tokens": max_tokens,
+            "response_format": {"type": "json_object"},
+            "messages": [
+                {"role": "system", "content": system_text},
+                {"role": "user", "content": (
+                    user_text
+                    + "\n\nRespond with ONLY a single JSON object that conforms exactly "
+                      "to this JSON Schema (no markdown, no commentary):\n" + schema
+                )},
+            ],
+        },
+        timeout=120,
+    )
+    resp.raise_for_status()
+    content = (resp.json()["choices"][0]["message"]["content"] or "").strip()
+    if content.startswith("```"):  # defensively strip accidental markdown fences
+        content = content[content.find("\n") + 1: content.rfind("```")].strip()
+    return output_model.model_validate_json(content)
+
+
+def _predict_structured(instruction: str, payload: dict,
+                        output_model: type[BaseModel], max_tokens: int):
+    """Run one structured prediction. Tries Anthropic (Claude) first; on any
+    failure, falls back to OpenRouter when OPENROUTER_API_KEY is configured.
+    Returns (parsed_model_or_None, cache_read_tokens, model_used)."""
+    system_text = SYSTEM_METHODOLOGY + _reference_table()
+    user_text = instruction + "\n\n" + json.dumps(payload, ensure_ascii=False)
+
+    # Primary: Anthropic Claude via the SDK's structured-output parse().
+    try:
+        client = _client()
+        resp = client.messages.parse(
+            model=MODEL,
+            max_tokens=max_tokens,
+            thinking={"type": "adaptive"},
+            system=_system_blocks(),
+            messages=[{"role": "user", "content": user_text}],
+            output_format=output_model,
+        )
+        cache_read = getattr(resp.usage, "cache_read_input_tokens", 0) or 0
+        return resp.parsed_output, cache_read, MODEL
+    except Exception as e:
+        if not OPENROUTER_API_KEY:
+            raise
+        logger.warning("Claude prediction failed (%s); falling back to OpenRouter (%s)",
+                       e, OPENROUTER_MODEL)
+
+    # Fallback: OpenRouter (OpenAI-compatible), same schema.
+    parsed = _openrouter_structured(system_text, user_text, output_model, max_tokens)
+    return parsed, 0, OPENROUTER_MODEL
 
 
 # ─── Context gathering ─────────────────────────────────────────────
@@ -224,7 +300,7 @@ def _scorer_candidates(db: Session, limit: int = 25) -> list[dict]:
 # ─── Prediction calls ──────────────────────────────────────────────
 
 def _persist(db: Session, date_str: str, kind: str, payload: dict,
-             cache_read: int) -> None:
+             cache_read: int, model_used: str = MODEL) -> None:
     existing = (db.query(Prediction)
                   .filter(Prediction.prediction_date == date_str,
                           Prediction.kind == kind).one_or_none())
@@ -232,7 +308,7 @@ def _persist(db: Session, date_str: str, kind: str, payload: dict,
         existing = Prediction(prediction_date=date_str, kind=kind)
         db.add(existing)
     existing.payload      = json.dumps(payload, ensure_ascii=False)
-    existing.model        = MODEL
+    existing.model        = model_used
     existing.cache_read   = cache_read
     existing.generated_at = datetime.now(timezone.utc)
     db.commit()
@@ -245,39 +321,24 @@ def predict_match_winners() -> dict:
         if not matches:
             return {"kind": "match_winners", "date": date_str,
                     "skipped": "no fixtures today"}
-        client = _client()
-        user_payload = {"date_wib": date_str, "fixtures": matches}
-        # Note: .parse() derives output_config.format from output_format, so we
-        # don't pass a separate output_config here. Adaptive thinking handles the
-        # reasoning depth; effort defaults to high.
-        resp = client.messages.parse(
-            model=MODEL,
-            max_tokens=8000,
-            thinking={"type": "adaptive"},
-            system=_system_blocks(),
-            messages=[{
-                "role": "user",
-                "content": (
-                    "Predict each of today's World Cup fixtures below. Return one "
-                    "prediction per fixture, preserving fixture_id and team codes.\n\n"
-                    + json.dumps(user_payload, ensure_ascii=False)
-                ),
-            }],
-            output_format=MatchPredictions,
+        parsed, cache_read, model_used = _predict_structured(
+            "Predict each of today's World Cup fixtures below. Return one "
+            "prediction per fixture, preserving fixture_id and team codes.",
+            {"date_wib": date_str, "fixtures": matches},
+            MatchPredictions, 8000,
         )
-        cache_read = getattr(resp.usage, "cache_read_input_tokens", 0) or 0
-        parsed = resp.parsed_output
         payload = parsed.model_dump() if parsed else {"predictions": []}
-        _persist_match_rows(db, payload.get("predictions", []))
-        logger.info("match_winners: %d fixtures, cache_read=%d",
-                    len(matches), cache_read)
+        _persist_match_rows(db, payload.get("predictions", []), model_used)
+        logger.info("match_winners: %d fixtures, cache_read=%d, model=%s",
+                    len(matches), cache_read, model_used)
         return {"kind": "match_winners", "date": date_str,
-                "fixtures": len(matches), "cache_read": cache_read, **payload}
+                "fixtures": len(matches), "cache_read": cache_read,
+                "model": model_used, **payload}
     finally:
         db.close()
 
 
-def _persist_match_rows(db: Session, items: list[dict]) -> None:
+def _persist_match_rows(db: Session, items: list[dict], model_used: str = MODEL) -> None:
     """Upsert one prediction row per fixture. Only ever called for scheduled
     fixtures, so a finished match keeps its last pre-kickoff prediction."""
     for it in items:
@@ -296,7 +357,7 @@ def _persist_match_rows(db: Session, items: list[dict]) -> None:
         row.likely_score     = it.get("likely_score")
         row.confidence       = it.get("confidence")
         row.reasoning        = it.get("reasoning")
-        row.model            = MODEL
+        row.model            = model_used
         row.predicted_at     = datetime.now(timezone.utc)
     db.commit()
 
@@ -309,32 +370,19 @@ def predict_top_scorer() -> dict:
         if not candidates:
             return {"kind": "top_scorer", "date": date_str,
                     "skipped": "no squads loaded"}
-        client = _client()
-        user_payload = {"date_wib": date_str, "candidates": candidates}
-        resp = client.messages.parse(
-            model=MODEL,
-            max_tokens=4000,
-            thinking={"type": "adaptive"},
-            system=_system_blocks(),
-            messages=[{
-                "role": "user",
-                "content": (
-                    "From the candidate list below, predict the top 5 most likely "
-                    "Golden Boot winners (tournament top scorers) given current goals "
-                    "and form. Rank 1-5 with projected final goal totals.\n\n"
-                    + json.dumps(user_payload, ensure_ascii=False)
-                ),
-            }],
-            output_format=TopScorerForecast,
+        parsed, cache_read, model_used = _predict_structured(
+            "From the candidate list below, predict the top 5 most likely "
+            "Golden Boot winners (tournament top scorers) given current goals "
+            "and form. Rank 1-5 with projected final goal totals.",
+            {"date_wib": date_str, "candidates": candidates},
+            TopScorerForecast, 4000,
         )
-        cache_read = getattr(resp.usage, "cache_read_input_tokens", 0) or 0
-        parsed = resp.parsed_output
         payload = parsed.model_dump() if parsed else {"ranking": [], "summary": ""}
-        _persist(db, date_str, "top_scorer", payload, cache_read)
-        logger.info("top_scorer: %d candidates, cache_read=%d",
-                    len(candidates), cache_read)
+        _persist(db, date_str, "top_scorer", payload, cache_read, model_used)
+        logger.info("top_scorer: %d candidates, cache_read=%d, model=%s",
+                    len(candidates), cache_read, model_used)
         return {"kind": "top_scorer", "date": date_str,
-                "cache_read": cache_read, **payload}
+                "cache_read": cache_read, "model": model_used, **payload}
     finally:
         db.close()
 
