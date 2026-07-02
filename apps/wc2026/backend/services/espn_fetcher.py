@@ -201,13 +201,17 @@ def _seed_match_counters(db: Session) -> dict[str, int]:
     return counters
 
 
-def _upsert_group_fixture(
+def _upsert_fixture(
     db: Session,
-    group_letter: str,
+    group_letter: str | None,
     p: dict,
     match_counters: dict[str, int],
 ) -> bool:
-    """Insert or update one group-stage fixture. Returns True if changed.
+    """Insert or update one fixture. Returns True if changed.
+
+    `group_letter=None` marks a knockout match — it is still stored as a
+    Fixture (in addition to the bracket) so /fixtures/today and the AI
+    predictions include knockout games, not just the group stage.
 
     `match_counters` holds the highest match_no in use per group. We
     increment it locally before each new insert because the DB-side max
@@ -219,7 +223,7 @@ def _upsert_group_fixture(
         fx = (db.query(Fixture)
                 .filter(Fixture.espn_event_id == p["espn_event_id"])
                 .one_or_none())
-    if fx is None:
+    if fx is None and group_letter:
         # Match the team pair within the group — order-insensitive so the
         # round-robin's reverse fixture isn't treated as a new row.
         fx = (db.query(Fixture)
@@ -230,10 +234,13 @@ def _upsert_group_fixture(
                 )
                 .one_or_none())
     if fx is None:
-        match_counters[group_letter] = match_counters.get(group_letter, 0) + 1
+        match_no = None
+        if group_letter:  # match_no is a within-group number; knockout has none
+            match_counters[group_letter] = match_counters.get(group_letter, 0) + 1
+            match_no = match_counters[group_letter]
         fx = Fixture(
             group_letter=group_letter,
-            match_no=match_counters[group_letter],
+            match_no=match_no,
             home_team_id=p["home"].id,
             away_team_id=p["away"].id,
         )
@@ -501,11 +508,14 @@ def refresh_from_espn() -> dict:
                 hg = TEAM_GROUP.get(p["home"].code)
                 ag = TEAM_GROUP.get(p["away"].code)
                 if hg and ag and hg == ag:
-                    if _upsert_group_fixture(db, hg, p, match_counters):
+                    if _upsert_fixture(db, hg, p, match_counters):
                         summary["group"] += 1
                 else:
                     if _upsert_knockout(db, p):
                         summary["knockout"] += 1
+                    # Also store the knockout match as a Fixture so it shows up
+                    # in "today's fixtures" and the AI match predictions.
+                    _upsert_fixture(db, None, p, match_counters)
         _stage("upsert_fixtures", _upsert_loop)
 
         def _score_loop():
