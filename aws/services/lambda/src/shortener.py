@@ -1,7 +1,9 @@
+import hashlib
 import json
 import os
-import secrets
 import string
+import time
+from urllib.parse import urlparse
 
 import boto3
 from botocore.exceptions import ClientError
@@ -11,6 +13,12 @@ table = dynamodb.Table(os.environ["TABLE_NAME"])
 
 ALPHABET = string.ascii_letters + string.digits  # base62
 CODE_LENGTH = 7  # set to whatever length you're using
+
+BASE_URL = os.environ.get("BASE_URL", "")
+# The shortener's own host(s) — we refuse to shorten links back to ourselves,
+# which is what was flooding the table with junk https://s.nasir.id/ rows.
+SELF_HOSTS = {h for h in [(urlparse(BASE_URL).hostname or "").lower()] if h}
+MAX_URL_LEN = 2048
 
 # The frontend, served on GET /. Raw string so the JS regex backslashes survive.
 # The fetch is relative ("/"), so the page works on whatever domain serves it.
@@ -257,32 +265,96 @@ def _html(status, html):
     }
 
 
+def _is_private_host(host):
+    """Block localhost / private / link-local hosts (SSRF-style junk targets)."""
+    host = host.strip("[]")
+    if host in ("localhost", "0.0.0.0", "::1"):
+        return True
+    if host.startswith(("127.", "10.", "192.168.", "169.254.")):
+        return True
+    if host.startswith("172."):  # 172.16.0.0 – 172.31.255.255
+        parts = host.split(".")
+        if len(parts) > 1 and parts[1].isdigit() and 16 <= int(parts[1]) <= 31:
+            return True
+    return False
+
+
+def _validate_url(raw):
+    """Server-side validation. Returns (clean_url, None) or (None, error_message)."""
+    if not raw or not isinstance(raw, str):
+        return None, "Missing 'url' field"
+    url = raw.strip()
+    if len(url) > MAX_URL_LEN:
+        return None, f"URL exceeds {MAX_URL_LEN} characters"
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        return None, "URL must use http or https"
+    host = (parsed.hostname or "").lower()
+    if not host or "." not in host:
+        return None, "URL host is not valid"
+    # Refuse links back to the shortener itself — this was the source of the flood.
+    if host in SELF_HOSTS or any(host == h or host.endswith("." + h) for h in SELF_HOSTS):
+        return None, "Refusing to shorten a link to this service"
+    if _is_private_host(host):
+        return None, "Private or local hosts are not allowed"
+    return url, None
+
+
+def _code_for(url, salt=0):
+    """Deterministic base62 code from the URL, so the SAME url always maps to the
+    SAME code — this deduplicates repeat submissions instead of creating a new row
+    every time. `salt` is only bumped on a true hash collision (different URL)."""
+    n = int.from_bytes(hashlib.sha256(f"{salt}:{url}".encode()).digest(), "big")
+    out = []
+    for _ in range(CODE_LENGTH):
+        n, r = divmod(n, len(ALPHABET))
+        out.append(ALPHABET[r])
+    return "".join(out)
+
+
+def _short_response(status, code, url):
+    return _json(status, {
+        "shortCode": code,
+        "shortUrl": f"{BASE_URL}/{code}" if BASE_URL else code,
+        "longUrl": url,
+    })
+
+
 def create_short_url(event):
     try:
         payload = json.loads(event.get("body") or "{}")
     except json.JSONDecodeError:
         return _json(400, {"error": "Invalid JSON body"})
 
-    long_url = payload.get("url")
-    if not long_url:
-        return _json(400, {"error": "Missing 'url' field"})
+    long_url, err = _validate_url(payload.get("url"))
+    if err:
+        return _json(400, {"error": err})
 
-    for _ in range(5):  # retry on the rare collision
-        code = "".join(secrets.choice(ALPHABET) for _ in range(CODE_LENGTH))
+    # Capture provenance so future abuse is traceable (was impossible before).
+    ident = (event.get("requestContext") or {}).get("identity") or {}
+    meta = {"createdAt": int(time.time())}
+    if ident.get("sourceIp"):
+        meta["sourceIp"] = ident["sourceIp"]
+    if ident.get("userAgent"):
+        meta["userAgent"] = ident["userAgent"]
+    # Enable DynamoDB TTL on the `expireAt` attribute to auto-purge old anonymous links.
+    meta["expireAt"] = int(time.time()) + 365 * 24 * 3600
+
+    for salt in range(5):
+        code = _code_for(long_url, salt)
         try:
             table.put_item(
-                Item={"shortCode": code, "longUrl": long_url},
+                Item={"shortCode": code, "longUrl": long_url, **meta},
                 ConditionExpression="attribute_not_exists(shortCode)",
             )
-            base = os.environ.get("BASE_URL", "")
-            return _json(201, {
-                "shortCode": code,
-                "shortUrl": f"{base}/{code}" if base else code,
-                "longUrl": long_url,
-            })
+            return _short_response(201, code, long_url)
         except ClientError as e:
             if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
-                continue
+                existing = table.get_item(Key={"shortCode": code}).get("Item")
+                if existing and existing.get("longUrl") == long_url:
+                    # Same URL already shortened → return the existing code (dedup).
+                    return _short_response(200, code, long_url)
+                continue  # genuine collision with a different URL → try next salt
             raise
     return _json(500, {"error": "Could not generate a unique code"})
 
