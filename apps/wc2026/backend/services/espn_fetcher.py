@@ -17,7 +17,7 @@ import difflib
 import logging
 import unicodedata
 from collections import defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import requests
 from sqlalchemy.orm import Session
@@ -34,8 +34,18 @@ ESPN_URL = os.getenv(
     "ESPN_SCOREBOARD_URL",
     "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard",
 )
-ESPN_BACK_DAYS    = int(os.getenv("ESPN_BACK_DAYS",    "10"))
+# Back far enough to always cover the whole tournament (group stage → final is
+# ~38 days), so cumulative scorer totals never lose early-tournament goals when
+# _apply_goal_counts resets and re-applies from the fetched window.
+ESPN_BACK_DAYS    = int(os.getenv("ESPN_BACK_DAYS",    "45"))
 ESPN_FORWARD_DAYS = int(os.getenv("ESPN_FORWARD_DAYS", "40"))
+# ESPN's scoreboard returns at most ~100 events per request, so we fetch the
+# window in chunks and merge (the tournament has 104 matches).
+ESPN_CHUNK_DAYS   = int(os.getenv("ESPN_CHUNK_DAYS",   "15"))
+# Fixed tournament window (preferred over the rolling window so we ALWAYS cover
+# the full event regardless of the server's current date). WC 2026: 11 Jun–19 Jul.
+ESPN_START_DATE   = os.getenv("ESPN_START_DATE", "2026-06-11")
+ESPN_END_DATE     = os.getenv("ESPN_END_DATE",   "2026-07-19")
 
 
 # ─── Bootstrap: teams + empty knockout bracket ────────────────────
@@ -80,18 +90,49 @@ def ensure_structure(db: Session) -> dict:
 
 # ─── ESPN fetch ───────────────────────────────────────────────────
 
-def _fetch_events() -> list[dict]:
+def _fetch_window() -> tuple[date, date]:
+    """The date range to fetch. Prefer the fixed tournament window
+    (ESPN_START_DATE..ESPN_END_DATE) so we always cover the whole event; fall
+    back to a rolling window around today if those aren't set/parseable. A ±1-day
+    buffer guards against timezone edges on the first/last match days."""
+    if ESPN_START_DATE and ESPN_END_DATE:
+        try:
+            s = date.fromisoformat(ESPN_START_DATE) - timedelta(days=1)
+            e = date.fromisoformat(ESPN_END_DATE) + timedelta(days=1)
+            return s, e
+        except ValueError:
+            logger.warning("Invalid ESPN_START_DATE/ESPN_END_DATE; using rolling window")
     today = datetime.now(timezone.utc).date()
-    start = today - timedelta(days=ESPN_BACK_DAYS)
-    end   = today + timedelta(days=ESPN_FORWARD_DAYS)
-    params = {"dates": f"{start.strftime('%Y%m%d')}-{end.strftime('%Y%m%d')}"}
-    try:
-        r = requests.get(ESPN_URL, params=params, timeout=20)
-        r.raise_for_status()
-        return r.json().get("events", []) or []
-    except Exception as e:
-        logger.warning("ESPN fetch failed: %s", e)
-        return []
+    return today - timedelta(days=ESPN_BACK_DAYS), today + timedelta(days=ESPN_FORWARD_DAYS)
+
+
+def _fetch_events() -> list[dict]:
+    """Fetch all events across the tournament window, in chunks (ESPN caps a
+    single request at ~100 events), merged and de-duplicated by event id."""
+    start, end = _fetch_window()
+
+    events_by_id: dict[str, dict] = {}
+    cur = start
+    step = timedelta(days=ESPN_CHUNK_DAYS)
+    while cur <= end:
+        chunk_end = min(cur + step - timedelta(days=1), end)
+        params = {"dates": f"{cur.strftime('%Y%m%d')}-{chunk_end.strftime('%Y%m%d')}"}
+        try:
+            r = requests.get(ESPN_URL, params=params, timeout=20)
+            r.raise_for_status()
+            batch = r.json().get("events", []) or []
+            for ev in batch:
+                events_by_id[str(ev.get("id") or id(ev))] = ev
+            if len(batch) >= 100:
+                logger.warning("ESPN chunk %s hit the ~100-event cap; "
+                               "consider a smaller ESPN_CHUNK_DAYS", params["dates"])
+        except Exception as e:
+            logger.warning("ESPN fetch failed for %s: %s", params["dates"], e)
+        cur = chunk_end + timedelta(days=1)
+
+    logger.info("ESPN fetch: %d events across %s..%s",
+                len(events_by_id), start, end)
+    return list(events_by_id.values())
 
 
 def _resolve_team(idx: dict[str, Team], competitor: dict) -> Team | None:
