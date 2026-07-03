@@ -106,4 +106,3 @@ resource "aws_lambda_permission" "profile" {
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${data.aws_api_gateway_rest_api.mbg.execution_arn}/*/*"
 }
-
