@@ -107,4 +107,17 @@ resource "aws_lambda_permission" "profile" {
   source_arn    = "${data.aws_api_gateway_rest_api.mbg.execution_arn}/*/*"
 }
 
+resource "aws_api_gateway_domain_name" "api_mbg" {
+  domain_name              = "api.mbg.nasir.id"
+  regional_certificate_arn = "arn:aws:acm:ap-southeast-1:647459380434:certificate/37dc76cb-ff81-4053-bd72-08d74fb39b19"
+  security_policy          = "TLS_1_2"
+  endpoint_configuration {
+    types = ["REGIONAL"]
+  }
+}
 
+resource "aws_api_gateway_base_path_mapping" "api_mbg" {
+  api_id      = module.mbg.api_id
+  stage_name  = aws_api_gateway_stage.this.stage_name
+  domain_name = aws_api_gateway_domain_name.api_mbggit.domain_name
+}
