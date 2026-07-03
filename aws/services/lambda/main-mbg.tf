@@ -6,7 +6,7 @@ module "mbg_lambda" {
   runtime          = "python3.13"
   architecture     = "arm64"
   role_arn         = aws_iam_role.lambda.arn
-  source_code_path = "src/mbg.py"
+  source_code_path = "src/mbg/handler.py"
 
 #   environment_variables = {
 #     TABLE_NAME = data.terraform_remote_state.dynamodb.outputs.table_name
