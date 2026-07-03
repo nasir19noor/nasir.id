@@ -10,9 +10,9 @@ module "mbg_api" {
   }
 }
 
-# data "aws_api_gateway_rest_api" "mbg" {
-#   name = module.mbg_api.api_name
-# }
+data "aws_api_gateway_rest_api" "mbg" {
+  name = module.mbg_api.api_name
+}
 
 locals {
   mbg_rest_api_id       = module.mbg_api.api_id
