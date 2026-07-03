@@ -27,7 +27,7 @@ resource "aws_api_gateway_authorizer" "cognito" {
   type            = "COGNITO_USER_POOLS"
   rest_api_id     = local.mbg_rest_api_id
   identity_source = "method.request.header.Authorization"
-  provider_arns   = [data.terraform_remote_state.mbg_cognito.outputs.cognitouser_pool_arn]
+  provider_arns   = [data.terraform_remote_state.mbg_cognito.outputs.cognito_user_pool_arn]
   # If Cognito isn't in remote state, hardcode:
   # provider_arns = ["arn:aws:cognito-idp:ap-southeast-1:647459380434:userpool/ap-southeast-1_30cpoEHIv"]
 }
