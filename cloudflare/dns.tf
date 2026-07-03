@@ -315,25 +315,7 @@ resource "cloudflare_record" "shortener_nasir_id" {
   ttl     = 1
 }
 
-#mbg.nasir.id
-resource "cloudflare_record" "mbg_nasir_id" {
-  zone_id = data.cloudflare_zones.nasir_id.zones[0].id
-  name    = "mbg.nasir.id"
-  content = "mbg.nasir.id.s3-website-ap-southeast-1.amazonaws.com"
-  type    = "CNAME"
-  proxied = true
-  ttl     = 1
-}
 
-resource "cloudflare_page_rule" "mbg_flexible_ssl" {
-  zone_id  = data.cloudflare_zones.nasir_id.zones[0].id
-  target   = "mbg.nasir.id/*"
-  priority = 1
-
-  actions {
-    ssl = "flexible"
-  }
-}
 
 
 
