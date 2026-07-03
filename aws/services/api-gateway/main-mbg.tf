@@ -119,6 +119,37 @@ resource "aws_api_gateway_domain_name" "api_mbg" {
 
 resource "aws_api_gateway_base_path_mapping" "api_mbg" {
   api_id      = module.mbg_api.api_id
-  stage_name  = aws_api_gateway_stage.this.stage_name
+  stage_name  = aws_api_gateway_stage.prd.stage_name
   domain_name = aws_api_gateway_domain_name.api_mbg.domain_name
+}
+
+resource "aws_api_gateway_deployment" "mbg" {
+  rest_api_id = local.mbg_rest_api_id
+
+  # Redeploy whenever the API surface changes, otherwise edits never go live
+  triggers = {
+    redeploy = sha1(jsonencode([
+      aws_api_gateway_resource.profile.id,
+      aws_api_gateway_method.profile_get.id,
+      aws_api_gateway_integration.profile_get.id,
+      aws_api_gateway_method.profile_options.id,
+      aws_api_gateway_integration.profile_options.id,
+      aws_api_gateway_integration_response.profile_options.id,
+    ]))
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+
+  depends_on = [
+    aws_api_gateway_integration.profile_get,
+    aws_api_gateway_integration.profile_options,
+  ]
+}
+
+resource "aws_api_gateway_stage" "prd" {
+  rest_api_id   = local.mbg_rest_api_id
+  deployment_id = aws_api_gateway_deployment.mbg.id
+  stage_name    = "prd"
 }
