@@ -26,3 +26,12 @@ resource "cloudflare_record" "acm_api_mbg_nasir_id" {
   proxied = false
   ttl     = 1
 }
+
+resource "cloudflare_record" "api_mbg_nasir_id" {
+  zone_id = data.cloudflare_zones.nasir_id.zones[0].id
+  name    = "api.mbg.nasir.id"
+  content = "d-hh8990psac.execute-api.ap-southeast-1.amazonaws.com"
+  type    = "CNAME"
+  proxied = false
+  ttl     = 1
+}
