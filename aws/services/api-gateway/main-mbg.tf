@@ -11,12 +11,13 @@ module "mbg_api" {
 }
 
 data "aws_api_gateway_rest_api" "mbg" {
-  name = module.mbg_api.api_name
+  name       = module.mbg_api.api_name
+  depends_on = [module.mbg_api]
 }
 
 locals {
   mbg_rest_api_id       = module.mbg_api.api_id
-  mbg_root_resource_id  = module.mbg_api.root_resource_id
+  mbg_root_resource_id  = data.aws_api_gateway_rest_api.mbg.root_resource_id
   mbg_lambda_invoke_arn = data.terraform_remote_state.lambda.outputs.mbg_invoke_arn
   app_origin            = "https://mbg.nasir.id"
 }
@@ -104,7 +105,7 @@ resource "aws_lambda_permission" "profile" {
   action        = "lambda:InvokeFunction"
   function_name = data.terraform_remote_state.lambda.outputs.mbg_function_name
   principal     = "apigateway.amazonaws.com"
-  source_arn    = "${module.mbg_api.execution_arn}/*/*"
+  source_arn    = "${data.aws_api_gateway_rest_api.mbg.execution_arn}/*/*"
 }
 
 resource "aws_api_gateway_domain_name" "api_mbg" {
