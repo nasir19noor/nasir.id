@@ -1,4 +1,4 @@
-data "terraform_remote_state" "mb-_cognito" {
+data "terraform_remote_state" "mbg_cognito" {
   backend = "s3"
   config = {
     bucket = "terraform.nasir.id"
