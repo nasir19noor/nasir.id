@@ -117,7 +117,7 @@ resource "aws_api_gateway_domain_name" "api_mbg" {
 }
 
 resource "aws_api_gateway_base_path_mapping" "api_mbg" {
-  api_id      = module.mbg.api_id
+  api_id      = module.mbg_api.api_id
   stage_name  = aws_api_gateway_stage.this.stage_name
-  domain_name = aws_api_gateway_domain_name.api_mbggit.domain_name
+  domain_name = aws_api_gateway_domain_name.api_mbg.domain_name
 }
