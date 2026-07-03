@@ -43,6 +43,7 @@ aws:
     name-shortener: "shortener-api-gateway" 
   lambda:    
     name-shortener: "shortener-lambda" 
+    name-mbg: "mbg-lambda"
   dynamodb:
     name-shortener: "shortener-dynamodb"  
   cognito:
