@@ -13,15 +13,15 @@ data "archive_file" "get_profile" {
 }
 
 # --- Assume-role trust for Lambda ---
-data "aws_iam_policy_document" "lambda_assume" {
-  statement {
-    actions = ["sts:AssumeRole"]
-    principals {
-      type        = "Service"
-      identifiers = ["lambda.amazonaws.com"]
-    }
-  }
-}
+# data "aws_iam_policy_document" "lambda_assume" {
+#   statement {
+#     actions = ["sts:AssumeRole"]
+#     principals {
+#       type        = "Service"
+#       identifiers = ["lambda.amazonaws.com"]
+#     }
+#   }
+# }
 
 resource "aws_iam_role" "get_profile" {
   name               = "${local.get_profile_name}-role"
@@ -36,7 +36,7 @@ resource "aws_iam_role_policy_attachment" "get_profile_logs" {
 
 # Least-privilege: GetItem on the Users table only.
 # ARN is constructed so this file doesn't depend on the table resource yet.
-data "aws_caller_identity" "current" {}
+# data "aws_caller_identity" "current" {}
 
 locals {
   users_table_arn = "arn:aws:dynamodb:${local.region}:${data.aws_caller_identity.current.account_id}:table/${local.users_table_name}"
