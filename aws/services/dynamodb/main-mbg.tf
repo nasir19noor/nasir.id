@@ -11,7 +11,13 @@ module "mbg_table" {
 
   table_name = local.name-mbg
   hash_key   = "shortCode"
-  # tags       = local.tags
+  tags = {
+    Project     = "mbg"
+    Environment = "prd"
+    ManagedBy   = "terraform"
+   }
 }
+
+
 
 
