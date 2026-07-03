@@ -5,6 +5,7 @@ locals {
   domain_name_itung_nasir     = local.config.aws.acm.domain_name_itung_nasir
   domain_name_pulsara_nasir   = local.config.aws.acm.domain_name_pulsara_nasir
   domain_name_shortener_nasir = local.config.aws.acm.domain_name_shortener_nasir
+  domain_name_api_mbg_nasir   = local.config.aws.acm.domain_name_api_mbg_nasir
   create_route53_records      = local.config.aws.acm.create_route53_records
   validation_method           = local.config.aws.acm.validation_method
 }    
