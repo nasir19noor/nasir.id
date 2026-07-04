@@ -7,6 +7,9 @@ module "mbg_lambda" {
   architecture     = "arm64"
   role_arn         = aws_iam_role.lambda.arn
   source_code_path = "src/mbg/handler.py"
+  environment_variables = {
+    USERS_TABLE = "mbg-users"
+  }  
 }
 
 
