@@ -67,6 +67,32 @@ _NAME_TO_CODE: dict[str, str] = {v.upper(): k for k, v in TEAM_NAME_ID.items()}
 _NAME_TO_CODE["KONGO"] = "DRC"          # DR Congo, sometimes without the "RD"
 _NAME_TO_CODE["AMERIKA"] = "USA"        # guard against truncated titles
 
+# Known-good baseline of per-match HIGHLIGHT reels, keyed by sorted team codes.
+# Scraped from the channel and baked in because YouTube bot-gates the production
+# datacenter IP; refresh_highlights() overlays live scrape results on top when
+# they're available. Re-generate as new matches are played.
+SEED_HIGHLIGHTS: dict[str, str] = {
+    "ALG-AUT": "xv4jBdH2IiM", "ALG-SUI": "5i09qUoSjag", "ARG-AUT": "gM13nQBCqxk",
+    "ARG-CPV": "a1gD0d1X1uU", "ARG-JOR": "gfDHWN9E8D8", "AUS-EGY": "hUAvYJWlBes",
+    "AUS-PAR": "Z3kp-xpnJ80", "AUT-ESP": "TWoldba8fkU", "BEL-IRN": "Lrv2BjIwH1E",
+    "BEL-NZL": "S1CPwICudRI", "BEL-SEN": "tVrdtcdCqb0", "BIH-QAT": "ulEq02frFjA",
+    "BIH-USA": "s6-ae4-ZZ9g", "BRA-JPN": "_45CddhxYb8", "BRA-NOR": "_PMuKTXBk7Q",
+    "BRA-SCO": "FyATijmcRuM", "CAN-MAR": "KQ7aFXjDvPk", "CAN-RSA": "BKHbxYEZxqs",
+    "CAN-SUI": "4u345-zUThU", "COL-GHA": "RTlsc-qdn04", "COL-POR": "kfuGBj76c1s",
+    "CPV-SAU": "XgJs5Z-VJ7o", "CPV-URU": "AjcSoursLwk", "CRO-GHA": "pOX-AQuMCuY",
+    "CRO-PAN": "GC1O5ml5TQk", "CRO-POR": "iBheg-BPgxI", "CUR-ECU": "uqPaysHhkjw",
+    "CUR-IVC": "kSryJ_lB6DE", "CZE-MEX": "Hc5O7dGSZWA", "DRC-ENG": "JwicaQvivVI",
+    "DRC-UZB": "kmjDwof2_40", "ECU-GER": "RayhIHg2LBk", "ECU-MEX": "XbxIRODhozk",
+    "EGY-IRN": "y2wS5Lcq6z0", "EGY-NZL": "yyQuV7no_Fs", "ENG-GHA": "-XYSHuhHUno",
+    "ENG-MEX": "Bk6Z3qtGSFc", "ENG-PAN": "E3sNGQH7AyI", "ESP-SAU": "6YT85RP8D-Q",
+    "ESP-URU": "9_jsMZvQXVk", "FRA-IRQ": "gEQICkPvr04", "FRA-NOR": "pf9NxJdmMNU",
+    "FRA-PAR": "6Qu4nMJAg_Q", "FRA-SWE": "8_v7Yc7b9y4", "GER-IVC": "Osm5PsdaYNY",
+    "GER-PAR": "LKDKXFLoMzI", "HAI-MAR": "aaBM3LYHhlg", "IRQ-SEN": "YfTbDNK6jIY",
+    "IVC-NOR": "rVaqoytub2Q", "JPN-SWE": "39ivd6Iy5qc", "MAR-NED": "6vAXtXFVDxo",
+    "NED-TUN": "nWMtlcIlvyE", "NOR-SEN": "QX8XQJTIaD8", "POR-UZB": "rG5mmsbfy5o",
+    "TUR-USA": "eQworjy2OuE",
+}
+
 
 # ─── Scrape ────────────────────────────────────────────────────────
 
@@ -140,57 +166,70 @@ def _scrape_channel() -> list[tuple[str, str]]:
     return videos
 
 
-_PAIR_RE = re.compile(r"HIGHLIGHT\s*\|?\s*(.+?)\s*\|?\s*FIFA WORLD CUP", re.IGNORECASE)
+def _teams_from_title(title: str) -> tuple[str | None, str | None]:
+    """The two team names from a title's 'X VS Y' segment (the pipe-delimited
+    part that contains ' VS '), ignoring the score / round / date segments."""
+    for seg in title.split("|"):
+        s = seg.strip()
+        if " VS " in s.upper():
+            parts = re.split(r"\s+VS\s+", s, flags=re.IGNORECASE)
+            if len(parts) >= 2:
+                return parts[0].strip(), parts[1].strip()
+    return None, None
 
 
-def _to_pair_map(videos: list[tuple[str, str]]) -> dict[str, tuple[str, str]]:
-    """{'ENG-MEX': (video_id, title)} for every 'FULL MATCH HIGHLIGHT' video we
-    can resolve to two known teams."""
-    result: dict[str, tuple[str, str]] = {}
+def _to_pair_map(videos: list[tuple[str, str]]) -> dict[str, str]:
+    """{'GER-PAR': video_id} for the per-match HIGHLIGHT reels. Targets titles
+    that start with 'HIGHLIGHT' — the scoreline reel (e.g. 'HIGHLIGHT | JERMAN VS
+    PARAGUAY | SKOR 1 (3) -1 (4) | …') — not the longer 'FULL MATCH HIGHLIGHT'
+    replay, the single-goal clips ('GOL …'), or the pre-match predictions."""
+    result: dict[str, str] = {}
     for vid, title in videos:
-        if not title.strip().upper().startswith("FULL MATCH HIGHLIGHT"):
+        if not title.strip().upper().startswith("HIGHLIGHT"):
             continue
-        m = _PAIR_RE.search(title)
-        if not m:
+        a, b = _teams_from_title(title)
+        if not a or not b:
             continue
-        sides = re.split(r"\s+VS\s+", m.group(1).strip(), flags=re.IGNORECASE)
-        if len(sides) != 2:
+        ca = _NAME_TO_CODE.get(a.upper())
+        cb = _NAME_TO_CODE.get(b.upper())
+        if not ca or not cb or ca == cb:
             continue
-        a = _NAME_TO_CODE.get(sides[0].strip().upper())
-        b = _NAME_TO_CODE.get(sides[1].strip().upper())
-        if not a or not b or a == b:
-            continue
-        result["-".join(sorted([a, b]))] = (vid, title)
+        result.setdefault("-".join(sorted([ca, cb])), vid)  # first (newest) wins
     return result
 
 
 def refresh_highlights() -> dict:
-    """Scrape the channel and upsert the video map. Never deletes: a failed or
-    empty scrape leaves existing rows untouched."""
-    summary = {"videos": 0, "mapped": 0, "upserted": 0, "errors": []}
+    """Seed the known-good map, then overlay anything a live scrape can add.
+
+    YouTube bot-gates datacenter IPs ('sign in to confirm you're not a bot'), so
+    the scrape usually returns nothing in production — SEED_HIGHLIGHTS guarantees
+    the current matches still resolve. In dev (un-gated IP) the live scrape adds
+    new matches on top. For guaranteed auto-update in production, wire the
+    official YouTube Data API (needs a key). Never deletes.
+    """
+    summary = {"seed": len(SEED_HIGHLIGHTS), "scraped_videos": 0,
+               "scraped_pairs": 0, "upserted": 0, "errors": []}
+
+    pairs: dict[str, str] = dict(SEED_HIGHLIGHTS)
     try:
         videos = _scrape_channel()
+        summary["scraped_videos"] = len(videos)
+        live = _to_pair_map(videos)
+        summary["scraped_pairs"] = len(live)
+        pairs.update(live)  # live results win over the baked seed
     except Exception as e:
-        logger.warning("highlights scrape failed: %s", e)
+        logger.warning("highlights scrape failed (using seed only): %s", e)
         summary["errors"].append(f"{type(e).__name__}: {e}")
-        return summary
-    summary["videos"] = len(videos)
-
-    pairs = _to_pair_map(videos)
-    summary["mapped"] = len(pairs)
-    if not pairs:
-        logger.info("highlights: no FULL MATCH videos resolved; keeping existing rows")
-        return summary
 
     db: Session = SessionLocal()
     try:
-        for key, (vid, title) in pairs.items():
+        for key, vid in pairs.items():
             row = db.get(MatchHighlight, key)
             if row is None:
-                db.add(MatchHighlight(pair_key=key, video_id=vid, title=title))
+                db.add(MatchHighlight(pair_key=key, video_id=vid))
                 summary["upserted"] += 1
-            elif row.video_id != vid or row.title != title:
-                row.video_id, row.title = vid, title
+            elif row.video_id != vid:
+                row.video_id = vid
                 summary["upserted"] += 1
         db.commit()
     finally:
