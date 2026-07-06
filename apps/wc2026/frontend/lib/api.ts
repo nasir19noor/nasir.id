@@ -59,6 +59,22 @@ export function fmtWIBTime(value?: string | number | Date | null): string {
   }) + ' WIB'
 }
 
+// ─── Match highlights (YouTube) ───────────────────────────────────
+// Every match (group + knockout) links to a search on the FolaPlay channel for
+// that specific tie. We can't know each video's id, so we scope a channel
+// search by the two team names — resilient as new highlights are uploaded.
+
+const HIGHLIGHTS_CHANNEL = 'https://www.youtube.com/@folaplayapps'
+
+export function highlightsUrl(
+  home?: { name: string } | null,
+  away?: { name: string } | null,
+): string | null {
+  if (!home?.name || !away?.name) return null
+  const query = encodeURIComponent(`${home.name} vs ${away.name} highlights`)
+  return `${HIGHLIGHTS_CHANNEL}/search?query=${query}`
+}
+
 /**
  * Server-side fetch helper.
  *

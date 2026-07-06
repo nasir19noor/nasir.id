@@ -1,5 +1,6 @@
 import { type Fixture, fmtWIB } from '@/lib/api'
 import TeamBadge from './TeamBadge'
+import HighlightsLink from './HighlightsLink'
 
 function statusBadge(status: Fixture['status']) {
   if (status === 'live')     return <span className="rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-bold uppercase text-white">Live</span>
@@ -32,8 +33,9 @@ export default function FixturesList({ fixtures }: { fixtures: Fixture[] }) {
               </div>
               <div><TeamBadge team={f.away} /></div>
             </div>
-            <div className="w-14 shrink-0 text-right">
+            <div className="flex w-20 shrink-0 items-center justify-end gap-2">
               {statusBadge(f.status)}
+              <HighlightsLink home={f.home} away={f.away} />
             </div>
           </li>
         )

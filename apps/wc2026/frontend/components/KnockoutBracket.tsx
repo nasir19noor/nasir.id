@@ -1,4 +1,4 @@
-import type { Bracket, Knockout, Team } from '@/lib/api'
+import { highlightsUrl, type Bracket, type Knockout, type Team } from '@/lib/api'
 
 /**
  * Symmetric tournament bracket rendered from live /knockout data.
@@ -59,8 +59,10 @@ function Cell({ m }: { m: Knockout }) {
   const homeWin = !!(m.winner && m.home && m.winner.id === m.home.id)
   const awayWin = !!(m.winner && m.away && m.winner.id === m.away.id)
   const showScore = m.status === 'live' || m.status === 'finished'
-  return (
-    <div className="w-36 overflow-hidden rounded-md border border-black/15 bg-white text-[11px] shadow-sm">
+  const url = highlightsUrl(m.home, m.away)
+  const box = (
+    <div className={`relative w-36 overflow-hidden rounded-md border border-black/15 bg-white text-[11px] shadow-sm${
+      url ? ' transition group-hover:ring-2 group-hover:ring-red-500/40' : ''}`}>
       <Side team={m.home} label={m.home_label}
             score={showScore ? m.home_score : null}
             shootout={showScore ? m.home_shootout : null} winner={homeWin} />
@@ -68,7 +70,26 @@ function Cell({ m }: { m: Knockout }) {
       <Side team={m.away} label={m.away_label}
             score={showScore ? m.away_score : null}
             shootout={showScore ? m.away_shootout : null} winner={awayWin} />
+      {url && (
+        // Centred on the divider, in the empty band between the team labels and
+        // scores — absolute so it never changes the cell height (keeps the
+        // bracket connectors aligned).
+        <span className="pointer-events-none absolute left-1/2 top-1/2 flex h-[15px] w-[15px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white text-[#FF0000] shadow-sm ring-1 ring-black/5">
+          <svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor" aria-hidden="true">
+            <path d="M23.5 6.2a3.02 3.02 0 0 0-2.12-2.14C19.5 3.55 12 3.55 12 3.55s-7.5 0-9.38.51A3.02 3.02 0 0 0 .5 6.2 31.4 31.4 0 0 0 0 12a31.4 31.4 0 0 0 .5 5.8 3.02 3.02 0 0 0 2.12 2.14c1.88.51 9.38.51 9.38.51s7.5 0 9.38-.51A3.02 3.02 0 0 0 23.5 17.8 31.4 31.4 0 0 0 24 12a31.4 31.4 0 0 0-.5-5.8ZM9.6 15.6V8.4l6.25 3.6-6.25 3.6Z" />
+          </svg>
+        </span>
+      )}
     </div>
+  )
+  if (!url) return box
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer"
+       title="Watch highlights on YouTube (FolaPlay)"
+       aria-label="Watch highlights on YouTube"
+       className="group block w-36">
+      {box}
+    </a>
   )
 }
 
