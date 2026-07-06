@@ -116,4 +116,5 @@ class StatusOut(BaseModel):
     players:          int
     fixtures:         int
     knockout_matches: int
+    highlights:       int = 0
     last_refresh:     Optional[datetime] = None

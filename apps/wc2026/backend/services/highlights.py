@@ -25,10 +25,19 @@ from models import MatchHighlight
 logger = logging.getLogger(__name__)
 
 CHANNEL_URL   = "https://www.youtube.com/@folaplayapps"
-CHANNEL_VIDEOS = f"{CHANNEL_URL}/videos"
 _UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
        "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
-_MAX_PAGES = 15
+
+# YouTube's public "WEB" InnerTube key is a fixed constant shared by every web
+# client. Using the browse API directly (browseId + continuations) avoids the
+# HTML channel page, which datacenter IPs often get a cookie-consent wall for —
+# the reason a scrape can work locally yet return nothing in production.
+_INNERTUBE_KEY  = "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8"
+_CHANNEL_UCID   = "UCI99iwswVelRuLGEWuanwcQ"      # @folaplayapps
+_CLIENT_VERSION = "2.20240606.06.00"
+_VIDEOS_PARAMS  = "EgZ2aWRlb3PyBgQKAjoA"          # channel "Videos" tab, newest first
+_BROWSE_URL = f"https://www.youtube.com/youtubei/v1/browse?key={_INNERTUBE_KEY}&prettyPrint=false"
+_MAX_PAGES = 20
 
 # ─── Team code ⇄ Indonesian name (as FolaPlay titles them) ─────────
 
@@ -69,37 +78,32 @@ def _extract_videos(text: str) -> list[tuple[str, str]]:
     return out
 
 
+def _browse(session: requests.Session, continuation: str | None) -> str:
+    """One InnerTube browse call: the channel's Videos tab, or a continuation."""
+    body: dict = {"context": {"client": {"clientName": "WEB",
+                                         "clientVersion": _CLIENT_VERSION,
+                                         "hl": "en", "gl": "US"}}}
+    if continuation:
+        body["continuation"] = continuation
+    else:
+        body["browseId"] = _CHANNEL_UCID
+        body["params"] = _VIDEOS_PARAMS
+    resp = session.post(_BROWSE_URL, json=body, timeout=30)
+    resp.raise_for_status()
+    return resp.text
+
+
 def _scrape_channel() -> list[tuple[str, str]]:
-    """Return every (videoId, title) on the channel, following continuations."""
-    sess = requests.Session()
-    sess.headers.update({"User-Agent": _UA, "Accept-Language": "en-US,en;q=0.9"})
+    """Every (videoId, title) on the channel, via the InnerTube browse API and
+    its continuation tokens."""
+    session = requests.Session()
+    session.headers.update({"User-Agent": _UA, "Accept-Language": "en-US,en;q=0.9"})
 
-    html = sess.get(CHANNEL_VIDEOS, timeout=30).text
-    i = html.find("ytInitialData = ")
-    if i < 0:
-        raise RuntimeError("ytInitialData not found (channel layout changed?)")
-    i += len("ytInitialData = ")
-    blob = html[i:html.find(";</script>", i)]
-
-    videos = _extract_videos(blob)
-    seen = {v for v, _ in videos}
-
-    m_key  = re.search(r'"INNERTUBE_API_KEY":"([^"]+)"', html)
-    m_ver  = (re.search(r'"INNERTUBE_CONTEXT_CLIENT_VERSION":"([^"]+)"', html)
-              or re.search(r'"clientVersion":"([^"]+)"', html))
-    m_cont = re.search(r'"continuationCommand":\{"token":"([^"]+)"', blob)
-    if not (m_key and m_ver and m_cont):
-        return videos  # no pagination available; first page is all we get
-
-    api_key, cver, cont = m_key.group(1), m_ver.group(1), m_cont.group(1)
-    url = f"https://www.youtube.com/youtubei/v1/browse?key={api_key}&prettyPrint=false"
+    videos: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    cont: str | None = None
     for _ in range(_MAX_PAGES):
-        if not cont:
-            break
-        body = {"context": {"client": {"clientName": "WEB", "clientVersion": cver,
-                                       "hl": "en", "gl": "US"}},
-                "continuation": cont}
-        txt = sess.post(url, json=body, timeout=30).text
+        txt = _browse(session, cont)
         added = 0
         for vid, title in _extract_videos(txt):
             if vid not in seen:
@@ -108,8 +112,10 @@ def _scrape_channel() -> list[tuple[str, str]]:
                 added += 1
         m = re.search(r'"continuationCommand":\{"token":"([^"]+)"', txt)
         cont = m.group(1) if m else None
-        if added == 0:
+        if not cont or added == 0:
             break
+    if not videos:
+        raise RuntimeError("InnerTube browse returned no videos")
     return videos
 
 

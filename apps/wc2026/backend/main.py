@@ -19,6 +19,7 @@ from sqlalchemy import inspect, text
 from database import engine, Base, SessionLocal
 from models import (  # noqa: F401 — register models for create_all
     Team, Player, Fixture, KnockoutMatch, PageView, Prediction, MatchPredictionRow,
+    MatchHighlight,
 )
 from routers import groups, fixtures, knockout, squads, scorers, predictions
 from schemas import StatusOut
@@ -146,6 +147,7 @@ def status():
             players=db.query(Player).count(),
             fixtures=db.query(Fixture).count(),
             knockout_matches=db.query(KnockoutMatch).count(),
+            highlights=db.query(MatchHighlight).count(),
             last_refresh=get_last_refresh(),
         )
     finally:
