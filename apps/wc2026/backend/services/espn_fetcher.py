@@ -498,6 +498,101 @@ def _apply_goal_counts(
     }
 
 
+# ─── Bracket topology: order slots so feeders sit beneath their match ──
+
+# The main knockout tree, closest-to-final first. Third place is a detached
+# consolation match, so it is intentionally excluded from the tree layout.
+_BRACKET_TREE = ["final", "sf", "qf", "r16", "r32"]
+
+
+def _compute_bracket_order(by_round: dict) -> dict:
+    """Re-order each round's matches so a match's two feeders occupy the two
+    slots directly beneath it — turning a chronologically-filled bracket into a
+    structurally consistent tree.
+
+    ESPN tells us the round and the two teams, but not the bracket position. We
+    reconstruct it from results: a team playing in round N won its match in
+    round N-1, so the feeders of match M are the lower-round matches whose
+    winner is M.home_team / M.away_team. We anchor at the highest round that has
+    any team placed and propagate downward; rounds above the anchor (still all
+    TBD) and any unlinked matches keep their existing relative order.
+
+    `by_round` maps round_code -> list of match objects (in current slot order).
+    Returns the same mapping re-ordered. Pure function — no DB access.
+    """
+    present = [rc for rc in _BRACKET_TREE if rc in by_round]
+
+    def has_teams(m) -> bool:
+        return bool(m.home_team_id or m.away_team_id)
+
+    anchor = next((rc for rc in present
+                   if any(has_teams(m) for m in by_round[rc])), None)
+    if anchor is None:
+        return by_round  # nothing decided yet — leave the empty bracket as-is
+
+    order = {rc: list(by_round[rc]) for rc in present}
+    start = present.index(anchor)
+    for depth in range(start, len(present) - 1):
+        parent_rc, child_rc = present[depth], present[depth + 1]
+        winners = {m.winner_team_id: m for m in by_round[child_rc] if m.winner_team_id}
+
+        used: set[int] = set()
+        slotted: list = []
+        for pm in order[parent_rc]:
+            for tid in (pm.home_team_id, pm.away_team_id):
+                fm = winners.get(tid) if tid else None
+                if fm is not None and id(fm) not in used:
+                    slotted.append(fm)
+                    used.add(id(fm))
+                else:
+                    slotted.append(None)   # keep the position; fill from leftovers
+
+        leftovers = iter(m for m in by_round[child_rc] if id(m) not in used)
+        rebuilt: list = []
+        for item in slotted:
+            if item is not None:
+                rebuilt.append(item)
+            else:
+                nxt = next(leftovers, None)
+                if nxt is not None:
+                    rebuilt.append(nxt)
+        rebuilt.extend(leftovers)          # safety: never drop a match
+        order[child_rc] = rebuilt
+
+    return order
+
+
+def _relink_bracket(db: Session) -> dict:
+    """Persist a structurally consistent slot order for the knockout bracket.
+
+    Renumbers in two phases (negative temporaries first) so the intermediate
+    state never trips the (round_code, slot) unique constraint.
+    """
+    by_round: dict = {}
+    for rc in _BRACKET_TREE:
+        rows = (db.query(KnockoutMatch)
+                  .filter(KnockoutMatch.round_code == rc)
+                  .order_by(KnockoutMatch.slot).all())
+        if rows:
+            by_round[rc] = rows
+    if not by_round:
+        return {"relinked": 0}
+
+    order = _compute_bracket_order(by_round)
+
+    for matches in order.values():
+        for pos, m in enumerate(matches, start=1):
+            m.slot = -pos
+    db.flush()
+    changed = 0
+    for matches in order.values():
+        for pos, m in enumerate(matches, start=1):
+            m.slot = pos
+            changed += 1
+    db.flush()
+    return {"relinked": changed}
+
+
 def refresh_from_espn() -> dict:
     """Bootstrap structure if missing, then overlay ESPN events + goal scorers.
 
@@ -556,6 +651,10 @@ def refresh_from_espn() -> dict:
             summary["scorers"] = _apply_goal_counts(db, goals, espn_team_to_code)
         _stage("apply_goals", _score_loop)
 
+        # Persist upserts + goals before the (pure) reorder, so that a relink
+        # failure can never roll back the freshly-populated matches.
+        db.commit()
+        summary["bracket"] = _stage("relink_bracket", lambda: _relink_bracket(db)) or {}
         db.commit()
     finally:
         db.close()
