@@ -165,30 +165,31 @@ export default function KnockoutBracket({ bracket }: { bracket: Bracket[] }) {
         <Column title={ROUND_TITLE.qf}  matches={qfL} side="left" receives feeds />
         <Column title={ROUND_TITLE.sf}  matches={sfL} side="left" receives feeds />
 
-        {/* Centre: Final + Third place */}
-        <div className="flex flex-col justify-center gap-4">
-          <div>
-            <div className="mb-2 text-center text-xs font-extrabold uppercase tracking-wide text-accent">
-              Final
-            </div>
-            {finalMatch
-              ? (
-                <div className="relative scale-105">
-                  <span className={`absolute top-1/2 h-px w-[15px] ${LINE} -left-[15px]`} />
-                  <span className={`absolute top-1/2 h-px w-[15px] ${LINE} -right-[15px]`} />
-                  <Cell m={finalMatch} />
-                </div>
-              )
-              : <p className="text-center text-[10px] text-black/40">TBD</p>}
+        {/* Centre: Final is centred to line up with the semi-finals so the
+            connectors meet; Third place hangs below without shifting it. */}
+        <div className="flex flex-col">
+          <div className="mb-2 text-center text-[9px] font-extrabold uppercase tracking-wide text-accent">
+            Final
           </div>
-          {thirdMatch && (
-            <div>
-              <div className="mb-1 text-center text-[9px] font-bold uppercase tracking-wide text-black/50">
-                Third place
-              </div>
-              <Cell m={thirdMatch} />
+          <div className="relative flex flex-1 items-center justify-center">
+            <div className="relative scale-105">
+              <span className={`absolute top-1/2 h-px w-[15px] ${LINE} -left-[15px]`} />
+              <span className={`absolute top-1/2 h-px w-[15px] ${LINE} -right-[15px]`} />
+              {finalMatch
+                ? <Cell m={finalMatch} />
+                : <div className="w-36 rounded-md border border-black/15 bg-white py-3 text-center text-[10px] italic text-black/40">
+                    TBD
+                  </div>}
             </div>
-          )}
+            {thirdMatch && (
+              <div className="absolute inset-x-0 bottom-0 flex flex-col items-center">
+                <div className="mb-1 text-center text-[9px] font-bold uppercase tracking-wide text-black/50">
+                  Third place
+                </div>
+                <Cell m={thirdMatch} />
+              </div>
+            )}
+          </div>
         </div>
 
         <Column title={ROUND_TITLE.sf}  matches={sfR} side="right" receives feeds />
