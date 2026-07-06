@@ -72,15 +72,62 @@ function Cell({ m }: { m: Knockout }) {
   )
 }
 
-function Column({ title, matches }: { title: string; matches: Knockout[] }) {
-  if (!matches.length) return null
+// Bracket connectors. Each match fills an equal vertical slice (flex-1), so a
+// cell's centre lines up exactly with the midpoint of the two cells that feed
+// it. Connector lines are drawn with percentage offsets inside that slice, so
+// they stay aligned no matter how many matches a round has. The 15px stubs are
+// half the inter-column gap, so a round's outgoing stub meets the next round's
+// incoming stub in the middle.
+const LINE = 'bg-black/20'
+
+function MatchNode({ m, side, feeds, receives, pair }: {
+  m: Knockout
+  side: 'left' | 'right'
+  feeds: boolean
+  receives: boolean
+  pair: 'top' | 'bottom' | 'lone'
+}) {
+  // The side facing the final is where a match sends its connector.
+  const offInner = side === 'left' ? '-right-[15px]' : '-left-[15px]'
+  const offOuter = side === 'left' ? '-left-[15px]'  : '-right-[15px]'
   return (
-    <div className="flex min-w-[9.5rem] flex-col">
+    <div className="relative flex w-36 flex-1 items-center">
+      {receives && (
+        <span className={`absolute top-1/2 h-px w-[15px] ${LINE} ${offOuter}`} />
+      )}
+      <Cell m={m} />
+      {feeds && (
+        <>
+          <span className={`absolute top-1/2 h-px w-[15px] ${LINE} ${offInner}`} />
+          {pair !== 'lone' && (
+            <span className={`absolute w-px ${LINE} ${offInner} ${
+              pair === 'top' ? 'top-1/2 h-1/2' : 'bottom-1/2 h-1/2'}`} />
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
+function Column({ title, matches, side, feeds, receives }: {
+  title: string
+  matches: Knockout[]
+  side: 'left' | 'right'
+  feeds: boolean
+  receives: boolean
+}) {
+  if (!matches.length) return null
+  const lone = matches.length === 1
+  return (
+    <div className="flex flex-col">
       <div className="mb-2 text-center text-[9px] font-bold uppercase tracking-wide text-pitch">
         {title}
       </div>
-      <div className="flex flex-1 flex-col justify-around gap-3">
-        {matches.map(m => <Cell key={m.id} m={m} />)}
+      <div className="flex flex-1 flex-col">
+        {matches.map((m, i) => (
+          <MatchNode key={m.id} m={m} side={side} feeds={feeds} receives={receives}
+                     pair={lone ? 'lone' : (i % 2 === 0 ? 'top' : 'bottom')} />
+        ))}
       </div>
     </div>
   )
@@ -112,20 +159,26 @@ export default function KnockoutBracket({ bracket }: { bracket: Bracket[] }) {
 
   return (
     <div className="overflow-x-auto pb-2">
-      <div className="flex min-w-[64rem] items-stretch gap-3">
-        <Column title={ROUND_TITLE.r32} matches={r32L} />
-        <Column title={ROUND_TITLE.r16} matches={r16L} />
-        <Column title={ROUND_TITLE.qf}  matches={qfL} />
-        <Column title={ROUND_TITLE.sf}  matches={sfL} />
+      <div className="flex min-w-[70rem] items-stretch gap-[30px]">
+        <Column title={ROUND_TITLE.r32} matches={r32L} side="left" receives={false} feeds />
+        <Column title={ROUND_TITLE.r16} matches={r16L} side="left" receives feeds />
+        <Column title={ROUND_TITLE.qf}  matches={qfL} side="left" receives feeds />
+        <Column title={ROUND_TITLE.sf}  matches={sfL} side="left" receives feeds />
 
         {/* Centre: Final + Third place */}
-        <div className="flex min-w-[10rem] flex-col justify-center gap-4">
+        <div className="flex flex-col justify-center gap-4">
           <div>
             <div className="mb-2 text-center text-xs font-extrabold uppercase tracking-wide text-accent">
               Final
             </div>
             {finalMatch
-              ? <div className="scale-105"><Cell m={finalMatch} /></div>
+              ? (
+                <div className="relative scale-105">
+                  <span className={`absolute top-1/2 h-px w-[15px] ${LINE} -left-[15px]`} />
+                  <span className={`absolute top-1/2 h-px w-[15px] ${LINE} -right-[15px]`} />
+                  <Cell m={finalMatch} />
+                </div>
+              )
               : <p className="text-center text-[10px] text-black/40">TBD</p>}
           </div>
           {thirdMatch && (
@@ -138,10 +191,10 @@ export default function KnockoutBracket({ bracket }: { bracket: Bracket[] }) {
           )}
         </div>
 
-        <Column title={ROUND_TITLE.sf}  matches={sfR} />
-        <Column title={ROUND_TITLE.qf}  matches={qfR} />
-        <Column title={ROUND_TITLE.r16} matches={r16R} />
-        <Column title={ROUND_TITLE.r32} matches={r32R} />
+        <Column title={ROUND_TITLE.sf}  matches={sfR} side="right" receives feeds />
+        <Column title={ROUND_TITLE.qf}  matches={qfR} side="right" receives feeds />
+        <Column title={ROUND_TITLE.r16} matches={r16R} side="right" receives feeds />
+        <Column title={ROUND_TITLE.r32} matches={r32R} side="right" receives={false} feeds />
       </div>
     </div>
   )
