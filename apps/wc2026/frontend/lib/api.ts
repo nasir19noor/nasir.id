@@ -6,6 +6,8 @@
  * REVALIDATE_SECONDS of an upstream change.
  */
 
+import { MATCH_HIGHLIGHT_VIDEOS, TEAM_NAME_ID } from './highlights'
+
 export const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || 'https://api.wc2026.nasir.id'
 
@@ -60,18 +62,27 @@ export function fmtWIBTime(value?: string | number | Date | null): string {
 }
 
 // ─── Match highlights (YouTube) ───────────────────────────────────
-// Every match (group + knockout) links to a search on the FolaPlay channel for
-// that specific tie. We can't know each video's id, so we scope a channel
-// search by the two team names — resilient as new highlights are uploaded.
+// Each match links to its FolaPlay "FULL MATCH HIGHLIGHT" video when we have the
+// exact id (MATCH_HIGHLIGHT_VIDEOS, keyed by the two team codes sorted). For
+// matches without a video yet, fall back to a channel search using the Indonesian
+// team names the channel titles with, so the search still lands on the right clip.
 
 const HIGHLIGHTS_CHANNEL = 'https://www.youtube.com/@folaplayapps'
 
 export function highlightsUrl(
-  home?: { name: string } | null,
-  away?: { name: string } | null,
+  home?: { code?: string; name: string } | null,
+  away?: { code?: string; name: string } | null,
 ): string | null {
   if (!home?.name || !away?.name) return null
-  const query = encodeURIComponent(`${home.name} vs ${away.name} highlights`)
+
+  if (home.code && away.code) {
+    const videoId = MATCH_HIGHLIGHT_VIDEOS[[home.code, away.code].sort().join('-')]
+    if (videoId) return `https://www.youtube.com/watch?v=${videoId}`
+  }
+
+  const homeName = (home.code && TEAM_NAME_ID[home.code]) || home.name
+  const awayName = (away.code && TEAM_NAME_ID[away.code]) || away.name
+  const query = encodeURIComponent(`${homeName} vs ${awayName} highlight`)
   return `${HIGHLIGHTS_CHANNEL}/search?query=${query}`
 }
 
@@ -119,6 +130,7 @@ export type Fixture = {
   status: 'scheduled' | 'live' | 'finished'
   kickoff?: string | null
   venue?: string | null
+  highlight_url?: string | null
 }
 
 export type Standing = {
@@ -149,6 +161,7 @@ export type Knockout = {
   status: string
   kickoff?: string | null
   venue?: string | null
+  highlight_url?: string | null
 }
 export type Bracket = { round_code: Knockout['round_code']; matches: Knockout[] }
 

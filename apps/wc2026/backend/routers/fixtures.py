@@ -6,11 +6,12 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import Fixture
 from schemas import FixtureOut, TeamBase
+from services.highlights import highlight_url, load_video_map
 
 router = APIRouter(prefix="/fixtures", tags=["fixtures"])
 
 
-def _to_out(f: Fixture) -> FixtureOut:
+def _to_out(f: Fixture, video_map: dict[str, str]) -> FixtureOut:
     return FixtureOut(
         id=f.id,
         group_letter=f.group_letter,
@@ -22,6 +23,7 @@ def _to_out(f: Fixture) -> FixtureOut:
         status=f.status,
         kickoff=f.kickoff,
         venue=f.venue,
+        highlight_url=highlight_url(f.home_team, f.away_team, video_map),
     )
 
 
@@ -38,7 +40,8 @@ def list_fixtures(
         q = q.filter(Fixture.group_letter == group.upper())
     q = q.order_by(Fixture.kickoff.is_(None), Fixture.kickoff,
                    Fixture.group_letter, Fixture.match_no)
-    return [_to_out(f) for f in q.all()]
+    video_map = load_video_map(db)
+    return [_to_out(f, video_map) for f in q.all()]
 
 
 @router.get("/today", response_model=list[FixtureOut])
@@ -49,4 +52,5 @@ def fixtures_today(db: Session = Depends(get_db)):
     q = (db.query(Fixture)
            .filter(Fixture.kickoff >= start, Fixture.kickoff < end)
            .order_by(Fixture.kickoff))
-    return [_to_out(f) for f in q.all()]
+    video_map = load_video_map(db)
+    return [_to_out(f, video_map) for f in q.all()]

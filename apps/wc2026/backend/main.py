@@ -24,6 +24,7 @@ from routers import groups, fixtures, knockout, squads, scorers, predictions
 from schemas import StatusOut
 from services.scheduler import start_scheduler, get_last_refresh
 from services.espn_fetcher import refresh_from_espn, ensure_structure
+from services.highlights import refresh_highlights
 from services.squads_loader import load_squads
 from services.auth import require_admin
 from services import analytics
@@ -161,8 +162,9 @@ def admin_check(user: str = Depends(require_admin)):
 
 @app.post("/admin/refresh")
 def manual_refresh(user: str = Depends(require_admin)):
-    """Trigger an immediate ESPN refresh (also runs hourly on the schedule)."""
-    return refresh_from_espn()
+    """Trigger an immediate ESPN refresh + FolaPlay highlights refresh (both also
+    run hourly on the schedule)."""
+    return {"espn": refresh_from_espn(), "highlights": refresh_highlights()}
 
 
 @app.post("/admin/load-squads")

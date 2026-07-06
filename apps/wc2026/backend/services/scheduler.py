@@ -7,12 +7,14 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from services.espn_fetcher import refresh_from_espn
+from services.highlights import refresh_highlights
 from services.predictions import run_daily_predictions
 
 logger = logging.getLogger(__name__)
 
 _state = {"last_refresh": None, "last_summary": None,
-          "last_prediction": None, "last_prediction_summary": None}
+          "last_prediction": None, "last_prediction_summary": None,
+          "last_highlights": None}
 
 
 def get_last_refresh() -> datetime | None:
@@ -34,6 +36,13 @@ def _job():
         _state["last_summary"] = summary
     except Exception as e:
         logger.exception("scheduled refresh failed: %s", e)
+
+    # Independent of the ESPN pull: refresh FolaPlay highlight links on the same
+    # cadence. Its own failures are swallowed inside refresh_highlights().
+    try:
+        _state["last_highlights"] = refresh_highlights()
+    except Exception as e:
+        logger.exception("scheduled highlights refresh failed: %s", e)
 
 
 def _prediction_job():

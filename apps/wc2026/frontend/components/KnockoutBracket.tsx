@@ -59,7 +59,7 @@ function Cell({ m }: { m: Knockout }) {
   const homeWin = !!(m.winner && m.home && m.winner.id === m.home.id)
   const awayWin = !!(m.winner && m.away && m.winner.id === m.away.id)
   const showScore = m.status === 'live' || m.status === 'finished'
-  const url = highlightsUrl(m.home, m.away)
+  const url = m.highlight_url ?? highlightsUrl(m.home, m.away)
   const box = (
     <div className={`relative w-36 overflow-hidden rounded-md border border-black/15 bg-white text-[11px] shadow-sm${
       url ? ' transition group-hover:ring-2 group-hover:ring-red-500/40' : ''}`}>

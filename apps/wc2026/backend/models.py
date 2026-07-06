@@ -151,3 +151,15 @@ class MatchPredictionRow(Base):
     model            = Column(String)
     predicted_at     = Column(DateTime(timezone=True),
                               server_default=func.now(), onupdate=func.now())
+
+
+class MatchHighlight(Base):
+    """One FolaPlay 'FULL MATCH HIGHLIGHT' video per tie, keyed by the two team
+    codes sorted alphabetically (e.g. 'ENG-MEX'). Refreshed hourly alongside the
+    ESPN pull, so new uploads surface automatically."""
+    __tablename__ = "match_highlights"
+    pair_key   = Column(String, primary_key=True)
+    video_id   = Column(String, nullable=False)
+    title      = Column(String)
+    updated_at = Column(DateTime(timezone=True),
+                        server_default=func.now(), onupdate=func.now())

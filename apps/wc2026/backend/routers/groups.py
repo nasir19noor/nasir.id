@@ -4,12 +4,13 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import Fixture, Team
 from schemas import FixtureOut, GroupOut, StandingRow, TeamBase
+from services.highlights import highlight_url, load_video_map
 from services.standings import standings_for_group
 
 router = APIRouter(prefix="/groups", tags=["groups"])
 
 
-def _fixture_out(f: Fixture) -> FixtureOut:
+def _fixture_out(f: Fixture, video_map: dict[str, str]) -> FixtureOut:
     return FixtureOut(
         id=f.id,
         group_letter=f.group_letter,
@@ -21,10 +22,11 @@ def _fixture_out(f: Fixture) -> FixtureOut:
         status=f.status,
         kickoff=f.kickoff,
         venue=f.venue,
+        highlight_url=highlight_url(f.home_team, f.away_team, video_map),
     )
 
 
-def _group_out(db: Session, letter: str) -> GroupOut:
+def _group_out(db: Session, letter: str, video_map: dict[str, str]) -> GroupOut:
     standings_rows = standings_for_group(db, letter)
     standings = [
         StandingRow(
@@ -39,7 +41,7 @@ def _group_out(db: Session, letter: str) -> GroupOut:
                   .order_by(Fixture.match_no)
                   .all())
     return GroupOut(letter=letter, standings=standings,
-                    fixtures=[_fixture_out(f) for f in fixtures])
+                    fixtures=[_fixture_out(f, video_map) for f in fixtures])
 
 
 @router.get("", response_model=list[GroupOut])
@@ -47,7 +49,8 @@ def list_groups(db: Session = Depends(get_db)):
     letters = [r[0] for r in db.query(Team.group_letter)
                                  .filter(Team.group_letter.isnot(None))
                                  .distinct().order_by(Team.group_letter).all()]
-    return [_group_out(db, ltr) for ltr in letters]
+    video_map = load_video_map(db)
+    return [_group_out(db, ltr, video_map) for ltr in letters]
 
 
 @router.get("/{letter}", response_model=GroupOut)
@@ -56,4 +59,4 @@ def get_group(letter: str, db: Session = Depends(get_db)):
     has_teams = db.query(Team).filter(Team.group_letter == letter).first()
     if not has_teams:
         raise HTTPException(404, f"Group {letter} not found")
-    return _group_out(db, letter)
+    return _group_out(db, letter, load_video_map(db))

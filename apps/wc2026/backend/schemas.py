@@ -49,6 +49,7 @@ class FixtureOut(BaseModel):
     status:       str
     kickoff:      Optional[datetime]
     venue:        Optional[str]
+    highlight_url: Optional[str] = None
 
 
 class StandingRow(BaseModel):
@@ -88,6 +89,7 @@ class KnockoutOut(BaseModel):
     status:       str
     kickoff:      Optional[datetime]
     venue:        Optional[str]
+    highlight_url: Optional[str] = None
 
 
 class BracketOut(BaseModel):

@@ -1,17 +1,13 @@
-import { highlightsUrl, type Team } from '@/lib/api'
-
 /**
- * Small YouTube link to highlights for a single match. Renders nothing when
- * either team is still undecided (e.g. an unfilled knockout slot).
+ * Small YouTube link to a match's highlights. Pass the `highlight_url` the API
+ * returns for the match; renders nothing when there is no url.
  */
 export default function HighlightsLink({
-  home, away, size = 18,
+  url, size = 18,
 }: {
-  home?: Team | null
-  away?: Team | null
+  url?: string | null
   size?: number
 }) {
-  const url = highlightsUrl(home, away)
   if (!url) return null
   return (
     <a

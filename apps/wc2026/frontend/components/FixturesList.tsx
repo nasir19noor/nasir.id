@@ -1,4 +1,4 @@
-import { type Fixture, fmtWIB } from '@/lib/api'
+import { type Fixture, fmtWIB, highlightsUrl } from '@/lib/api'
 import TeamBadge from './TeamBadge'
 import HighlightsLink from './HighlightsLink'
 
@@ -35,7 +35,7 @@ export default function FixturesList({ fixtures }: { fixtures: Fixture[] }) {
             </div>
             <div className="flex w-20 shrink-0 items-center justify-end gap-2">
               {statusBadge(f.status)}
-              <HighlightsLink home={f.home} away={f.away} />
+              <HighlightsLink url={f.highlight_url ?? highlightsUrl(f.home, f.away)} />
             </div>
           </li>
         )
