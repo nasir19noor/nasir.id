@@ -47,6 +47,20 @@ ESPN_CHUNK_DAYS   = int(os.getenv("ESPN_CHUNK_DAYS",   "15"))
 ESPN_START_DATE   = os.getenv("ESPN_START_DATE", "2026-06-11")
 ESPN_END_DATE     = os.getenv("ESPN_END_DATE",   "2026-07-19")
 
+# ESPN tags every event with its tournament round via `season.slug`. Map those
+# to our internal bracket round codes so each knockout match lands in the right
+# column. Without this, every knockout game was bucketed into 'r32', so the 16
+# R32 slots filled up and Round-of-16-and-later matches were silently dropped
+# (the bracket's "Last 16" onward stayed permanently "TBD").
+ESPN_ROUND_SLUGS = {
+    "round-of-32":     "r32",
+    "round-of-16":     "r16",
+    "quarterfinals":   "qf",
+    "semifinals":      "sf",
+    "3rd-place-match": "third",
+    "final":           "final",
+}
+
 
 # ─── Bootstrap: teams + empty knockout bracket ────────────────────
 
@@ -170,6 +184,10 @@ def _parse_event(ev: dict, idx: dict[str, Team]) -> dict | None:
     state = ((comp.get("status") or {}).get("type") or {}).get("state", "pre")
     status_map = {"pre": "scheduled", "in": "live", "post": "finished"}
 
+    # Round tag from ESPN (None for group-stage games and anything untagged).
+    season_slug = ((ev.get("season") or {}).get("slug") or "").lower()
+    round_code = ESPN_ROUND_SLUGS.get(season_slug)
+
     def to_int(v):
         if v is None or v == "":
             return None
@@ -189,6 +207,7 @@ def _parse_event(ev: dict, idx: dict[str, Team]) -> dict | None:
         "kickoff":       kickoff,
         "status":        status_map.get(state, "scheduled"),
         "venue":         ((comp.get("venue") or {}).get("fullName")),
+        "round_code":    round_code,
     }
 
 
@@ -268,10 +287,9 @@ def _upsert_fixture(
 
 def _upsert_knockout(db: Session, p: dict) -> bool:
     """Knockout match: locate next empty slot for this round and fill it."""
-    # Round inference: this fetcher is conservative. Until ESPN tags rounds we
-    # bucket all knockout games into 'r32' chronologically; when the front-end
-    # bracket needs r16/qf/sf we can refine the rule.
-    round_code = "r32"
+    # Use the round ESPN tagged (via season.slug); fall back to 'r32' only when
+    # a cross-group pairing arrives without a recognisable round slug.
+    round_code = p.get("round_code") or "r32"
     # Reuse existing record if we already saw this ESPN event.
     ko = None
     if p["espn_event_id"]:
@@ -519,7 +537,10 @@ def refresh_from_espn() -> dict:
                     continue
                 hg = TEAM_GROUP.get(p["home"].code)
                 ag = TEAM_GROUP.get(p["away"].code)
-                if hg and ag and hg == ag:
+                # Group stage = a same-group pair that ESPN did NOT tag with a
+                # knockout round. Any knockout round tag (or a cross-group pair)
+                # is a bracket match.
+                if hg and ag and hg == ag and not p["round_code"]:
                     if _upsert_fixture(db, hg, p, match_counters):
                         summary["group"] += 1
                 else:
