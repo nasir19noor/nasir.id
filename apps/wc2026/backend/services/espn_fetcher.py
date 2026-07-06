@@ -285,36 +285,33 @@ def _upsert_fixture(
     return True
 
 
-def _upsert_knockout(db: Session, p: dict) -> bool:
-    """Knockout match: locate next empty slot for this round and fill it."""
-    # Use the round ESPN tagged (via season.slug); fall back to 'r32' only when
-    # a cross-group pairing arrives without a recognisable round slug.
-    round_code = p.get("round_code") or "r32"
-    # Reuse existing record if we already saw this ESPN event.
-    ko = None
-    if p["espn_event_id"]:
-        ko = (db.query(KnockoutMatch)
-                .filter(KnockoutMatch.espn_event_id == p["espn_event_id"])
-                .one_or_none())
-    if ko is None:
-        # First empty slot in the round (home_team_id IS NULL).
-        ko = (db.query(KnockoutMatch)
-                .filter(KnockoutMatch.round_code == round_code,
-                        KnockoutMatch.home_team_id.is_(None))
-                .order_by(KnockoutMatch.slot)
-                .first())
-        if ko is None:
-            return False
+_KNOCKOUT_ROUNDS = {rc for rc, _ in KNOCKOUT_SHAPE}
+
+
+def _clear_knockout_slot(ko: KnockoutMatch) -> None:
+    """Reset a bracket slot back to an empty TBD placeholder."""
+    ko.home_team_id = ko.away_team_id = ko.winner_team_id = None
+    ko.home_score = ko.away_score = None
+    ko.home_shootout = ko.away_shootout = None
+    ko.espn_event_id = None
+    ko.status = "scheduled"
+    ko.kickoff = ko.venue = None
+    ko.home_label = f"TBD {ko.round_code.upper()} #{ko.slot} home"
+    ko.away_label = f"TBD {ko.round_code.upper()} #{ko.slot} away"
+
+
+def _fill_knockout_slot(ko: KnockoutMatch, p: dict) -> None:
+    """Write one parsed ESPN knockout match into a bracket slot."""
     ko.home_team_id  = p["home"].id
     ko.away_team_id  = p["away"].id
-    ko.espn_event_id = p["espn_event_id"] or ko.espn_event_id
-    if p["kickoff"]: ko.kickoff = p["kickoff"]
-    if p["venue"]:   ko.venue   = p["venue"]
-    ko.status = p["status"]
+    ko.espn_event_id = p["espn_event_id"]
+    ko.kickoff       = p["kickoff"]
+    ko.venue         = p["venue"]
+    ko.status        = p["status"]
     if p["status"] in ("live", "finished") \
        and p["home_score"] is not None and p["away_score"] is not None:
-        ko.home_score = p["home_score"]
-        ko.away_score = p["away_score"]
+        ko.home_score    = p["home_score"]
+        ko.away_score    = p["away_score"]
         ko.home_shootout = p.get("home_shootout")
         ko.away_shootout = p.get("away_shootout")
         if p["status"] == "finished":
@@ -325,12 +322,52 @@ def _upsert_knockout(db: Session, p: dict) -> bool:
                 hso, aso = p.get("home_shootout"), p.get("away_shootout")
                 if hso is not None and aso is not None and hso != aso:
                     ko.winner_team_id = p["home"].id if hso > aso else p["away"].id
-    else:
-        ko.home_score = None
-        ko.away_score = None
-        ko.home_shootout = None
-        ko.away_shootout = None
-    return True
+
+
+def _rebuild_knockout(db: Session, ko_list: list[dict]) -> dict:
+    """Rebuild the whole knockout bracket from the parsed ESPN knockout matches.
+
+    Deterministic and self-healing: every refresh clears all slots and re-places
+    each match into its ESPN-tagged round (ordered by kickoff), so there is no
+    dependence on prior slot state. This replaces the old "find the next empty
+    slot, never move, never clear" upsert, which could strand matches in the
+    wrong round and leave a stale `winner` on a slot that was later reused. If
+    ESPN reports no knockout matches yet, the empty bracket is left untouched.
+    """
+    if not ko_list:
+        return {"placed": 0, "cleared": 0}
+
+    slots_by_round: dict[str, list[KnockoutMatch]] = defaultdict(list)
+    for ko in db.query(KnockoutMatch).order_by(KnockoutMatch.slot).all():
+        slots_by_round[ko.round_code].append(ko)
+
+    # Only wipe rounds ESPN actually has data for, so an unrelated empty round
+    # is never disturbed. Dedupe by ESPN event id.
+    parsed_by_round: dict[str, list[dict]] = defaultdict(list)
+    seen: set[str] = set()
+    for p in ko_list:
+        rc = p.get("round_code")
+        if rc not in _KNOCKOUT_ROUNDS:
+            continue
+        eid = p["espn_event_id"]
+        if eid and eid in seen:
+            continue
+        if eid:
+            seen.add(eid)
+        parsed_by_round[rc].append(p)
+
+    cleared = placed = 0
+    for rc, parsed in parsed_by_round.items():
+        slots = slots_by_round.get(rc, [])
+        for ko in slots:
+            _clear_knockout_slot(ko)
+            cleared += 1
+        parsed.sort(key=lambda p: (p["kickoff"] is None, p["kickoff"]))
+        for p, ko in zip(parsed, slots):
+            _fill_knockout_slot(ko, p)
+            placed += 1
+    db.flush()
+    return {"placed": placed, "cleared": cleared}
 
 
 def _normalize_name(s: str) -> str:
@@ -626,6 +663,7 @@ def refresh_from_espn() -> dict:
         match_counters = _seed_match_counters(db)
 
         def _upsert_loop():
+            knockout: list[dict] = []
             for ev in events:
                 p = _parse_event(ev, idx)
                 if not p:
@@ -639,11 +677,12 @@ def refresh_from_espn() -> dict:
                     if _upsert_fixture(db, hg, p, match_counters):
                         summary["group"] += 1
                 else:
-                    if _upsert_knockout(db, p):
-                        summary["knockout"] += 1
+                    knockout.append(p)
                     # Also store the knockout match as a Fixture so it shows up
                     # in "today's fixtures" and the AI match predictions.
                     _upsert_fixture(db, None, p, match_counters)
+            # Rebuild the bracket in one deterministic pass (see _rebuild_knockout).
+            summary["knockout"] = _rebuild_knockout(db, knockout)["placed"]
         _stage("upsert_fixtures", _upsert_loop)
 
         def _score_loop():
