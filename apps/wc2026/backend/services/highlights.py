@@ -38,6 +38,11 @@ _CLIENT_VERSION = "2.20240606.06.00"
 _VIDEOS_PARAMS  = "EgZ2aWRlb3PyBgQKAjoA"          # channel "Videos" tab, newest first
 _BROWSE_URL = f"https://www.youtube.com/youtubei/v1/browse?key={_INNERTUBE_KEY}&prettyPrint=false"
 _MAX_PAGES = 20
+# "Consent given" cookie. Without it, EU/datacenter IPs get an empty grid back
+# from the browse API (the request succeeds but returns no videos) — which is
+# why the scrape can work from a dev machine yet return nothing in production.
+_SOCS_COOKIE = ("CAISNQgDEitib3V0dWJlX3dlYl9jb25zZW50X2FkX3BlcnNvbmFsaXphdGlvbl9j"
+                "b25zZW50GgJlbiACGgYIgLC_owY")
 
 # ─── Team code ⇄ Indonesian name (as FolaPlay titles them) ─────────
 
@@ -66,13 +71,18 @@ _NAME_TO_CODE["AMERIKA"] = "USA"        # guard against truncated titles
 # ─── Scrape ────────────────────────────────────────────────────────
 
 def _extract_videos(text: str) -> list[tuple[str, str]]:
-    """Pull (videoId, title) pairs out of a chunk of InnerTube JSON. YouTube's
-    grid uses lockupViewModel: contentId holds the id, the metadata view model
-    holds the title."""
+    """Pull (videoId, title) pairs out of InnerTube JSON, handling both the
+    current web grid (lockupViewModel: contentId + metadata title) and the
+    classic gridVideoRenderer/videoRenderer layout (videoId + title.runs)."""
     out: list[tuple[str, str]] = []
     for chunk in text.split('"lockupViewModel"'):
         m_id = re.search(r'"contentId":"([\w-]{11})"', chunk)
         m_t  = re.search(r'"lockupMetadataViewModel":\{"title":\{"content":"([^"]+)"', chunk)
+        if m_id and m_t:
+            out.append((m_id.group(1), m_t.group(1)))
+    for chunk in text.split('"videoRenderer"'):
+        m_id = re.search(r'"videoId":"([\w-]{11})"', chunk)
+        m_t  = re.search(r'"title":\{"runs":\[\{"text":"([^"]+)"', chunk)
         if m_id and m_t:
             out.append((m_id.group(1), m_t.group(1)))
     return out
@@ -98,12 +108,18 @@ def _scrape_channel() -> list[tuple[str, str]]:
     its continuation tokens."""
     session = requests.Session()
     session.headers.update({"User-Agent": _UA, "Accept-Language": "en-US,en;q=0.9"})
+    # Consent cookies so datacenter/EU IPs get the real grid, not an empty one.
+    session.cookies.set("SOCS", _SOCS_COOKIE, domain=".youtube.com")
+    session.cookies.set("CONSENT", "YES+cb", domain=".youtube.com")
 
     videos: list[tuple[str, str]] = []
     seen: set[str] = set()
     cont: str | None = None
-    for _ in range(_MAX_PAGES):
+    first_txt = ""
+    for page in range(_MAX_PAGES):
         txt = _browse(session, cont)
+        if page == 0:
+            first_txt = txt
         added = 0
         for vid, title in _extract_videos(txt):
             if vid not in seen:
@@ -115,7 +131,12 @@ def _scrape_channel() -> list[tuple[str, str]]:
         if not cont or added == 0:
             break
     if not videos:
-        raise RuntimeError("InnerTube browse returned no videos")
+        # Surface *why* the grid was empty so it's diagnosable from /admin/refresh.
+        markers = [k for k in ("consent", "captcha", "sign in", "not a bot",
+                               "verify", "unusual traffic", '"alerts"')
+                   if k in first_txt.lower()]
+        raise RuntimeError(f"browse returned no videos "
+                           f"(resp_len={len(first_txt)}, markers={markers or 'none'})")
     return videos
 
 
