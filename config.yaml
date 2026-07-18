@@ -18,6 +18,7 @@ aws:
     bucket_name_upload: "upload.nasir.id"
     bucket_name_mbg: "mbg.nasir.id"
     bucket_name_nasir: "nasir.id"
+    bucket_name_transform: "transform.nasir.id"
   acm:
     domain_name_nasir: "assets.nasir.id" 
     domain_name_itung_nasir: "assets.itung.nasir.id" 

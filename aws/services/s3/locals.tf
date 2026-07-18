@@ -5,5 +5,6 @@ locals {
   bucket_name_backup      = local.config.aws.s3.bucket_name_backup
   bucket_name_upload      = local.config.aws.s3.bucket_name_upload
   bucket_name_mbg         = local.config.aws.s3.bucket_name_mbg
+  bucket_name_transform   = local.config.aws.s3.bucket_name_transform
 }    
 
