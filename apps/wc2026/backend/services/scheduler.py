@@ -1,20 +1,25 @@
-"""APScheduler wrapper — runs ESPN refresh once an hour."""
+"""APScheduler wrapper.
+
+The tournament is over, so the periodic ESPN refresh is disabled by default —
+the data in the database is final. Set TOURNAMENT_ACTIVE=true to re-enable the
+hourly ESPN + highlights refresh (e.g. for a future tournament).
+"""
 import os
 import logging
 from datetime import datetime, timezone
 
 from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.cron import CronTrigger
 
 from services.espn_fetcher import refresh_from_espn
 from services.highlights import refresh_highlights
-from services.predictions import run_daily_predictions
 
 logger = logging.getLogger(__name__)
 
-_state = {"last_refresh": None, "last_summary": None,
-          "last_prediction": None, "last_prediction_summary": None,
-          "last_highlights": None}
+_state = {"last_refresh": None, "last_summary": None, "last_highlights": None}
+
+
+def tournament_active() -> bool:
+    return os.getenv("TOURNAMENT_ACTIVE", "false").lower() in ("1", "true", "yes")
 
 
 def get_last_refresh() -> datetime | None:
@@ -25,10 +30,6 @@ def get_last_summary() -> dict | None:
     return _state["last_summary"]
 
 
-def get_last_prediction() -> datetime | None:
-    return _state["last_prediction"]
-
-
 def _job():
     try:
         summary = refresh_from_espn()
@@ -37,42 +38,27 @@ def _job():
     except Exception as e:
         logger.exception("scheduled refresh failed: %s", e)
 
-    # Independent of the ESPN pull: refresh FolaPlay highlight links on the same
-    # cadence. Its own failures are swallowed inside refresh_highlights().
     try:
         _state["last_highlights"] = refresh_highlights()
     except Exception as e:
         logger.exception("scheduled highlights refresh failed: %s", e)
 
 
-def _prediction_job():
-    try:
-        summary = run_daily_predictions()
-        _state["last_prediction"] = datetime.now(timezone.utc)
-        _state["last_prediction_summary"] = summary
-        logger.info("daily predictions complete")
-    except Exception as e:
-        logger.exception("scheduled prediction failed: %s", e)
-
-
 def start_scheduler() -> BackgroundScheduler:
-    minutes = int(os.getenv("REFRESH_INTERVAL_MIN", "60"))
     sched = BackgroundScheduler(timezone="UTC")
 
-    # Hourly ESPN refresh.
+    if not tournament_active():
+        # Tournament complete — no periodic fetching. Data is served as-is from
+        # the database. The scheduler still starts (so shutdown is a no-op) but
+        # registers no jobs.
+        sched.start()
+        logger.info("Scheduler idle — TOURNAMENT_ACTIVE is false; ESPN refresh "
+                    "and predictions are disabled (tournament complete).")
+        return sched
+
+    minutes = int(os.getenv("REFRESH_INTERVAL_MIN", "60"))
     sched.add_job(_job, "interval", minutes=minutes, id="espn_refresh",
                   next_run_time=datetime.now(timezone.utc))
-
-    # AI predictions once a day at 00:00 WIB.
-    pred_hours  = os.getenv("PREDICTION_HOURS", "0")
-    pred_minute = int(os.getenv("PREDICTION_MINUTE", "0"))
-    sched.add_job(
-        _prediction_job,
-        CronTrigger(hour=pred_hours, minute=pred_minute, timezone="Asia/Jakarta"),
-        id="predictions",
-    )
-
     sched.start()
-    logger.info("Scheduler started — ESPN every %d min; predictions daily at "
-                "%s:%02d WIB", minutes, pred_hours, pred_minute)
+    logger.info("Scheduler started — ESPN + highlights every %d min.", minutes)
     return sched

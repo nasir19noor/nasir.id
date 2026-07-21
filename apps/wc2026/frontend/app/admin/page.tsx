@@ -50,9 +50,6 @@ const ACTIONS = [
   { key: 'load-squads', label: 'Load Squads from Spreadsheet',
     path: '/admin/load-squads',
     blurb: 'Re-import the 26-player squads (jersey, club, captain) from the bundled wall-chart spreadsheet.' },
-  { key: 'predict', label: 'Run AI Predictions',
-    path: '/admin/predict',
-    blurb: 'Generate match-winner (next 24h) and Golden Boot predictions via Claude now (also runs every 6h at 00:00/06:00/12:00/18:00 WIB). May take 10–30s.' },
 ]
 
 // ─── Component ─────────────────────────────────────────────────────

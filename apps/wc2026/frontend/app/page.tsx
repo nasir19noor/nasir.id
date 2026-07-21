@@ -18,19 +18,28 @@ export default async function HomePage() {
     api<Bracket[]>('/knockout', { noStore: true }).catch(() => [] as Bracket[]),
   ])
 
+  const champion = bracket.find(b => b.round_code === 'final')?.matches?.[0]?.winner
+
   return (
     <div className="space-y-8">
       <section className="card overflow-hidden">
         <div className="bg-pitch p-6 text-chalk">
           <h1 className="text-3xl font-extrabold">FIFA World Cup 2026</h1>
           <p className="mt-1 text-sm opacity-80">
-            48 teams · 12 groups · 104 matches · Updated hourly.
+            48 teams · 12 groups · 104 matches · Final results
           </p>
+          {champion && (
+            <Link href="/awards"
+                  className="mt-4 inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2
+                             text-sm font-bold text-pitch hover:opacity-90">
+              🏆 Champions: {champion.name} — see Awards &amp; Stats →
+            </Link>
+          )}
         </div>
         <div className="grid gap-4 p-6 md:grid-cols-3">
           <Stat label="Groups"   value={groups.length} />
-          <Stat label="Matches today" value={todayFixtures.length} />
-          <Stat label="Top scorer goals"
+          <Stat label="Matches"  value={104} />
+          <Stat label="Top scorer"
                 value={scorers[0]?.goals ?? 0}
                 hint={scorers[0]?.player} />
         </div>

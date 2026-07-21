@@ -21,15 +21,14 @@ from models import (  # noqa: F401 — register models for create_all
     Team, Player, Fixture, KnockoutMatch, PageView, Prediction, MatchPredictionRow,
     MatchHighlight,
 )
-from routers import groups, fixtures, knockout, squads, scorers, predictions
+from routers import groups, fixtures, knockout, squads, scorers, awards
 from schemas import StatusOut
-from services.scheduler import start_scheduler, get_last_refresh
+from services.scheduler import start_scheduler, get_last_refresh, tournament_active
 from services.espn_fetcher import refresh_from_espn, ensure_structure
 from services.highlights import refresh_highlights
 from services.squads_loader import load_squads
 from services.auth import require_admin
 from services import analytics
-from services.predictions import run_daily_predictions
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -103,10 +102,16 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.exception("Startup squads load failed: %s", e)
 
-    try:
-        logger.info("Startup refresh: %s", refresh_from_espn())
-    except Exception as e:
-        logger.exception("Startup refresh failed: %s", e)
+    # Tournament is complete: don't re-fetch from ESPN on startup — the DB holds
+    # the final data. Re-enable with TOURNAMENT_ACTIVE=true for a live event.
+    if tournament_active():
+        try:
+            logger.info("Startup refresh: %s", refresh_from_espn())
+        except Exception as e:
+            logger.exception("Startup refresh failed: %s", e)
+    else:
+        logger.info("Startup ESPN refresh skipped — tournament complete "
+                    "(TOURNAMENT_ACTIVE=false).")
 
     sched = start_scheduler()
     yield
@@ -129,7 +134,7 @@ app.include_router(fixtures.router)
 app.include_router(knockout.router)
 app.include_router(squads.router)
 app.include_router(scorers.router)
-app.include_router(predictions.router)
+app.include_router(awards.router)
 
 
 @app.get("/")
@@ -173,12 +178,6 @@ def manual_refresh(user: str = Depends(require_admin)):
 def manual_load_squads(user: str = Depends(require_admin)):
     """Re-import squads + tournament goal totals from the wall-chart spreadsheet."""
     return load_squads()
-
-
-@app.post("/admin/predict")
-def manual_predict(user: str = Depends(require_admin)):
-    """Force-generate today's AI predictions now (also runs daily at 00:0X WIB)."""
-    return run_daily_predictions()
 
 
 @app.get("/admin/analytics")

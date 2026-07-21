@@ -6,10 +6,10 @@ import { useState } from 'react'
 
 const links = [
   { href: '/',         label: 'Home' },
+  { href: '/awards',   label: 'Awards' },
   { href: '/groups',   label: 'Groups' },
   { href: '/knockout', label: 'Knockout' },
   { href: '/scorers',  label: 'Top Scorers' },
-  { href: '/predictions', label: 'Predictions' },
   { href: '/squads',   label: 'Squads' },
   { href: '/admin',    label: 'Admin' },
 ]

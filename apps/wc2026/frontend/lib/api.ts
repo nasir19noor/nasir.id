@@ -178,6 +178,28 @@ export type Scorer = {
   club?: string | null; goals: number
 }
 
+// ─── Awards & tournament stats ──────────────────────────────────
+
+export type Award = {
+  award: string; subtitle: string; emoji?: string
+  player: string; team: Team; detail: string
+  club?: string | null; position?: string | null
+  age?: number | null; goals?: number | null; is_captain?: boolean
+}
+
+export type AwardsData = {
+  champion: Team
+  standings: { champion: Team; runner_up: Team; third: Team; fourth: Team }
+  awards: Award[]
+  stats: {
+    matches: number; goals: number; goals_per_match: number
+    teams: number; players: number; scorers: number
+    biggest_margin: number; highest_scoring: number
+  }
+  top_scorers: Scorer[]
+  top_scoring_teams: { team: Team; goals: number }[]
+}
+
 // ─── AI predictions ─────────────────────────────────────────────
 
 export type MatchPrediction = {
