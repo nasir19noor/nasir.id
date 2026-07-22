@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react'
 import type { PlayerStat } from '@/lib/api'
 import TeamBadge from './TeamBadge'
 
-type SortKey = 'goals' | 'caps' | 'intl_goals' | 'age' | 'name'
+type SortKey = 'goals' | 'assists' | 'cards' | 'caps' | 'intl_goals' | 'age' | 'name'
 
 /** Searchable, sortable table of every player's tournament statistics. */
 export default function PlayerStatsTable({ players }: { players: PlayerStat[] }) {
@@ -58,7 +58,9 @@ export default function PlayerStatsTable({ players }: { players: PlayerStat[] })
               <th onClick={() => toggle('age')} className="cursor-pointer py-2 text-right">Age{arrow('age')}</th>
               <th onClick={() => toggle('caps')} className="hidden cursor-pointer py-2 text-right sm:table-cell">Caps{arrow('caps')}</th>
               <th onClick={() => toggle('intl_goals')} className="hidden cursor-pointer py-2 text-right lg:table-cell">Int'l G{arrow('intl_goals')}</th>
-              <th onClick={() => toggle('goals')} className="cursor-pointer py-2 pr-3 text-right">WC G{arrow('goals')}</th>
+              <th onClick={() => toggle('goals')} className="cursor-pointer py-2 text-right">Goals{arrow('goals')}</th>
+              <th onClick={() => toggle('assists')} className="cursor-pointer py-2 text-right">Ast{arrow('assists')}</th>
+              <th onClick={() => toggle('cards')} className="hidden cursor-pointer py-2 pr-3 text-right sm:table-cell">Cards{arrow('cards')}</th>
             </tr>
           </thead>
           <tbody>
@@ -71,11 +73,15 @@ export default function PlayerStatsTable({ players }: { players: PlayerStat[] })
                 <td className="py-2 text-right">{p.age ?? '—'}</td>
                 <td className="hidden py-2 text-right sm:table-cell">{p.caps}</td>
                 <td className="hidden py-2 text-right lg:table-cell">{p.intl_goals}</td>
-                <td className="py-2 pr-3 text-right font-bold">{p.goals}</td>
+                <td className="py-2 text-right font-bold">{p.goals}</td>
+                <td className="py-2 text-right">{p.assists}</td>
+                <td className="hidden py-2 pr-3 text-right sm:table-cell">
+                  {p.yellow_cards}🟨{p.red_cards ? ` ${p.red_cards}🟥` : ''}
+                </td>
               </tr>
             ))}
             {rows.length === 0 && (
-              <tr><td colSpan={8} className="p-6 text-center text-black/50">
+              <tr><td colSpan={10} className="p-6 text-center text-black/50">
                 No players match “{q}”.
               </td></tr>
             )}

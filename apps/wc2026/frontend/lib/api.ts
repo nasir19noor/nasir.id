@@ -206,17 +206,21 @@ export type PlayerStat = {
   id: number; name: string; team: Team
   position?: string | null; age?: number | null
   caps: number; intl_goals: number; club?: string | null
-  goals: number; is_captain: boolean
+  goals: number
+  assists: number; yellow_cards: number; red_cards: number; cards: number
+  shots: number; shots_on_target: number; saves: number
+  is_captain: boolean
 }
 
 export type PlayerStats = {
   summary: {
-    players: number; goals: number; scorers: number
+    players: number; goals: number; assists: number; scorers: number
+    yellow_cards: number; red_cards: number
     avg_age: number; positions: Record<string, number>
   }
   leaderboards: {
-    top_scorers: PlayerStat[]; most_caps: PlayerStat[]
-    most_intl_goals: PlayerStat[]; youngest: PlayerStat[]
+    top_scorers: PlayerStat[]; top_assists: PlayerStat[]; most_cards: PlayerStat[]
+    most_caps: PlayerStat[]; most_intl_goals: PlayerStat[]; youngest: PlayerStat[]
   }
   players: PlayerStat[]
 }

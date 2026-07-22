@@ -19,16 +19,23 @@ export default async function StatisticsPage() {
         <section className="space-y-5">
           <h2 className="text-xl font-extrabold">Player Statistics</h2>
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             <Stat label="Players" value={pl.summary.players} />
-            <Stat label="Total goals" value={pl.summary.goals} />
+            <Stat label="Goals" value={pl.summary.goals} />
+            <Stat label="Assists" value={pl.summary.assists} />
             <Stat label="Goalscorers" value={pl.summary.scorers} />
+            <Stat label="Yellow / Red" value={`${pl.summary.yellow_cards} / ${pl.summary.red_cards}`} />
             <Stat label="Average age" value={pl.summary.avg_age} />
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
             <Leaderboard title="Top Scorers (WC goals)" emoji="👟"
                          rows={pl.leaderboards.top_scorers} metric={p => p.goals} />
+            <Leaderboard title="Top Assists" emoji="🅰️"
+                         rows={pl.leaderboards.top_assists} metric={p => p.assists} />
+            <Leaderboard title="Most Booked (cards)" emoji="🟨"
+                         rows={pl.leaderboards.most_cards}
+                         metric={p => `${p.yellow_cards}🟨${p.red_cards ? ` ${p.red_cards}🟥` : ''}`} />
             <Leaderboard title="Most Experienced (caps)" emoji="🎖️"
                          rows={pl.leaderboards.most_caps} metric={p => p.caps} />
             <Leaderboard title="Most International Goals" emoji="🎯"

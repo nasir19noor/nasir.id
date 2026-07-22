@@ -27,6 +27,7 @@ from services.scheduler import start_scheduler, get_last_refresh, tournament_act
 from services.espn_fetcher import refresh_from_espn, ensure_structure
 from services.highlights import refresh_highlights
 from services.squads_loader import load_squads
+from services.stats_enricher import enrich_player_stats
 from services.auth import require_admin
 from services import analytics
 
@@ -73,6 +74,16 @@ def run_migrations() -> None:
                 logger.info("Migration: adding knockout_matches.%s", col)
                 with engine.begin() as c:
                     c.execute(text(f"ALTER TABLE knockout_matches ADD COLUMN {col} INTEGER"))
+
+    # players gained enriched stat columns (assists, cards, shots, saves).
+    if insp.has_table("players"):
+        p_cols = {c["name"] for c in insp.get_columns("players")}
+        for col in ("assists", "yellow_cards", "red_cards",
+                    "shots", "shots_on_target", "saves"):
+            if col not in p_cols:
+                logger.info("Migration: adding players.%s", col)
+                with engine.begin() as c:
+                    c.execute(text(f"ALTER TABLE players ADD COLUMN {col} INTEGER DEFAULT 0"))
 
 
 @asynccontextmanager
@@ -179,6 +190,13 @@ def manual_refresh(user: str = Depends(require_admin)):
 def manual_load_squads(user: str = Depends(require_admin)):
     """Re-import squads + tournament goal totals from the wall-chart spreadsheet."""
     return load_squads()
+
+
+@app.post("/admin/enrich-stats")
+def manual_enrich_stats(user: str = Depends(require_admin)):
+    """One-time: pull per-player assists, cards, shots and saves from ESPN match
+    summaries onto the Player rows. Safe to re-run (resets then re-sums)."""
+    return enrich_player_stats()
 
 
 @app.get("/admin/analytics")

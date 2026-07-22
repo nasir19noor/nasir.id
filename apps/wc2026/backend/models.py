@@ -34,6 +34,13 @@ class Player(Base):
     club          = Column(String)
     is_captain    = Column(Boolean, default=False)
     wc_goals      = Column(Integer, default=0)         # updated as tournament progresses
+    # Per-tournament totals enriched from ESPN match summaries (rosters).
+    assists         = Column(Integer, default=0)
+    yellow_cards    = Column(Integer, default=0)
+    red_cards       = Column(Integer, default=0)
+    shots           = Column(Integer, default=0)
+    shots_on_target = Column(Integer, default=0)
+    saves           = Column(Integer, default=0)
 
     team = relationship("Team", back_populates="players")
 

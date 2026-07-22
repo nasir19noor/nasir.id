@@ -43,6 +43,13 @@ def player_statistics(db: Session = Depends(get_db)):
             "intl_goals": p.intl_goals or 0,
             "club": p.club,
             "goals": p.wc_goals or 0,
+            "assists": p.assists or 0,
+            "yellow_cards": p.yellow_cards or 0,
+            "red_cards": p.red_cards or 0,
+            "cards": (p.yellow_cards or 0) + (p.red_cards or 0),
+            "shots": p.shots or 0,
+            "shots_on_target": p.shots_on_target or 0,
+            "saves": p.saves or 0,
             "is_captain": p.is_captain,
         }
 
@@ -56,16 +63,27 @@ def player_statistics(db: Session = Depends(get_db)):
         pool.sort(key=lambda p: (getattr(p, key) or 0), reverse=reverse)
         return [row(p) for p in pool[:n]]
 
+    most_cards = sorted(
+        (p for p in players if (p.yellow_cards or 0) + (p.red_cards or 0) > 0),
+        key=lambda p: ((p.yellow_cards or 0) + (p.red_cards or 0), p.red_cards or 0),
+        reverse=True,
+    )[:10]
+
     return {
         "summary": {
             "players": len(players),
             "goals": sum(p.wc_goals or 0 for p in players),
+            "assists": sum(p.assists or 0 for p in players),
             "scorers": sum(1 for p in players if (p.wc_goals or 0) > 0),
+            "yellow_cards": sum(p.yellow_cards or 0 for p in players),
+            "red_cards": sum(p.red_cards or 0 for p in players),
             "avg_age": round(sum(ages) / len(ages), 1) if ages else 0,
             "positions": by_pos,
         },
         "leaderboards": {
             "top_scorers":     top("wc_goals"),
+            "top_assists":     top("assists"),
+            "most_cards":      [row(p) for p in most_cards],
             "most_caps":       top("caps"),
             "most_intl_goals": top("intl_goals"),
             "youngest":        top("age", reverse=False, need="age"),
