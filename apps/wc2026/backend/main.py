@@ -21,7 +21,7 @@ from models import (  # noqa: F401 — register models for create_all
     Team, Player, Fixture, KnockoutMatch, PageView, Prediction, MatchPredictionRow,
     MatchHighlight,
 )
-from routers import groups, fixtures, knockout, squads, scorers, awards
+from routers import groups, fixtures, knockout, squads, scorers, awards, statistics
 from schemas import StatusOut
 from services.scheduler import start_scheduler, get_last_refresh, tournament_active
 from services.espn_fetcher import refresh_from_espn, ensure_structure
@@ -135,6 +135,7 @@ app.include_router(knockout.router)
 app.include_router(squads.router)
 app.include_router(scorers.router)
 app.include_router(awards.router)
+app.include_router(statistics.router)
 
 
 @app.get("/")

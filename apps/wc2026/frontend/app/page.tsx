@@ -1,20 +1,16 @@
 import Link from 'next/link'
-import { api, type Group, type Scorer, type Fixture, type Bracket } from '@/lib/api'
+import { api, type Group, type Scorer, type Bracket } from '@/lib/api'
 import TeamBadge from '@/components/TeamBadge'
-import FixturesList from '@/components/FixturesList'
 import KnockoutBracket from '@/components/KnockoutBracket'
 
-// Standings, scorers and fixtures change live during matches, so render on
-// every request (no ISR cache) with uncached fetches — results show up
-// immediately rather than waiting out a revalidate window.
+// Tournament is complete; results are final.
 export const dynamic = 'force-dynamic'
 
 export default async function HomePage() {
   // Pull everything in parallel for speed.
-  const [groups, scorers, todayFixtures, bracket] = await Promise.all([
+  const [groups, scorers, bracket] = await Promise.all([
     api<Group[]>('/groups', { noStore: true }).catch(() => [] as Group[]),
     api<Scorer[]>('/scorers?limit=5', { noStore: true }).catch(() => [] as Scorer[]),
-    api<Fixture[]>('/fixtures/today', { noStore: true }).catch(() => [] as Fixture[]),
     api<Bracket[]>('/knockout', { noStore: true }).catch(() => [] as Bracket[]),
   ])
 
@@ -54,13 +50,6 @@ export default async function HomePage() {
         </div>
         <div className="card p-4">
           <KnockoutBracket bracket={bracket} />
-        </div>
-      </section>
-
-      <section>
-        <h2 className="mb-3 text-lg font-bold">Today</h2>
-        <div className="card">
-          <FixturesList fixtures={todayFixtures} />
         </div>
       </section>
 

@@ -10,6 +10,7 @@ const links = [
   { href: '/groups',   label: 'Groups' },
   { href: '/knockout', label: 'Knockout' },
   { href: '/scorers',  label: 'Top Scorers' },
+  { href: '/statistics', label: 'Statistics' },
   { href: '/squads',   label: 'Squads' },
   { href: '/admin',    label: 'Admin' },
 ]

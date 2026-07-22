@@ -200,6 +200,48 @@ export type AwardsData = {
   top_scoring_teams: { team: Team; goals: number }[]
 }
 
+// ─── Statistics (players & matches) ─────────────────────────────
+
+export type PlayerStat = {
+  id: number; name: string; team: Team
+  position?: string | null; age?: number | null
+  caps: number; intl_goals: number; club?: string | null
+  goals: number; is_captain: boolean
+}
+
+export type PlayerStats = {
+  summary: {
+    players: number; goals: number; scorers: number
+    avg_age: number; positions: Record<string, number>
+  }
+  leaderboards: {
+    top_scorers: PlayerStat[]; most_caps: PlayerStat[]
+    most_intl_goals: PlayerStat[]; youngest: PlayerStat[]
+  }
+  players: PlayerStat[]
+}
+
+export type MatchRow = {
+  home: Team; away: Team; home_score: number; away_score: number
+  total: number; margin: number; stage: string; venue?: string | null
+}
+
+export type ShootoutRow = {
+  home: Team; away: Team; score: string; shootout: string
+  winner: Team; stage: string
+}
+
+export type MatchStats = {
+  summary: {
+    matches: number; goals: number; goals_per_match: number
+    shootouts: number; biggest_margin: number; highest_scoring: number; draws: number
+  }
+  goals_by_stage: { stage: string; matches: number; goals: number }[]
+  highest_scoring: MatchRow[]
+  biggest_wins: MatchRow[]
+  shootout_matches: ShootoutRow[]
+}
+
 // ─── AI predictions ─────────────────────────────────────────────
 
 export type MatchPrediction = {
