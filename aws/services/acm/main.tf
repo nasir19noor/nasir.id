@@ -82,3 +82,20 @@ module "acm_api_mbg_nasir" {
   validation_method      = local.validation_method
   wait_for_validation    = false
 }
+
+module "acm_antri_nasir" {
+  source = "git::https://github.com/nasir19noor/terraform.git//aws/modules/acm"
+
+  providers = {
+    aws = aws.sg
+  }
+
+  domain_name = local.domain_name_antri_nasir
+  subject_alternative_names = [
+    local.domain_name_antri_nasir
+  ]
+
+  create_route53_records = local.create_route53_records
+  validation_method      = local.validation_method
+  wait_for_validation    = false
+}

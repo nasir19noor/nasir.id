@@ -25,6 +25,7 @@ aws:
     domain_name_pulsara_nasir: "assets.pulsara.nasir.id"
     domain_name_shortener_nasir: "s.nasir.id"
     domain_name_api_mbg_nasir: "api.mbg.nasir.id"
+    domain_name_antri_nasir: "antri.nasir.id"
     create_route53_records: false
     validation_method: "DNS"
   cloudfront:
