@@ -19,10 +19,15 @@ from models import Player, Team
 
 logger = logging.getLogger(__name__)
 
+# Convention: a second-yellow dismissal is recorded as 1 yellow (the first
+# caution) + 1 red (the dismissal card itself) — matching how every other
+# second-yellow case in this dataset is represented (e.g. Hincapié, Quansah,
+# Almirón, Balogun). Not 2 yellows + 1 red — the second caution IS the red,
+# not an additional yellow tally.
 CARD_CORRECTIONS = [
     {
         "team": "ARG", "name": "Enzo Fernández",
-        "yellow_cards": 2, "red_cards": 1,
+        "yellow_cards": 1, "red_cards": 1,
         "reason": "Final (ESP 1-0 ARG): second-yellow dismissal. ESPN's roster "
                   "stats showed 0Y/1R — the match's keyEvents log (5 Yellow "
                   "Card entries) didn't reconcile with the summed per-player "
