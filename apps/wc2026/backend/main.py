@@ -28,6 +28,7 @@ from services.espn_fetcher import refresh_from_espn, ensure_structure
 from services.highlights import refresh_highlights
 from services.squads_loader import load_squads
 from services.stats_enricher import enrich_player_stats
+from services.manual_corrections import apply_card_corrections
 from services.api_football_enricher import enrich_from_api_football
 from services.auth import require_admin
 from services import analytics
@@ -221,8 +222,20 @@ def manual_load_squads(user: str = Depends(require_admin)):
 @app.post("/admin/enrich-stats")
 def manual_enrich_stats(user: str = Depends(require_admin)):
     """One-time: pull per-player assists, cards, shots and saves from ESPN match
-    summaries onto the Player rows. Safe to re-run (resets then re-sums)."""
+    summaries onto the Player rows. Safe to re-run (resets then re-sums).
+    NOTE: this resets cards from ESPN's raw data, so it will undo anything
+    applied by /admin/correct-cards — re-run that afterward if needed."""
     return enrich_player_stats()
+
+
+@app.post("/admin/correct-cards")
+def manual_correct_cards(user: str = Depends(require_admin)):
+    """Apply the small, hand-verified card corrections in
+    services/manual_corrections.py (confirmed gaps in ESPN's roster stats for
+    specific second-yellow dismissals). Idempotent — re-running is a no-op if
+    already applied. Re-run this after any /admin/enrich-stats call, since that
+    resets cards from ESPN's raw (uncorrected) data."""
+    return apply_card_corrections()
 
 
 @app.post("/admin/enrich-stats-af")
