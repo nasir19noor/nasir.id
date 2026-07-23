@@ -1,6 +1,6 @@
 """ORM models for the World Cup 2026 wall-chart."""
 from sqlalchemy import (
-    Column, Integer, String, Boolean, DateTime, ForeignKey, UniqueConstraint, Index, func,
+    Column, Integer, Float, String, Boolean, DateTime, ForeignKey, UniqueConstraint, Index, func,
 )
 from sqlalchemy.orm import relationship
 from database import Base
@@ -41,6 +41,22 @@ class Player(Base):
     shots           = Column(Integer, default=0)
     shots_on_target = Column(Integer, default=0)
     saves           = Column(Integer, default=0)
+    # Additional per-tournament totals enriched from API-Football (one-time,
+    # since the tournament is complete — not on the regular refresh cycle).
+    appearances       = Column(Integer, default=0)
+    minutes_played    = Column(Integer, default=0)
+    rating_sum        = Column(Float, default=0)     # sum of per-match ratings;
+    rating_apps       = Column(Integer, default=0)   # ÷ this = average rating
+    tackles           = Column(Integer, default=0)
+    interceptions     = Column(Integer, default=0)
+    duels_won         = Column(Integer, default=0)
+    duels_total       = Column(Integer, default=0)
+    dribbles_success  = Column(Integer, default=0)
+    dribbles_attempts = Column(Integer, default=0)
+    key_passes        = Column(Integer, default=0)
+    passes_total      = Column(Integer, default=0)
+    fouls_committed   = Column(Integer, default=0)
+    fouls_drawn       = Column(Integer, default=0)
 
     team = relationship("Team", back_populates="players")
 
@@ -58,6 +74,12 @@ class Fixture(Base):
     status          = Column(String, default="scheduled")  # scheduled | live | finished
     kickoff         = Column(DateTime(timezone=True))
     venue           = Column(String)
+    # API-Football one-time player-stats enrichment bookkeeping. The free tier
+    # is rate-limited (~100 req/day) so a single run may not cover all 104
+    # matches — af_fixture_id caches the resolved match (skip re-matching on
+    # the next run) and af_stats_done marks it as fully enriched (skip refetch).
+    af_fixture_id   = Column(Integer, index=True)
+    af_stats_done   = Column(Boolean, default=False)
     espn_event_id   = Column(String, index=True)
     updated_at      = Column(DateTime(timezone=True),
                              server_default=func.now(), onupdate=func.now())

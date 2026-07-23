@@ -42,11 +42,23 @@ export default async function StatisticsPage() {
                          rows={pl.leaderboards.most_intl_goals} metric={p => p.intl_goals} />
             <Leaderboard title="Youngest Players" emoji="🐣"
                          rows={pl.leaderboards.youngest} metric={p => `${p.age}y`} />
+            {/* Defensive/rating metrics need the optional API-Football backfill
+                (tackles, interceptions, duels, minutes, rating) — hidden until
+                that's run so the page doesn't show an all-zero leaderboard. */}
+            {pl.summary.af_enriched && (
+              <>
+                <Leaderboard title="Most Tackles" emoji="🛡️"
+                             rows={pl.leaderboards.most_tackles} metric={p => p.tackles} />
+                <Leaderboard title="Best Rated (min. 3 apps)" emoji="⭐"
+                             rows={pl.leaderboards.top_rating}
+                             metric={p => p.avg_rating?.toFixed(2) ?? '—'} />
+              </>
+            )}
           </div>
 
           <div>
             <h3 className="mb-2 font-bold">Every Player</h3>
-            <PlayerStatsTable players={pl.players} />
+            <PlayerStatsTable players={pl.players} enriched={pl.summary.af_enriched} />
           </div>
         </section>
       )}

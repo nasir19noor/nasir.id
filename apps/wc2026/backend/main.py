@@ -28,6 +28,7 @@ from services.espn_fetcher import refresh_from_espn, ensure_structure
 from services.highlights import refresh_highlights
 from services.squads_loader import load_squads
 from services.stats_enricher import enrich_player_stats
+from services.api_football_enricher import enrich_from_api_football
 from services.auth import require_admin
 from services import analytics
 
@@ -84,6 +85,31 @@ def run_migrations() -> None:
                 logger.info("Migration: adding players.%s", col)
                 with engine.begin() as c:
                     c.execute(text(f"ALTER TABLE players ADD COLUMN {col} INTEGER DEFAULT 0"))
+        # API-Football enrichment fields (rating_sum is the one float column).
+        for col in ("appearances", "minutes_played", "rating_apps", "tackles",
+                    "interceptions", "duels_won", "duels_total",
+                    "dribbles_success", "dribbles_attempts", "key_passes",
+                    "passes_total", "fouls_committed", "fouls_drawn"):
+            if col not in p_cols:
+                logger.info("Migration: adding players.%s", col)
+                with engine.begin() as c:
+                    c.execute(text(f"ALTER TABLE players ADD COLUMN {col} INTEGER DEFAULT 0"))
+        if "rating_sum" not in p_cols:
+            logger.info("Migration: adding players.rating_sum")
+            with engine.begin() as c:
+                c.execute(text("ALTER TABLE players ADD COLUMN rating_sum FLOAT DEFAULT 0"))
+
+    # fixtures gained API-Football enrichment bookkeeping columns.
+    if insp.has_table("fixtures"):
+        f_cols = {c["name"] for c in insp.get_columns("fixtures")}
+        if "af_fixture_id" not in f_cols:
+            logger.info("Migration: adding fixtures.af_fixture_id")
+            with engine.begin() as c:
+                c.execute(text("ALTER TABLE fixtures ADD COLUMN af_fixture_id INTEGER"))
+        if "af_stats_done" not in f_cols:
+            logger.info("Migration: adding fixtures.af_stats_done")
+            with engine.begin() as c:
+                c.execute(text("ALTER TABLE fixtures ADD COLUMN af_stats_done BOOLEAN DEFAULT FALSE"))
 
 
 @asynccontextmanager
@@ -197,6 +223,15 @@ def manual_enrich_stats(user: str = Depends(require_admin)):
     """One-time: pull per-player assists, cards, shots and saves from ESPN match
     summaries onto the Player rows. Safe to re-run (resets then re-sums)."""
     return enrich_player_stats()
+
+
+@app.post("/admin/enrich-stats-af")
+def manual_enrich_stats_af(max_requests: int = 90, user: str = Depends(require_admin)):
+    """One-time: pull per-player tackles, interceptions, duels, dribbles, passes,
+    fouls, minutes and rating from API-Football (free tier, ~100 req/day).
+    Resumable — re-run (e.g. the next day) to continue past the daily cap; already
+    -processed fixtures are skipped automatically. Requires API_FOOTBALL_KEY."""
+    return enrich_from_api_football(max_requests=max_requests)
 
 
 @app.get("/admin/analytics")

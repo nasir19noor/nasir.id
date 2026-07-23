@@ -50,6 +50,21 @@ def player_statistics(db: Session = Depends(get_db)):
             "shots": p.shots or 0,
             "shots_on_target": p.shots_on_target or 0,
             "saves": p.saves or 0,
+            # API-Football enrichment (0 until /admin/enrich-stats-af has run).
+            "appearances": p.appearances or 0,
+            "minutes_played": p.minutes_played or 0,
+            "avg_rating": (round(p.rating_sum / p.rating_apps, 2)
+                          if p.rating_apps else None),
+            "tackles": p.tackles or 0,
+            "interceptions": p.interceptions or 0,
+            "duels_won": p.duels_won or 0,
+            "duels_total": p.duels_total or 0,
+            "dribbles_success": p.dribbles_success or 0,
+            "dribbles_attempts": p.dribbles_attempts or 0,
+            "key_passes": p.key_passes or 0,
+            "passes_total": p.passes_total or 0,
+            "fouls_committed": p.fouls_committed or 0,
+            "fouls_drawn": p.fouls_drawn or 0,
             "is_captain": p.is_captain,
         }
 
@@ -69,6 +84,15 @@ def player_statistics(db: Session = Depends(get_db)):
         reverse=True,
     )[:10]
 
+    # API-Football enrichment is optional (needs API_FOOTBALL_KEY + an admin
+    # trigger) — af_enriched tells the frontend whether to render that section.
+    af_enriched = any((p.appearances or 0) > 0 for p in players)
+    # Ratings need a minimum sample so a single good cameo doesn't top the chart.
+    rated = sorted(
+        (p for p in players if p.rating_apps and p.appearances and p.appearances >= 3),
+        key=lambda p: (p.rating_sum / p.rating_apps), reverse=True,
+    )[:10]
+
     return {
         "summary": {
             "players": len(players),
@@ -79,6 +103,7 @@ def player_statistics(db: Session = Depends(get_db)):
             "red_cards": sum(p.red_cards or 0 for p in players),
             "avg_age": round(sum(ages) / len(ages), 1) if ages else 0,
             "positions": by_pos,
+            "af_enriched": af_enriched,
         },
         "leaderboards": {
             "top_scorers":     top("wc_goals"),
@@ -87,6 +112,8 @@ def player_statistics(db: Session = Depends(get_db)):
             "most_caps":       top("caps"),
             "most_intl_goals": top("intl_goals"),
             "youngest":        top("age", reverse=False, need="age"),
+            "most_tackles":    top("tackles"),
+            "top_rating":      [row(p) for p in rated],
         },
         # Full list for a searchable/sortable table on the frontend.
         "players": [row(p) for p in sorted(players, key=lambda p: (-(p.wc_goals or 0), p.name))],

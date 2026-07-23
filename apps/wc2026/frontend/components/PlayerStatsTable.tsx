@@ -5,9 +5,14 @@ import type { PlayerStat } from '@/lib/api'
 import TeamBadge from './TeamBadge'
 
 type SortKey = 'goals' | 'assists' | 'cards' | 'caps' | 'intl_goals' | 'age' | 'name'
+  | 'minutes_played' | 'avg_rating' | 'tackles'
 
-/** Searchable, sortable table of every player's tournament statistics. */
-export default function PlayerStatsTable({ players }: { players: PlayerStat[] }) {
+/** Searchable, sortable table of every player's tournament statistics.
+ * `enriched` reveals the Minutes/Rating/Tackles columns (only meaningful once
+ * the optional API-Football backfill has run — otherwise they're all zero). */
+export default function PlayerStatsTable({
+  players, enriched = false,
+}: { players: PlayerStat[]; enriched?: boolean }) {
   const [q, setQ] = useState('')
   const [sort, setSort] = useState<SortKey>('goals')
   const [dir, setDir] = useState<'asc' | 'desc'>('desc')
@@ -60,7 +65,14 @@ export default function PlayerStatsTable({ players }: { players: PlayerStat[] })
               <th onClick={() => toggle('intl_goals')} className="hidden cursor-pointer py-2 text-right lg:table-cell">Int'l G{arrow('intl_goals')}</th>
               <th onClick={() => toggle('goals')} className="cursor-pointer py-2 text-right">Goals{arrow('goals')}</th>
               <th onClick={() => toggle('assists')} className="cursor-pointer py-2 text-right">Ast{arrow('assists')}</th>
-              <th onClick={() => toggle('cards')} className="hidden cursor-pointer py-2 pr-3 text-right sm:table-cell">Cards{arrow('cards')}</th>
+              <th onClick={() => toggle('cards')} className="hidden cursor-pointer py-2 text-right sm:table-cell">Cards{arrow('cards')}</th>
+              {enriched && (
+                <>
+                  <th onClick={() => toggle('minutes_played')} className="hidden cursor-pointer py-2 text-right lg:table-cell">Mins{arrow('minutes_played')}</th>
+                  <th onClick={() => toggle('tackles')} className="hidden cursor-pointer py-2 text-right lg:table-cell">Tkl{arrow('tackles')}</th>
+                  <th onClick={() => toggle('avg_rating')} className="cursor-pointer py-2 pr-3 text-right">Rtg{arrow('avg_rating')}</th>
+                </>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -75,13 +87,20 @@ export default function PlayerStatsTable({ players }: { players: PlayerStat[] })
                 <td className="hidden py-2 text-right lg:table-cell">{p.intl_goals}</td>
                 <td className="py-2 text-right font-bold">{p.goals}</td>
                 <td className="py-2 text-right">{p.assists}</td>
-                <td className="hidden py-2 pr-3 text-right sm:table-cell">
+                <td className="hidden py-2 text-right sm:table-cell">
                   {p.yellow_cards}🟨{p.red_cards ? ` ${p.red_cards}🟥` : ''}
                 </td>
+                {enriched && (
+                  <>
+                    <td className="hidden py-2 text-right lg:table-cell">{p.minutes_played || '—'}</td>
+                    <td className="hidden py-2 text-right lg:table-cell">{p.tackles || '—'}</td>
+                    <td className="py-2 pr-3 text-right">{p.avg_rating?.toFixed(1) ?? '—'}</td>
+                  </>
+                )}
               </tr>
             ))}
             {rows.length === 0 && (
-              <tr><td colSpan={10} className="p-6 text-center text-black/50">
+              <tr><td colSpan={enriched ? 13 : 10} className="p-6 text-center text-black/50">
                 No players match “{q}”.
               </td></tr>
             )}

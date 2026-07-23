@@ -209,6 +209,13 @@ export type PlayerStat = {
   goals: number
   assists: number; yellow_cards: number; red_cards: number; cards: number
   shots: number; shots_on_target: number; saves: number
+  // API-Football enrichment — 0/null until /admin/enrich-stats-af has run.
+  appearances: number; minutes_played: number; avg_rating: number | null
+  tackles: number; interceptions: number
+  duels_won: number; duels_total: number
+  dribbles_success: number; dribbles_attempts: number
+  key_passes: number; passes_total: number
+  fouls_committed: number; fouls_drawn: number
   is_captain: boolean
 }
 
@@ -217,10 +224,12 @@ export type PlayerStats = {
     players: number; goals: number; assists: number; scorers: number
     yellow_cards: number; red_cards: number
     avg_age: number; positions: Record<string, number>
+    af_enriched: boolean
   }
   leaderboards: {
     top_scorers: PlayerStat[]; top_assists: PlayerStat[]; most_cards: PlayerStat[]
     most_caps: PlayerStat[]; most_intl_goals: PlayerStat[]; youngest: PlayerStat[]
+    most_tackles: PlayerStat[]; top_rating: PlayerStat[]
   }
   players: PlayerStat[]
 }
