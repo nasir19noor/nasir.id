@@ -1,4 +1,4 @@
-import { api, type PlayerStats, type MatchStats, type PlayerStat } from '@/lib/api'
+import { api, type PlayerStats, type MatchStats, type PlayerStat, type Streak, type AttendanceRow } from '@/lib/api'
 import TeamBadge from '@/components/TeamBadge'
 import PlayerStatsTable from '@/components/PlayerStatsTable'
 
@@ -121,6 +121,64 @@ export default async function StatisticsPage() {
               </div>
             </div>
           )}
+
+          {/* Team Discipline */}
+          {mt.team_discipline.length > 0 && (
+            <div>
+              <h3 className="mb-2 font-bold">Team Discipline <span className="text-accent">🟨</span></h3>
+              <div className="card overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-pitch/5 text-xs uppercase tracking-wide text-pitch">
+                    <tr>
+                      <th className="py-2 pl-3 text-left">#</th>
+                      <th className="py-2 text-left">Team</th>
+                      <th className="py-2 text-right">Played</th>
+                      <th className="py-2 text-right">🟨</th>
+                      <th className="py-2 text-right">🟥</th>
+                      <th className="py-2 pr-3 text-right">Points</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {mt.team_discipline.map((d, i) => (
+                      <tr key={d.team.code} className="border-t border-black/5">
+                        <td className="py-2 pl-3 font-mono text-black/40">{i + 1}</td>
+                        <td className="py-2"><TeamBadge team={d.team} size="sm" /></td>
+                        <td className="py-2 text-right text-black/60">{d.played}</td>
+                        <td className="py-2 text-right">{d.yellow_cards}</td>
+                        <td className="py-2 text-right">{d.red_cards}</td>
+                        <td className="py-2 pr-3 text-right font-bold">{d.points}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="mt-1 text-xs text-black/50">Points = 1 per yellow card, 3 per red card.</p>
+            </div>
+          )}
+
+          {/* Streaks */}
+          {(mt.streaks.winning.length > 0 || mt.streaks.unbeaten.length > 0) && (
+            <div className="grid gap-4 lg:grid-cols-2">
+              <StreakList title="Longest Winning Streaks" emoji="🔥" rows={mt.streaks.winning} />
+              <StreakList title="Longest Unbeaten Streaks" emoji="🛡️" rows={mt.streaks.unbeaten} />
+            </div>
+          )}
+
+          {/* Attendance — only once /admin/enrich-attendance has run */}
+          {mt.attendance && (
+            <div>
+              <h3 className="mb-2 font-bold">Attendance <span className="text-accent">🏟️</span></h3>
+              <div className="mb-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <Stat label="Total attendance" value={mt.attendance.total.toLocaleString()} />
+                <Stat label="Average / match" value={mt.attendance.average.toLocaleString()} />
+                <Stat label="Matches recorded" value={mt.attendance.matches_recorded} />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <AttendanceCard label="Largest crowd" row={mt.attendance.highest} />
+                <AttendanceCard label="Smallest crowd" row={mt.attendance.lowest} />
+              </div>
+            </div>
+          )}
         </section>
       )}
 
@@ -194,6 +252,42 @@ function MatchList({
           </li>
         ))}
       </ul>
+    </div>
+  )
+}
+
+function StreakList({ title, emoji, rows }: { title: string; emoji: string; rows: Streak[] }) {
+  return (
+    <div className="card p-4">
+      <h3 className="mb-2 font-bold">{title} <span className="text-accent">{emoji}</span></h3>
+      <ol className="space-y-1.5">
+        {rows.map((s, i) => (
+          <li key={s.team.code} className="flex items-center justify-between gap-2 text-sm">
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="w-4 text-xs text-black/40">{i + 1}.</span>
+              <TeamBadge team={s.team} size="sm" />
+            </span>
+            <span className="shrink-0 font-mono font-bold">{s.games} games</span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  )
+}
+
+function AttendanceCard({ label, row }: { label: string; row: AttendanceRow }) {
+  return (
+    <div className="card p-4">
+      <p className="mb-2 text-xs uppercase tracking-wide text-black/50">{label}</p>
+      <p className="mb-2 text-2xl font-extrabold text-pitch">{row.attendance.toLocaleString()}</p>
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <TeamBadge team={row.home} size="sm" showName={false} />
+        <span className="font-semibold">{row.home.code}</span>
+        <span className="text-black/40">vs</span>
+        <span className="font-semibold">{row.away.code}</span>
+        <TeamBadge team={row.away} size="sm" showName={false} />
+      </div>
+      <p className="mt-1 text-xs text-black/50">{row.venue ?? 'Venue unknown'} · {row.stage}</p>
     </div>
   )
 }

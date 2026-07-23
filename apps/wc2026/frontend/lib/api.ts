@@ -244,6 +244,23 @@ export type ShootoutRow = {
   winner: Team; stage: string
 }
 
+export type TeamDiscipline = {
+  team: Team; played: number
+  yellow_cards: number; red_cards: number; points: number
+}
+
+export type AttendanceRow = {
+  home: Team; away: Team; attendance: number
+  venue?: string | null; stage: string
+}
+
+export type AttendanceStats = {
+  matches_recorded: number; total: number; average: number
+  highest: AttendanceRow; lowest: AttendanceRow
+}
+
+export type Streak = { team: Team; games: number }
+
 export type MatchStats = {
   summary: {
     matches: number; goals: number; goals_per_match: number
@@ -253,6 +270,9 @@ export type MatchStats = {
   highest_scoring: MatchRow[]
   biggest_wins: MatchRow[]
   shootout_matches: ShootoutRow[]
+  team_discipline: TeamDiscipline[]
+  attendance: AttendanceStats | null
+  streaks: { winning: Streak[]; unbeaten: Streak[] }
 }
 
 // ─── AI predictions ─────────────────────────────────────────────

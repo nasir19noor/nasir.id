@@ -74,6 +74,7 @@ class Fixture(Base):
     status          = Column(String, default="scheduled")  # scheduled | live | finished
     kickoff         = Column(DateTime(timezone=True))
     venue           = Column(String)
+    attendance      = Column(Integer)  # backfilled once via /admin/enrich-attendance
     # API-Football one-time player-stats enrichment bookkeeping. The free tier
     # is rate-limited (~100 req/day) so a single run may not cover all 104
     # matches — af_fixture_id caches the resolved match (skip re-matching on

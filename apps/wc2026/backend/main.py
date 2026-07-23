@@ -30,6 +30,7 @@ from services.squads_loader import load_squads
 from services.stats_enricher import enrich_player_stats
 from services.manual_corrections import apply_card_corrections
 from services.api_football_enricher import enrich_from_api_football
+from services.attendance_enricher import enrich_attendance
 from services.auth import require_admin
 from services import analytics
 
@@ -111,6 +112,10 @@ def run_migrations() -> None:
             logger.info("Migration: adding fixtures.af_stats_done")
             with engine.begin() as c:
                 c.execute(text("ALTER TABLE fixtures ADD COLUMN af_stats_done BOOLEAN DEFAULT FALSE"))
+        if "attendance" not in f_cols:
+            logger.info("Migration: adding fixtures.attendance")
+            with engine.begin() as c:
+                c.execute(text("ALTER TABLE fixtures ADD COLUMN attendance INTEGER"))
 
 
 @asynccontextmanager
@@ -236,6 +241,13 @@ def manual_correct_cards(user: str = Depends(require_admin)):
     already applied. Re-run this after any /admin/enrich-stats call, since that
     resets cards from ESPN's raw (uncorrected) data."""
     return apply_card_corrections()
+
+
+@app.post("/admin/enrich-attendance")
+def manual_enrich_attendance(user: str = Depends(require_admin)):
+    """One-time: pull match attendance (and backfill venue) from ESPN summaries
+    onto the Fixture rows, powering the Statistics page's attendance records."""
+    return enrich_attendance()
 
 
 @app.post("/admin/enrich-stats-af")

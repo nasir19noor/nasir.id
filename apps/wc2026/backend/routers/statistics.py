@@ -179,6 +179,102 @@ def match_statistics(db: Session = Depends(get_db)):
             "stage": label,
         })
 
+    # ── Team discipline (aggregated from existing per-player card data) ──
+    players_all = db.query(Player).all()
+    team_cards: dict[int, dict] = {}
+    for p in players_all:
+        if p.team_id is None:
+            continue
+        tc = team_cards.setdefault(p.team_id, {"yellow": 0, "red": 0})
+        tc["yellow"] += p.yellow_cards or 0
+        tc["red"] += p.red_cards or 0
+
+    team_played: dict[int, int] = {}
+    for f in finished:
+        for tid in (f.home_team_id, f.away_team_id):
+            if tid:
+                team_played[tid] = team_played.get(tid, 0) + 1
+
+    discipline = [
+        {
+            "team": _team(teams_by_id.get(tid)),
+            "played": team_played.get(tid, 0),
+            "yellow_cards": c["yellow"],
+            "red_cards": c["red"],
+            # FIFA's standard fair-play points: 1 per yellow, 3 per red.
+            "points": c["yellow"] + c["red"] * 3,
+        }
+        for tid, c in team_cards.items() if c["yellow"] or c["red"]
+    ]
+    discipline.sort(key=lambda d: (-d["points"], -d["red_cards"], -d["yellow_cards"]))
+
+    # ── Attendance (only meaningful once /admin/enrich-attendance has run) ──
+    attended = [f for f in finished if f.attendance]
+    attendance_stats = None
+    if attended:
+        def att_row(f: Fixture) -> dict:
+            return {
+                "home": _team(teams_by_id.get(f.home_team_id)),
+                "away": _team(teams_by_id.get(f.away_team_id)),
+                "attendance": f.attendance,
+                "venue": f.venue,
+                "stage": f"Group {f.group_letter}" if f.group_letter else "Knockout",
+            }
+        by_att = sorted(attended, key=lambda f: -(f.attendance or 0))
+        attendance_stats = {
+            "matches_recorded": len(attended),
+            "total": sum(f.attendance for f in attended),
+            "average": round(sum(f.attendance for f in attended) / len(attended)),
+            "highest": att_row(by_att[0]),
+            "lowest": att_row(by_att[-1]),
+        }
+
+    # ── Streaks: longest winning / unbeaten run per team, chronologically ──
+    # A penalty-shootout result is a win/loss for streak purposes, not a draw —
+    # override the tied regulation score using KnockoutMatch's winner_team_id
+    # (matched by the shared espn_event_id).
+    ko_winner_by_event = {
+        km.espn_event_id: km.winner_team_id
+        for km in db.query(KnockoutMatch)
+                    .filter(KnockoutMatch.winner_team_id.isnot(None),
+                            KnockoutMatch.espn_event_id.isnot(None))
+                    .all()
+    }
+    team_results: dict[int, list[str]] = {}
+    for f in sorted(finished, key=lambda f: f.kickoff or f.id):
+        if f.home_score is None or f.away_score is None:
+            continue
+        shootout_winner = ko_winner_by_event.get(f.espn_event_id)
+        for tid, opp_score, own_score in (
+            (f.home_team_id, f.away_score, f.home_score),
+            (f.away_team_id, f.home_score, f.away_score),
+        ):
+            if tid is None:
+                continue
+            if shootout_winner:
+                result = "W" if tid == shootout_winner else "L"
+            else:
+                result = "W" if own_score > opp_score else ("D" if own_score == opp_score else "L")
+            team_results.setdefault(tid, []).append(result)
+
+    def longest_run(results: list[str], allowed: set[str]) -> int:
+        best = cur = 0
+        for r in results:
+            cur = cur + 1 if r in allowed else 0
+            best = max(best, cur)
+        return best
+
+    win_streaks = sorted(
+        ({"team": _team(teams_by_id.get(tid)), "games": longest_run(res, {"W"})}
+         for tid, res in team_results.items()),
+        key=lambda s: -s["games"],
+    )
+    unbeaten_streaks = sorted(
+        ({"team": _team(teams_by_id.get(tid)), "games": longest_run(res, {"W", "D"})}
+         for tid, res in team_results.items()),
+        key=lambda s: -s["games"],
+    )
+
     return {
         "summary": {
             "matches": len(rows),
@@ -193,4 +289,10 @@ def match_statistics(db: Session = Depends(get_db)):
         "highest_scoring": sorted(rows, key=lambda r: -r["total"])[:6],
         "biggest_wins": sorted(rows, key=lambda r: -r["margin"])[:6],
         "shootout_matches": shootouts,
+        "team_discipline": discipline,
+        "attendance": attendance_stats,
+        "streaks": {
+            "winning": [s for s in win_streaks if s["games"] > 0][:5],
+            "unbeaten": [s for s in unbeaten_streaks if s["games"] > 0][:5],
+        },
     }
