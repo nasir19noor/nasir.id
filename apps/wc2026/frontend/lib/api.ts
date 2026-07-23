@@ -205,7 +205,7 @@ export type AwardsData = {
 export type PlayerStat = {
   id: number; name: string; team: Team
   position?: string | null; age?: number | null
-  caps: number; intl_goals: number; club?: string | null
+  club?: string | null
   goals: number
   assists: number; yellow_cards: number; red_cards: number; cards: number
   shots: number; shots_on_target: number; saves: number
@@ -228,7 +228,7 @@ export type PlayerStats = {
   }
   leaderboards: {
     top_scorers: PlayerStat[]; top_assists: PlayerStat[]; most_cards: PlayerStat[]
-    most_caps: PlayerStat[]; most_intl_goals: PlayerStat[]; youngest: PlayerStat[]
+    youngest: PlayerStat[]
     most_tackles: PlayerStat[]; top_rating: PlayerStat[]
   }
   players: PlayerStat[]

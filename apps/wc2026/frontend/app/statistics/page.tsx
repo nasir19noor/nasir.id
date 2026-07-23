@@ -36,10 +36,6 @@ export default async function StatisticsPage() {
             <Leaderboard title="Most Booked (cards)" emoji="🟨"
                          rows={pl.leaderboards.most_cards}
                          metric={p => `${p.yellow_cards}🟨${p.red_cards ? ` ${p.red_cards}🟥` : ''}`} />
-            <Leaderboard title="Most Experienced (caps)" emoji="🎖️"
-                         rows={pl.leaderboards.most_caps} metric={p => p.caps} />
-            <Leaderboard title="Most International Goals" emoji="🎯"
-                         rows={pl.leaderboards.most_intl_goals} metric={p => p.intl_goals} />
             <Leaderboard title="Youngest Players" emoji="🐣"
                          rows={pl.leaderboards.youngest} metric={p => `${p.age}y`} />
             {/* Defensive/rating metrics need the optional API-Football backfill

@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react'
 import type { PlayerStat } from '@/lib/api'
 import TeamBadge from './TeamBadge'
 
-type SortKey = 'goals' | 'assists' | 'cards' | 'caps' | 'intl_goals' | 'age' | 'name'
+type SortKey = 'goals' | 'assists' | 'cards' | 'age' | 'name'
   | 'minutes_played' | 'avg_rating' | 'tackles'
 
 /** Searchable, sortable table of every player's tournament statistics.
@@ -61,8 +61,6 @@ export default function PlayerStatsTable({
               <th className="hidden py-2 text-left sm:table-cell">Pos</th>
               <th className="hidden py-2 text-left md:table-cell">Club</th>
               <th onClick={() => toggle('age')} className="cursor-pointer py-2 text-right">Age{arrow('age')}</th>
-              <th onClick={() => toggle('caps')} className="hidden cursor-pointer py-2 text-right sm:table-cell">Caps{arrow('caps')}</th>
-              <th onClick={() => toggle('intl_goals')} className="hidden cursor-pointer py-2 text-right lg:table-cell">Int'l G{arrow('intl_goals')}</th>
               <th onClick={() => toggle('goals')} className="cursor-pointer py-2 text-right">Goals{arrow('goals')}</th>
               <th onClick={() => toggle('assists')} className="cursor-pointer py-2 text-right">Ast{arrow('assists')}</th>
               <th onClick={() => toggle('cards')} className="hidden cursor-pointer py-2 text-right sm:table-cell">Cards{arrow('cards')}</th>
@@ -83,8 +81,6 @@ export default function PlayerStatsTable({
                 <td className="hidden py-2 text-black/60 sm:table-cell">{p.position ?? '—'}</td>
                 <td className="hidden py-2 text-black/60 md:table-cell">{p.club ?? '—'}</td>
                 <td className="py-2 text-right">{p.age ?? '—'}</td>
-                <td className="hidden py-2 text-right sm:table-cell">{p.caps}</td>
-                <td className="hidden py-2 text-right lg:table-cell">{p.intl_goals}</td>
                 <td className="py-2 text-right font-bold">{p.goals}</td>
                 <td className="py-2 text-right">{p.assists}</td>
                 <td className="hidden py-2 text-right sm:table-cell">
@@ -100,7 +96,7 @@ export default function PlayerStatsTable({
               </tr>
             ))}
             {rows.length === 0 && (
-              <tr><td colSpan={enriched ? 13 : 10} className="p-6 text-center text-black/50">
+              <tr><td colSpan={enriched ? 11 : 8} className="p-6 text-center text-black/50">
                 No players match “{q}”.
               </td></tr>
             )}

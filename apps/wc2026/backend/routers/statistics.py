@@ -1,9 +1,9 @@
 """Tournament statistics — per-player and per-match breakdowns.
 
 Everything is aggregated from the database (final tournament data), so the
-numbers stay consistent with the rest of the app. The tracked per-player metric
-is World Cup goals (wc_goals); bio fields (age, caps, international goals, club)
-come from the squad data.
+numbers stay consistent with the rest of the app. Scoped to this World Cup only
+— career totals (caps, international goals) live on the Squads page instead,
+not here.
 """
 from fastapi import APIRouter, Depends
 from sqlalchemy import func
@@ -39,8 +39,6 @@ def player_statistics(db: Session = Depends(get_db)):
             "team": _team(teams_by_id.get(p.team_id)),
             "position": p.position,
             "age": p.age,
-            "caps": p.caps or 0,
-            "intl_goals": p.intl_goals or 0,
             "club": p.club,
             "goals": p.wc_goals or 0,
             "assists": p.assists or 0,
@@ -109,8 +107,6 @@ def player_statistics(db: Session = Depends(get_db)):
             "top_scorers":     top("wc_goals"),
             "top_assists":     top("assists"),
             "most_cards":      [row(p) for p in most_cards],
-            "most_caps":       top("caps"),
-            "most_intl_goals": top("intl_goals"),
             "youngest":        top("age", reverse=False, need="age"),
             "most_tackles":    top("tackles"),
             "top_rating":      [row(p) for p in rated],
