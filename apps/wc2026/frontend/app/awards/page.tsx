@@ -12,7 +12,7 @@ export default async function AwardsPage() {
   if (!data) {
     return <p className="text-black/60">Awards are not available right now.</p>
   }
-  const { standings, awards, stats, top_scorers, top_scoring_teams } = data
+  const { standings, awards, team_awards, stats, top_scorers, top_scoring_teams } = data
   const podium = [standings.champion, standings.runner_up, standings.third, standings.fourth]
 
   return (
@@ -62,6 +62,28 @@ export default async function AwardsPage() {
           ))}
         </div>
       </section>
+
+      {/* Team awards */}
+      {team_awards.length > 0 && (
+        <section>
+          <h2 className="mb-3 text-xl font-extrabold">Team Awards</h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {team_awards.map(a => (
+              <div key={a.award} className="card p-5">
+                <div className="flex items-start gap-4">
+                  <div className="text-4xl leading-none">{a.emoji ?? '🏅'}</div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-extrabold text-pitch">{a.award}</h3>
+                    <p className="text-xs uppercase tracking-wide text-black/50">{a.subtitle}</p>
+                    <div className="mt-2"><TeamBadge team={a.team} size="md" /></div>
+                    {a.detail && <p className="mt-2 text-sm text-black/70">{a.detail}</p>}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Final standings */}
       <section>

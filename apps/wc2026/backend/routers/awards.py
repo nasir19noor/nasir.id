@@ -23,14 +23,20 @@ AWARDS = [
      "player": "Kylian Mbappé", "team": "FRA",
      "detail": "The tournament's leading scorer with 10 goals."},
     {"award": "Golden Ball", "subtitle": "Best player", "emoji": "⚽",
-     "player": "Lionel Messi", "team": "ARG",
-     "detail": "Drove Argentina to the final, scoring 8 goals along the way."},
+     "player": "Rodri", "team": "ESP",
+     "detail": "The anchor of Spain's midfield throughout their title-winning run."},
     {"award": "Golden Glove", "subtitle": "Best goalkeeper", "emoji": "🧤",
      "player": "Unai Simón", "team": "ESP",
      "detail": "The champions' goalkeeper, anchoring Spain's run to the title."},
     {"award": "Best Young Player", "subtitle": "Best player aged 21 or under",
-     "emoji": "🌟", "player": "Lamine Yamal", "team": "ESP",
-     "detail": "Just 18 years old and pivotal to Spain's triumph."},
+     "emoji": "🌟", "player": "Pau Cubarsí", "team": "ESP",
+     "detail": "Just 19 years old and a rock at the heart of Spain's defence."},
+]
+
+# Team honours (no individual player attached).
+TEAM_AWARDS = [
+    {"award": "Fair Play Award", "subtitle": "Best disciplinary record", "emoji": "🤝",
+     "team": "NED"},
 ]
 
 
@@ -56,6 +62,25 @@ def get_awards(db: Session = Depends(get_db)):
             info.update(club=p.club, position=p.position, age=p.age,
                         goals=p.wc_goals, is_captain=p.is_captain)
         enriched_awards.append(info)
+
+    # ── Team awards, enriched with the team's actual discipline record ──
+    enriched_team_awards = []
+    for a in TEAM_AWARDS:
+        info = dict(a)
+        team = teams_by_code.get(a["team"])
+        info["team"] = _team_dict(team, a["team"])
+        if team is not None:
+            yellow = sum(p.yellow_cards or 0 for p in team.players)
+            red = sum(p.red_cards or 0 for p in team.players)
+            played = (db.query(Fixture)
+                        .filter(Fixture.status == "finished",
+                               (Fixture.home_team_id == team.id) |
+                               (Fixture.away_team_id == team.id))
+                        .count())
+            info["detail"] = (f"{team.name} picked up just {yellow} yellow card"
+                              f"{'s' if yellow != 1 else ''} and {red} red card"
+                              f"{'s' if red != 1 else ''} in {played} matches.")
+        enriched_team_awards.append(info)
 
     # ── Final standings ──
     standings = {k: _team_dict(teams_by_code.get(code), code)
@@ -100,6 +125,7 @@ def get_awards(db: Session = Depends(get_db)):
 
     return {
         "champion": standings["champion"],
+        "team_awards": enriched_team_awards,
         "standings": standings,
         "awards": enriched_awards,
         "stats": {

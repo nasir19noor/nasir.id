@@ -7,25 +7,52 @@ import TeamBadge from './TeamBadge'
 type SortKey = 'goals' | 'assists' | 'cards' | 'age' | 'name'
   | 'minutes_played' | 'avg_rating' | 'tackles'
 
-/** Searchable, sortable table of every player's tournament statistics.
- * `enriched` reveals the Minutes/Rating/Tackles columns (only meaningful once
- * the optional API-Football backfill has run — otherwise they're all zero). */
+const POSITION_ORDER: Record<string, number> = { GK: 1, DF: 2, MF: 3, FW: 4 }
+const ALL = 'all'
+
+/** Searchable, sortable, filterable table of every player's tournament
+ * statistics. `enriched` reveals the Minutes/Rating/Tackles columns (only
+ * meaningful once the optional API-Football backfill has run). */
 export default function PlayerStatsTable({
   players, enriched = false,
 }: { players: PlayerStat[]; enriched?: boolean }) {
   const [q, setQ] = useState('')
+  const [country, setCountry] = useState(ALL)
+  const [position, setPosition] = useState(ALL)
+  const [club, setClub] = useState(ALL)
   const [sort, setSort] = useState<SortKey>('goals')
   const [dir, setDir] = useState<'asc' | 'desc'>('desc')
 
+  const countries = useMemo(() => {
+    const seen = new Map<string, string>()
+    for (const p of players) seen.set(p.team.code, p.team.name)
+    return [...seen.entries()].sort((a, b) => a[1].localeCompare(b[1]))
+  }, [players])
+
+  const positions = useMemo(() => {
+    const seen = new Set(players.map(p => p.position).filter((x): x is string => !!x))
+    return [...seen].sort((a, b) => (POSITION_ORDER[a] ?? 9) - (POSITION_ORDER[b] ?? 9))
+  }, [players])
+
+  const clubs = useMemo(() => {
+    const seen = new Set(players.map(p => p.club).filter((x): x is string => !!x))
+    return [...seen].sort((a, b) => a.localeCompare(b))
+  }, [players])
+
   const rows = useMemo(() => {
     const needle = q.trim().toLowerCase()
-    const list = needle
-      ? players.filter(p =>
-          p.name.toLowerCase().includes(needle) ||
-          p.team.name.toLowerCase().includes(needle) ||
-          p.team.code.toLowerCase().includes(needle) ||
-          (p.club ?? '').toLowerCase().includes(needle))
-      : players
+    const list = players.filter(p => {
+      if (country !== ALL && p.team.code !== country) return false
+      if (position !== ALL && p.position !== position) return false
+      if (club !== ALL && p.club !== club) return false
+      if (!needle) return true
+      return (
+        p.name.toLowerCase().includes(needle) ||
+        p.team.name.toLowerCase().includes(needle) ||
+        p.team.code.toLowerCase().includes(needle) ||
+        (p.club ?? '').toLowerCase().includes(needle)
+      )
+    })
     return [...list].sort((a, b) => {
       if (sort === 'name') {
         return dir === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)
@@ -34,7 +61,7 @@ export default function PlayerStatsTable({
       const bv = (b[sort] as number) ?? 0
       return dir === 'asc' ? av - bv : bv - av
     })
-  }, [players, q, sort, dir])
+  }, [players, q, country, position, club, sort, dir])
 
   function toggle(key: SortKey) {
     if (sort === key) setDir(d => (d === 'asc' ? 'desc' : 'asc'))
@@ -42,16 +69,36 @@ export default function PlayerStatsTable({
   }
 
   const arrow = (key: SortKey) => (sort === key ? (dir === 'asc' ? ' ▲' : ' ▼') : '')
+  const filtered = q.trim() !== '' || country !== ALL || position !== ALL || club !== ALL
+
+  const selectClass = 'rounded-lg border border-black/15 bg-white px-3 py-2 text-sm ' +
+    'focus:border-pitch focus:outline-none'
 
   return (
     <div>
-      <input
-        value={q}
-        onChange={e => setQ(e.target.value)}
-        placeholder="Search player, country, or club…"
-        className="mb-3 w-full rounded-lg border border-black/15 px-3 py-2 text-sm
-                   focus:border-pitch focus:outline-none"
-      />
+      <div className="mb-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <input
+          value={q}
+          onChange={e => setQ(e.target.value)}
+          placeholder="Search player, country, or club…"
+          className={`sm:col-span-2 lg:col-span-1 ${selectClass}`}
+        />
+        <select value={country} onChange={e => setCountry(e.target.value)} className={selectClass}>
+          <option value={ALL}>All Countries</option>
+          {countries.map(([code, name]) => (
+            <option key={code} value={code}>{name}</option>
+          ))}
+        </select>
+        <select value={position} onChange={e => setPosition(e.target.value)} className={selectClass}>
+          <option value={ALL}>All Positions</option>
+          {positions.map(pos => <option key={pos} value={pos}>{pos}</option>)}
+        </select>
+        <select value={club} onChange={e => setClub(e.target.value)} className={selectClass}>
+          <option value={ALL}>All Clubs</option>
+          {clubs.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+      </div>
+
       <div className="card max-h-[34rem] overflow-auto">
         <table className="w-full text-sm">
           <thead className="sticky top-0 z-10 bg-pitch text-xs uppercase tracking-wide text-chalk">
@@ -97,7 +144,7 @@ export default function PlayerStatsTable({
             ))}
             {rows.length === 0 && (
               <tr><td colSpan={enriched ? 11 : 8} className="p-6 text-center text-black/50">
-                No players match “{q}”.
+                {filtered ? 'No players match these filters.' : 'No players found.'}
               </td></tr>
             )}
           </tbody>

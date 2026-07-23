@@ -187,10 +187,16 @@ export type Award = {
   age?: number | null; goals?: number | null; is_captain?: boolean
 }
 
+export type TeamAward = {
+  award: string; subtitle: string; emoji?: string
+  team: Team; detail?: string
+}
+
 export type AwardsData = {
   champion: Team
   standings: { champion: Team; runner_up: Team; third: Team; fourth: Team }
   awards: Award[]
+  team_awards: TeamAward[]
   stats: {
     matches: number; goals: number; goals_per_match: number
     teams: number; players: number; scorers: number
