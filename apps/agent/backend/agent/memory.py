@@ -1,6 +1,5 @@
-"""PostgreSQL-backed memory. Each message (including tool calls and results) is
-stored as a JSONB block list, exactly in the shape Bedrock expects, so a
-conversation can be reloaded and continued."""
+"""PostgreSQL memory. Messages are stored as JSONB in exactly the shape Bedrock
+expects, so a conversation can be reloaded and continued verbatim."""
 import json
 import psycopg2
 from config import DATABASE_URL
@@ -12,6 +11,14 @@ class Memory:
 
     def _conn(self):
         return psycopg2.connect(self.db_url)
+
+    def healthy(self) -> bool:
+        try:
+            with self._conn() as conn, conn.cursor() as cur:
+                cur.execute("SELECT 1")
+            return True
+        except Exception:
+            return False
 
     def create_conversation(self, title: str = "session") -> int:
         with self._conn() as conn, conn.cursor() as cur:
@@ -35,7 +42,4 @@ class Memory:
                 "WHERE conversation_id = %s ORDER BY id",
                 (conversation_id,),
             )
-            return [
-                {"role": role, "content": content}  # content already parsed from JSONB
-                for role, content in cur.fetchall()
-            ]
+            return [{"role": r, "content": c} for r, c in cur.fetchall()]

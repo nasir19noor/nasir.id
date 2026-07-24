@@ -1,0 +1,568 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const seeds = [
+  'How much disk is free on the VPS?',
+  'Which containers are running right now?',
+  'List my S3 buckets and EC2 instances',
+  'How many conversations are stored in Postgres?',
+];
+---
+
+<Layout title="agent.nasir.id — infrastructure copilot">
+  <header class="rig">
+    <div class="rig__inner">
+      <h1 class="wordmark">
+        agent<span class="wordmark__dim">.nasir.id</span>
+      </h1>
+      <div class="rig__status">
+        <span class="lamp" id="lamp" data-state="wait" aria-hidden="true"></span>
+        <span class="rig__label" id="status">checking backend</span>
+        <span class="rig__conv" id="conv"></span>
+      </div>
+    </div>
+  </header>
+
+  <main class="log" id="log">
+    <section class="intro" id="intro">
+      <p class="eyebrow">read-only · bedrock · claude</p>
+      <h2 class="intro__head">Ask about your infrastructure.</h2>
+      <p class="intro__body">
+        The agent reads your Contabo VPS, AWS account, and PostgreSQL. It decides
+        which tools to call, and every call is shown here as it happens.
+      </p>
+      <ul class="seeds">
+        {seeds.map((s) => (
+          <li><button class="seed" type="button" data-seed={s}>{s}</button></li>
+        ))}
+      </ul>
+    </section>
+  </main>
+
+  <form class="composer" id="composer">
+    <div class="composer__inner">
+      <textarea
+        id="input"
+        class="composer__input"
+        rows="1"
+        placeholder="Ask about disk, containers, logs, buckets…"
+        autocomplete="off"
+      ></textarea>
+      <button class="composer__send" id="send" type="submit">Ask</button>
+    </div>
+  </form>
+</Layout>
+
+<style>
+  /* ---------- shell ---------- */
+  .rig {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: color-mix(in srgb, var(--paper) 88%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--rule);
+  }
+  .rig__inner {
+    max-width: var(--col);
+    margin: 0 auto;
+    padding: 0.85rem 1.25rem;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .wordmark {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 0.95rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+  .wordmark__dim { color: var(--dim); }
+
+  .rig__status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--cond);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--dim);
+  }
+  .lamp {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--dim);
+    flex: none;
+  }
+  .lamp[data-state='ok'] { background: var(--ok); }
+  .lamp[data-state='down'] { background: var(--alert); }
+  .lamp[data-state='busy'] {
+    background: var(--signal);
+    animation: pulse 1.1s ease-in-out infinite;
+  }
+  .rig__conv { font-variant-numeric: tabular-nums; }
+
+  /* ---------- log ---------- */
+  .log {
+    max-width: var(--col);
+    margin: 0 auto;
+    padding: 2.5rem 1.25rem 9rem;
+  }
+
+  .intro { max-width: 38rem; }
+  .eyebrow {
+    font-family: var(--cond);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 0.75rem;
+    color: var(--signal);
+    margin: 0 0 0.75rem;
+  }
+  .intro__head {
+    font-family: var(--cond);
+    font-weight: 600;
+    font-size: clamp(1.9rem, 5vw, 2.7rem);
+    line-height: 1.08;
+    letter-spacing: -0.015em;
+    margin: 0 0 0.6rem;
+  }
+  .intro__body { color: var(--dim); margin: 0 0 1.6rem; }
+
+  .seeds {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .seed {
+    font: inherit;
+    font-size: 0.86rem;
+    color: var(--ink);
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: var(--r);
+    padding: 0.4rem 0.7rem;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .seed:hover { border-color: var(--signal); color: var(--signal); }
+
+  /* ---------- turns ---------- */
+  .turn { margin-block: 2.25rem; }
+
+  .turn--you {
+    display: flex;
+    gap: 0.9rem;
+    align-items: baseline;
+  }
+  .turn--you .tag {
+    font-family: var(--cond);
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    color: var(--dim);
+    flex: none;
+    padding-top: 0.15rem;
+  }
+  .turn--you .said {
+    margin: 0;
+    font-size: 1.02rem;
+    font-weight: 500;
+  }
+
+  /* The trace rail — the spine every step clamps onto. */
+  .turn--agent {
+    position: relative;
+    padding-left: 2.4rem;
+  }
+  .turn--agent::before {
+    content: '';
+    position: absolute;
+    left: 0.72rem;
+    top: 0.5rem;
+    bottom: 0.4rem;
+    width: 1px;
+    background: var(--rule);
+    transform-origin: top;
+    animation: draw 0.4s ease-out both;
+  }
+
+  .step {
+    position: relative;
+    margin-bottom: 0.9rem;
+    animation: rise 0.26s ease-out both;
+  }
+  .step__marker {
+    position: absolute;
+    left: -2.4rem;
+    top: 0.1rem;
+    width: 1.45rem;
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--dim);
+    background: var(--paper);
+    padding-block: 0.15rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .step__marker[data-live='1'] {
+    color: var(--signal);
+    animation: pulse 1.1s ease-in-out infinite;
+  }
+
+  /* tool instrument card */
+  .card {
+    border: 1px solid var(--rule);
+    border-radius: var(--r);
+    background: var(--panel);
+    overflow: hidden;
+  }
+  .card__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.45rem 0.7rem;
+    border-bottom: 1px solid var(--rule);
+  }
+  .card__tool {
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--signal);
+  }
+  .card__ms {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--dim);
+    font-variant-numeric: tabular-nums;
+  }
+  .card__args {
+    display: block;
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    padding: 0.5rem 0.7rem;
+    color: var(--ink);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .card__out { border-top: 1px solid var(--rule); }
+  .card__out summary {
+    cursor: pointer;
+    padding: 0.4rem 0.7rem;
+    font-family: var(--cond);
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    font-size: 0.72rem;
+    color: var(--dim);
+  }
+  .card__out summary::marker { color: var(--rule); }
+  .card__out pre {
+    margin: 0;
+    padding: 0 0.7rem 0.7rem;
+    font-family: var(--mono);
+    font-size: 0.76rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 20rem;
+    overflow: auto;
+    color: var(--dim);
+  }
+  .card--refused .card__tool { color: var(--alert); }
+
+  /* the model's own words */
+  .note {
+    color: var(--dim);
+    font-size: 0.93rem;
+    margin: 0;
+  }
+  .answer {
+    margin: 0;
+    white-space: pre-wrap;
+    font-size: 1rem;
+  }
+  .step--answer .step__marker { color: var(--ok); }
+
+  .fail {
+    border-left: 2px solid var(--alert);
+    padding-left: 0.75rem;
+    color: var(--alert);
+    font-size: 0.92rem;
+  }
+
+  /* ---------- composer ---------- */
+  .composer {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+      to top,
+      var(--paper) 62%,
+      color-mix(in srgb, var(--paper) 0%, transparent)
+    );
+    padding: 1.5rem 1.25rem 1.25rem;
+  }
+  .composer__inner {
+    max-width: var(--col);
+    margin: 0 auto;
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-end;
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: var(--r);
+    padding: 0.45rem 0.45rem 0.45rem 0.75rem;
+  }
+  .composer__inner:focus-within { border-color: var(--signal); }
+  .composer__input {
+    flex: 1;
+    font: inherit;
+    color: var(--ink);
+    background: none;
+    border: 0;
+    resize: none;
+    max-height: 9rem;
+    padding: 0.35rem 0;
+  }
+  .composer__input:focus { outline: none; }
+  .composer__send {
+    font-family: var(--cond);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.8rem;
+    color: var(--panel);
+    background: var(--ink);
+    border: 0;
+    border-radius: var(--r);
+    padding: 0.5rem 0.9rem;
+    cursor: pointer;
+    flex: none;
+  }
+  .composer__send:disabled { opacity: 0.45; cursor: default; }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes draw {
+    from { transform: scaleY(0); }
+    to { transform: scaleY(1); }
+  }
+  @keyframes pulse {
+    50% { opacity: 0.35; }
+  }
+
+  @media (max-width: 640px) {
+    .log { padding-top: 1.75rem; }
+    .turn--agent { padding-left: 2rem; }
+    .step__marker { left: -2rem; width: 1.25rem; }
+  }
+</style>
+
+<script>
+  const API = import.meta.env.PUBLIC_API_URL || 'https://api.agent.nasir.id';
+
+  const log = document.getElementById('log')!;
+  const intro = document.getElementById('intro')!;
+  const form = document.getElementById('composer') as HTMLFormElement;
+  const input = document.getElementById('input') as HTMLTextAreaElement;
+  const send = document.getElementById('send') as HTMLButtonElement;
+  const lamp = document.getElementById('lamp')!;
+  const status = document.getElementById('status')!;
+  const convLabel = document.getElementById('conv')!;
+
+  let conversationId: number | null = null;
+  let busy = false;
+
+  const el = (tag: string, cls?: string, text?: string) => {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined) n.textContent = text;
+    return n;
+  };
+
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const toBottom = () => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+
+  /* ---- backend health ---- */
+  async function ping() {
+    try {
+      const r = await fetch(`${API}/health`);
+      const j = await r.json();
+      lamp.dataset.state = 'ok';
+      status.textContent = j.memory === 'up' ? 'connected' : 'connected · no memory';
+    } catch {
+      lamp.dataset.state = 'down';
+      status.textContent = 'backend unreachable';
+    }
+  }
+  ping();
+
+  /* ---- rendering ---- */
+  function addYou(text: string) {
+    intro.remove();
+    const turn = el('article', 'turn turn--you');
+    turn.append(el('span', 'tag', 'you'), el('p', 'said', text));
+    log.append(turn);
+    return turn;
+  }
+
+  function addAgent() {
+    const turn = el('article', 'turn turn--agent');
+    log.append(turn);
+    return turn;
+  }
+
+  function addStep(turn: HTMLElement, n: number, live = false) {
+    const step = el('div', 'step');
+    const marker = el('span', 'step__marker', pad(n));
+    if (live) marker.dataset.live = '1';
+    step.append(marker);
+    turn.append(step);
+    return step;
+  }
+
+  function toolCard(step: HTMLElement, name: string, args: unknown) {
+    const card = el('div', 'card');
+    const head = el('div', 'card__head');
+    head.append(el('span', 'card__tool', name), el('span', 'card__ms', 'running'));
+    const pretty =
+      args && Object.keys(args as object).length
+        ? Object.values(args as Record<string, unknown>).map(String).join(' ')
+        : '(no arguments)';
+    card.append(head, el('code', 'card__args', pretty));
+    step.append(card);
+    return card;
+  }
+
+  function finishCard(card: HTMLElement, output: string, ms: number) {
+    (card.querySelector('.card__ms') as HTMLElement).textContent = `${ms} ms`;
+    if (output.startsWith('Refused') || output.startsWith('Error')) {
+      card.classList.add('card--refused');
+    }
+    const details = el('details', 'card__out');
+    details.append(el('summary', undefined, 'output'), el('pre', undefined, output));
+    card.append(details);
+  }
+
+  /* ---- the stream ---- */
+  async function ask(message: string) {
+    if (busy || !message.trim()) return;
+    busy = true;
+    send.disabled = true;
+    send.textContent = 'Running';
+    lamp.dataset.state = 'busy';
+    status.textContent = 'working';
+
+    addYou(message);
+    const turn = addAgent();
+    toBottom();
+
+    const cards = new Map<string, HTMLElement>();
+    let stepNo = 0;
+
+    try {
+      const res = await fetch(`${API}/chat/stream`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message, conversation_id: conversationId }),
+      });
+      if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const frames = buffer.split('\n\n');
+        buffer = frames.pop() ?? '';
+
+        for (const frame of frames) {
+          const line = frame.split('\n').find((l) => l.startsWith('data: '));
+          if (!line) continue;
+          const ev = JSON.parse(line.slice(6));
+
+          if (ev.type === 'start') {
+            conversationId = ev.conversation_id;
+            convLabel.textContent = conversationId ? `conv ${conversationId}` : '';
+          } else if (ev.type === 'text') {
+            const step = addStep(turn, ++stepNo);
+            step.append(el('p', 'note', ev.text));
+          } else if (ev.type === 'tool_use') {
+            const step = addStep(turn, ++stepNo, true);
+            cards.set(ev.id, toolCard(step, ev.name, ev.input));
+          } else if (ev.type === 'tool_result') {
+            const card = cards.get(ev.id);
+            if (card) {
+              finishCard(card, ev.output, ev.ms);
+              delete (card.closest('.step')!.querySelector('.step__marker') as HTMLElement)
+                .dataset.live;
+            }
+          } else if (ev.type === 'done') {
+            const last = turn.querySelector('.step:last-child .note');
+            if (last) {
+              last.classList.remove('note');
+              last.classList.add('answer');
+              last.closest('.step')!.classList.add('step--answer');
+            }
+          } else if (ev.type === 'error') {
+            const step = addStep(turn, ++stepNo);
+            step.append(el('p', 'fail', ev.message));
+          }
+          toBottom();
+        }
+      }
+    } catch (e) {
+      const step = addStep(turn, ++stepNo);
+      step.append(
+        el(
+          'p',
+          'fail',
+          `Can't reach ${API}. Check the agent-backend container is running on port 9003.`
+        )
+      );
+    } finally {
+      busy = false;
+      send.disabled = false;
+      send.textContent = 'Ask';
+      ping();
+      toBottom();
+    }
+  }
+
+  /* ---- wiring ---- */
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const v = input.value;
+    input.value = '';
+    input.style.height = 'auto';
+    ask(v);
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      form.requestSubmit();
+    }
+  });
+
+  input.addEventListener('input', () => {
+    input.style.height = 'auto';
+    input.style.height = `${input.scrollHeight}px`;
+  });
+
+  document.querySelectorAll<HTMLButtonElement>('.seed').forEach((b) =>
+    b.addEventListener('click', () => ask(b.dataset.seed!))
+  );
+</script>

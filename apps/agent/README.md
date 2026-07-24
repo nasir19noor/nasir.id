@@ -1,114 +1,164 @@
-# Nasir Infra Copilot — an agentic AI on your own infrastructure
+# agent.nasir.id — infrastructure copilot
 
-A read-only "infrastructure copilot" agent built on **AWS Bedrock (Claude)**,
-running on your **Contabo VPS**, remembering state in your **PostgreSQL**,
-inspecting your **AWS account**, and deployed by your **GitHub Actions
-self-hosted runner**.
+A read-only agent on **AWS Bedrock (Claude)** that inspects your Contabo VPS,
+AWS account, and PostgreSQL. Built to slot into the `nasir.id` monorepo and
+deploy through the same self-hosted runner pattern as iTung.
 
-It is deliberately built *from scratch* (no agent framework) so every part of
-the loop is visible and yours to extend.
+```
+apps/agent/
+├── backend/     FastAPI  · api.agent.nasir.id · :9003 · --network host
+└── frontend/    Astro    · agent.nasir.id     · :5003 · -p 5003:5003
+```
 
 ---
 
-## How your infrastructure maps to the agent
+## Architecture
 
-| Your setup | Role in the agent | File |
-| --- | --- | --- |
-| Bedrock + Claude | Reasoning engine (Converse API, native tool use) | `agent/bedrock_client.py` |
-| PostgreSQL on VPS | Memory — conversations + tool history | `agent/memory.py`, `db/schema.sql` |
-| AWS account | Tools — read-only EC2 / S3 / CloudWatch | `agent/tools/aws_tools.py` |
-| VPS | Tools — allowlisted shell, and where it runs | `agent/tools/shell.py` |
-| GitHub Actions + runner | CI/CD that redeploys on push to `main` | `.github/workflows/deploy.yml` |
-| Cloudflare | DNS in front of the agent's HTTP API | (point a record at VPS:8000) |
+```
+                    Cloudflare DNS
+                          │
+          ┌───────────────┴────────────────┐
+          ▼                                ▼
+  agent.nasir.id                  api.agent.nasir.id
+          │                                │
+      nginx :443                       nginx :443
+          │                                │  (proxy_buffering off — SSE)
+          ▼                                ▼
+  agent-frontend :5003            agent-backend :9003
+  Astro node standalone           FastAPI + uvicorn
+          │                                │
+          └──── fetch SSE ─────────────────┤
+                                           ├──► Bedrock Converse (Claude)
+                                           ├──► PostgreSQL  (memory)
+                                           ├──► boto3       (EC2/S3/CloudWatch)
+                                           └──► shell       (allowlisted)
+```
 
-## The agent loop (the important part)
+The backend runs with `--network host` so it reaches the VPS PostgreSQL on
+`localhost:5432` and can inspect the host directly. The frontend is a normal
+published-port container.
 
-`agent/core.py`:
+## The agent loop
+
+`backend/agent/core.py` — no framework, just a loop you can read:
 
 ```
 user message
-  -> Bedrock: answer directly OR request tool calls
-  -> if tools: run them, feed results back, ask Bedrock again
-  -> repeat until no more tools are requested (or MAX_AGENT_STEPS)
+  → Bedrock: answer, or request tool calls
+  → run the tools, feed results back, ask again
+  → repeat until no tools are requested (or MAX_AGENT_STEPS)
 ```
 
-That single `while` loop *is* what makes this "agentic" — the model chooses
-which tools to use and when it's done.
+`run_stream()` yields one event per step, which the API re-emits as SSE, which
+the frontend draws as a live trace. You watch the agent think.
+
+## API
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/health` | liveness + Bedrock model + memory status |
+| GET | `/tools` | what the agent can do |
+| POST | `/chat` | run the loop, return the final answer |
+| POST | `/chat/stream` | run the loop, stream every step as SSE |
+| GET | `/conversations/{id}` | replay a stored conversation |
+
+SSE event types: `start`, `text`, `tool_use`, `tool_result`, `done`, `error`, `end`.
+
+```
+data: {"type":"tool_use","step":1,"id":"tu_1","name":"run_shell","input":{"command":"uptime"}}
+
+data: {"type":"tool_result","step":1,"id":"tu_1","name":"run_shell","output":"...","ms":4}
+```
+
+## Tools
+
+| Tool | Reaches | Guard |
+| --- | --- | --- |
+| `run_shell` | VPS | prefix allowlist, no metacharacters or chaining |
+| `query_postgres` | VPS PostgreSQL | `SELECT` only, keyword denylist |
+| `list_ec2_instances` | AWS | IAM `ec2:Describe*` |
+| `list_s3_buckets` | AWS | IAM `s3:ListAllMyBuckets` |
+| `tail_cloudwatch_logs` | AWS | IAM `logs:FilterLogEvents` |
+| `http_fetch` | anywhere | GET only |
+
+Adding a tool: drop a class in `backend/agent/tools/`, register it in
+`tools/__init__.py`. Bedrock is told about it automatically.
 
 ---
 
 ## Setup
 
-### 1. Enable Bedrock model access
-In the AWS console (region `ap-southeast-1`): **Bedrock -> Model access ->
-enable the Claude model** you want. Then open **Model catalog** and copy the
-exact **model ID or inference profile** (APAC profiles are prefixed `apac.`).
-Put it in `.env` as `BEDROCK_MODEL_ID`.
+### 1. Bedrock model access
+Console → **Bedrock → Model access** (region `ap-southeast-1`) → enable Claude.
+Then **Model catalog** → copy the exact model ID or inference profile. APAC
+cross-region profiles are prefixed `apac.`. Model IDs change — confirm rather
+than trusting the default in `config.py`.
 
-> Model IDs change over time — always confirm the current one in the console
-> rather than trusting a hard-coded default.
-
-### 2. Create the IAM user (Terraform)
+### 2. IAM user
 ```bash
-cd terraform
-terraform init
-terraform apply
+cd deploy && terraform init && terraform apply
 terraform output access_key_id
 terraform output -raw secret_access_key
 ```
-Put those keys in `.env`.
 
-### 3. Prepare PostgreSQL (already on your VPS)
+### 3. Database
 ```bash
-createdb agent           # or reuse an existing DB
-psql "$DATABASE_URL" -f db/schema.sql
+sudo -u postgres createdb agent
+psql "$DATABASE_URL" -f apps/agent/backend/db/schema.sql
 ```
 
-### 4. Configure and run
+### 4. Upload the backend `.env` to S3
+The workflow pulls it at deploy time, same as iTung.
 ```bash
-cp .env.example .env      # fill in the values
+aws s3 cp apps/agent/backend/.env s3://agent.nasir.id/backend/.env
+```
+Contents: see `backend/.env.example`.
+
+### 5. GitHub secret
+Only `SSH_PASSWORD` is needed (for `sudo -S`), matching your existing workflows.
+
+### 6. DNS + nginx
+Cloudflare A records → VPS IP:
+- `agent.nasir.id`
+- `api.agent.nasir.id`
+
+Then:
+```bash
+sudo cp deploy/nginx-agent.conf /etc/nginx/sites-available/agent.nasir.id
+sudo ln -s /etc/nginx/sites-available/agent.nasir.id /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+> The `api.` server block sets `proxy_buffering off`. Without it nginx buffers
+> the SSE stream and the trace appears all at once at the end.
+
+### 7. Deploy
+Push to `main` touching `apps/agent/**`, or run the workflow manually. The
+`nasir-contabo` runner rebuilds and restarts only the side that changed.
+
+## Local development
+
+```bash
+# backend
+cd apps/agent/backend
 pip install -r requirements.txt
-python main.py            # interactive CLI to test locally
+cp .env.example .env         # fill in
+uvicorn main:app --reload --port 9003
+
+# frontend
+cd apps/agent/frontend
+npm install
+PUBLIC_API_URL=http://localhost:9003 npm run dev
 ```
 
-Try:
-- `How much disk is free on the VPS?`
-- `List my S3 buckets and EC2 instances.`
-- `Show the last 20 events from log group /aws/lambda/my-fn.`
-- `How many rows are in the messages table?`
+## Safety
 
-### 5. Deploy on the VPS
-The self-hosted runner does this automatically on push to `main`:
-```bash
-docker compose up -d --build   # what the workflow runs
-curl http://localhost:8000/health
-```
-Then add a Cloudflare DNS record (e.g. `agent.nasir.id`) pointing at the VPS,
-and put a reverse proxy / TLS in front of port 8000.
+IAM is the real boundary — it grants only `Describe*`/`List*` and Bedrock
+invoke. The code-level guards (shell allowlist, SELECT-only SQL) are the second
+layer, and the system prompt tells the model to print destructive commands for a
+human rather than run them.
 
----
+`COPY ... FROM PROGRAM` is explicitly refused by the SQL guard.
 
-## Safety model
-
-- **Shell** is limited to an allowlist of read-only command prefixes (`SHELL_ALLOWLIST`).
-- **SQL** accepts `SELECT` only; write/DDL keywords are refused before hitting the DB.
-- **AWS** IAM grants only `Describe*` / `List*` / log reads — no mutations.
-- The system prompt tells the model to describe destructive commands for a
-  human to run rather than attempting them.
-
-Treat this as defence in depth: the IAM policy is the real boundary; the code
-checks are a friendly second layer.
-
----
-
-## Where to go next
-
-1. **Add tools** — drop a class in `agent/tools/`, register it in
-   `agent/tools/__init__.py`. That's the whole wiring.
-2. **RAG (Phase 5)** — enable `pgvector`, embed your runbooks/Terraform docs,
-   add a `search_docs` tool so the agent answers with *your* context.
-3. **Streaming** — switch `converse` to `converse_stream` for token-by-token output.
-4. **MCP** — wrap these tools as a Model Context Protocol server so Claude Code
-   and the desktop app can use them too.
-5. **Write actions** — add mutating tools *only* behind an explicit human
-   confirmation step, and widen the IAM policy deliberately.
+Before adding any write capability: widen IAM deliberately, and put the action
+behind an explicit human confirmation step in the UI.

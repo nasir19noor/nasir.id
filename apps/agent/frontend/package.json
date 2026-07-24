@@ -1,0 +1,15 @@
+{
+  "name": "agent-frontend",
+  "type": "module",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev --host 0.0.0.0 --port 5003",
+    "build": "astro build",
+    "start": "node ./dist/server/entry.mjs"
+  },
+  "dependencies": {
+    "astro": "^5.2.0",
+    "@astrojs/node": "^9.0.0"
+  }
+}

@@ -1,12 +1,11 @@
-"""Every tool implements this interface. `spec()` produces the exact JSON shape
-that Bedrock's Converse API expects under toolConfig.tools[]."""
+"""Tool interface. spec() emits the exact shape Bedrock's Converse API wants."""
 from abc import ABC, abstractmethod
 
 
 class Tool(ABC):
     name: str
     description: str
-    input_schema: dict  # JSON Schema for the tool's arguments
+    input_schema: dict
 
     @abstractmethod
     def run(self, **kwargs) -> str:

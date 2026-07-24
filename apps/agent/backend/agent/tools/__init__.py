@@ -1,5 +1,4 @@
-"""Tool registry. Add a tool here and it is instantly available to the agent
-and advertised to Bedrock — no other wiring needed."""
+"""Tool registry. Add a class here and the agent + Bedrock both see it."""
 from agent.tools.shell import ShellTool
 from agent.tools.postgres import PostgresQueryTool
 from agent.tools.aws_tools import ListEC2Tool, ListS3Tool, TailLogsTool

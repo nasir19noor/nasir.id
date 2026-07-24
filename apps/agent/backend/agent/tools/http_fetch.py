@@ -1,15 +1,14 @@
-"""GET a URL. Handy for uptime checks against your own endpoints (e.g. behind
-Cloudflare) or reading a JSON API."""
+"""HTTP GET, for uptime checks against your own endpoints behind Cloudflare."""
 import requests
 from agent.tools.base import Tool
 
 
 class HttpFetchTool(Tool):
     name = "http_fetch"
-    description = "Fetch a URL over HTTP GET. Returns status code and body preview."
+    description = "HTTP GET a URL. Returns the status code and a body preview."
     input_schema = {
         "type": "object",
-        "properties": {"url": {"type": "string", "description": "The URL to fetch."}},
+        "properties": {"url": {"type": "string", "description": "URL to fetch."}},
         "required": ["url"],
     }
 

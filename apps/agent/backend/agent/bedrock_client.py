@@ -1,5 +1,4 @@
-"""Thin wrapper around the Bedrock Converse API. This is the ONLY place that
-talks to AWS Bedrock, so swapping models or regions is a one-line change."""
+"""Only place that talks to Bedrock. Swapping model or region is one line."""
 import boto3
 from config import AWS_REGION, BEDROCK_MODEL_ID, MAX_TOKENS
 
