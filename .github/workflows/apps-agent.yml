@@ -1,28 +1,121 @@
-name: Deploy Agent
+name: 'Deploy agent.nasir.id'
 
-# Runs on the self-hosted runner that lives on your VPS, so "deploy" just means
-# rebuild the image and restart the container locally.
 on:
   push:
-    branches: [main]
     paths:
-      - "agent/**"
-      - "server.py"
-      - "requirements.txt"
-      - "Dockerfile"
-      - "docker-compose.yml"
+      - 'apps/agent/frontend/**'
+      - 'apps/agent/backend/**'
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
-  deploy:
-    runs-on: self-hosted
+  changes:
+    runs-on: [self-hosted, nasir-contabo]
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
     steps:
-      - uses: actions/checkout@v4
+    - name: Remove stale nested .git directories
+      run: find "$GITHUB_WORKSPACE" -mindepth 2 -name ".git" -exec rm -rf {} + 2>/dev/null || true
 
-      - name: Build and (re)start
-        run: |
-          docker compose up -d --build
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      - name: Health check
-        run: |
-          sleep 5
-          curl -fsS http://localhost:8000/health
+    - name: Detect changed paths
+      uses: dorny/paths-filter@v3
+      id: filter
+      with:
+        filters: |
+          backend:
+            - 'apps/agent/backend/**'
+          frontend:
+            - 'apps/agent/frontend/**'
+
+  deploy-backend:
+    needs: changes
+    if: ${{ needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch' }}
+    runs-on: [self-hosted, nasir-contabo]
+    steps:
+    - name: Deploy backend
+      env:
+        SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+      working-directory: apps/agent/backend
+      run: |
+        echo "Pulling .env from S3..."
+        rm -f .env
+        aws s3 cp s3://agent.nasir.id/backend/.env .env
+
+        echo "Stopping and removing existing backend container..."
+        echo "$SSH_PASSWORD" | sudo -S docker stop agent-backend 2>/dev/null || true
+        echo "$SSH_PASSWORD" | sudo -S docker rm agent-backend 2>/dev/null || true
+        echo "$SSH_PASSWORD" | sudo -S docker rmi agent-backend:latest 2>/dev/null || true
+
+        echo "Building backend image..."
+        echo "$SSH_PASSWORD" | sudo -S docker build -t agent-backend:latest .
+
+        echo "Running backend container..."
+        echo "$SSH_PASSWORD" | sudo -S docker run -d --network host --env-file .env \
+          --restart unless-stopped \
+          --name agent-backend agent-backend:latest
+
+        echo "Backend deployed successfully"
+
+    - name: Verify backend health
+      run: |
+        for i in $(seq 1 10); do
+          if curl -fsS http://localhost:9003/health; then
+            echo ""
+            echo "Backend healthy"
+            exit 0
+          fi
+          echo "Waiting for backend... ($i/10)"
+          sleep 3
+        done
+        echo "Backend did not become healthy"
+        exit 1
+
+    - name: Remove .env
+      if: always()
+      working-directory: apps/agent/backend
+      run: rm -f .env
+
+  deploy-frontend:
+    needs: changes
+    if: ${{ needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch' }}
+    runs-on: [self-hosted, nasir-contabo]
+    steps:
+    - name: Deploy frontend
+      env:
+        SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+      working-directory: apps/agent/frontend
+      run: |
+        echo "Stopping and removing existing frontend container..."
+        echo "$SSH_PASSWORD" | sudo -S docker stop agent-frontend 2>/dev/null || true
+        echo "$SSH_PASSWORD" | sudo -S docker rm agent-frontend 2>/dev/null || true
+        echo "$SSH_PASSWORD" | sudo -S docker rmi agent-frontend:latest 2>/dev/null || true
+
+        echo "Building frontend image..."
+        echo "$SSH_PASSWORD" | sudo -S docker build \
+          --build-arg PUBLIC_API_URL=https://api.agent.nasir.id \
+          -t agent-frontend:latest .
+
+        echo "Running frontend container..."
+        echo "$SSH_PASSWORD" | sudo -S docker run -d -p 5003:5003 \
+          --restart unless-stopped \
+          --name agent-frontend agent-frontend:latest
+
+        echo "Frontend deployed successfully"
+
+    - name: Verify frontend is serving
+      run: |
+        for i in $(seq 1 10); do
+          if curl -fsS -o /dev/null http://localhost:5003/; then
+            echo "Frontend healthy"
+            exit 0
+          fi
+          echo "Waiting for frontend... ($i/10)"
+          sleep 3
+        done
+        echo "Frontend did not become healthy"
+        exit 1
