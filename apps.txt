@@ -1,4 +1,0 @@
-nginx
-github runner
-certbot
-terraform

@@ -1,0 +1,9 @@
+# The agent connects to the PostgreSQL you ALREADY run on the VPS.
+# host network lets the container reach localhost:5432 directly.
+services:
+  agent:
+    build: .
+    container_name: nasir-agent
+    env_file: .env
+    network_mode: host
+    restart: unless-stopped

@@ -1,0 +1,6 @@
+I can't self-serve the signup (it's your account). Two minutes:
+
+Go to https://dashboard.api-football.com/register → sign up free (no payment info required).
+Copy your API key from the dashboard.
+Send it to me, or set it yourself as API_FOOTBALL_KEY in the backend's .env / deploy secrets.
+Once it's deployed with that key set, tell me and I'll trigger POST /admin/enrich-stats-af and verify the results (checking unmatched_teams/unmatched_players in the response — if any alias gaps show up, I'll patch them immediately). If we hit the daily cap partway through, I'll just re-run it the next day to finish the remaining fixtures.
