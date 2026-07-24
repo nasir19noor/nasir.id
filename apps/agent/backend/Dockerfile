@@ -14,3 +14,6 @@ EXPOSE 9003
 
 # --network host is used at run time, so uvicorn binds the VPS port directly.
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "9003"]
+
+
+
