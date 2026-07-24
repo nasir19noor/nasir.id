@@ -1,6 +1,6 @@
 """api.agent.nasir.id — FastAPI front door for the Bedrock agent.
 
-Endpoints
+Endpoints (all require HTTP Basic auth — see auth.py — except /health)
   GET  /health              liveness + dependency status
   GET  /tools               what the agent can do
   POST /chat                run the loop, return the final answer
@@ -8,12 +8,13 @@ Endpoints
   GET  /conversations/{id}  replay a stored conversation
 """
 import json
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from config import CORS_ORIGINS, BEDROCK_MODEL_ID, AWS_REGION
+from auth import require_auth
 from agent.core import Agent
 from agent.memory import Memory
 from agent.tools import build_registry
@@ -59,7 +60,7 @@ def health():
     }
 
 
-@app.get("/tools")
+@app.get("/tools", dependencies=[Depends(require_auth)])
 def tools():
     return {
         "tools": [
@@ -69,14 +70,14 @@ def tools():
     }
 
 
-@app.post("/chat")
+@app.post("/chat", dependencies=[Depends(require_auth)])
 def chat(req: ChatRequest):
     conversation_id = req.conversation_id or _new_conversation("api")
     agent = Agent(memory=memory, conversation_id=conversation_id)
     return {"conversation_id": conversation_id, "answer": agent.run(req.message)}
 
 
-@app.post("/chat/stream")
+@app.post("/chat/stream", dependencies=[Depends(require_auth)])
 def chat_stream(req: ChatRequest):
     conversation_id = req.conversation_id or _new_conversation("web")
     agent = Agent(memory=memory, conversation_id=conversation_id)
@@ -101,7 +102,7 @@ def chat_stream(req: ChatRequest):
     )
 
 
-@app.get("/conversations/{conversation_id}")
+@app.get("/conversations/{conversation_id}", dependencies=[Depends(require_auth)])
 def conversation(conversation_id: int):
     try:
         return {

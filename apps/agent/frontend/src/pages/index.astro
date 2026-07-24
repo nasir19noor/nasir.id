@@ -10,6 +10,24 @@ const seeds = [
 ---
 
 <Layout title="agent.nasir.id — infrastructure copilot">
+  <div class="gate" id="gate">
+    <form class="gate__card" id="gateForm">
+      <p class="eyebrow">authentication required</p>
+      <h2 class="gate__head">Sign in to the copilot.</h2>
+      <p class="gate__body">This agent can run shell commands and query production data. Credentials stay in this tab only.</p>
+      <label class="gate__field">
+        <span>Username</span>
+        <input id="gateUser" type="text" autocomplete="username" required />
+      </label>
+      <label class="gate__field">
+        <span>Password</span>
+        <input id="gatePass" type="password" autocomplete="current-password" required />
+      </label>
+      <p class="gate__error" id="gateError" role="alert"></p>
+      <button class="gate__submit" id="gateSubmit" type="submit">Unlock</button>
+    </form>
+  </div>
+
   <header class="rig">
     <div class="rig__inner">
       <h1 class="wordmark">
@@ -105,6 +123,81 @@ const seeds = [
     animation: pulse 1.1s ease-in-out infinite;
   }
   .rig__conv { font-variant-numeric: tabular-nums; }
+
+  /* ---------- auth gate ---------- */
+  .gate {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.25rem;
+    background: color-mix(in srgb, var(--paper) 94%, transparent);
+    backdrop-filter: blur(6px);
+  }
+  .gate[hidden] { display: none; }
+  .gate__card {
+    width: 100%;
+    max-width: 22rem;
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: var(--r);
+    padding: 1.5rem;
+  }
+  .gate__head {
+    font-family: var(--cond);
+    font-weight: 600;
+    font-size: 1.5rem;
+    letter-spacing: -0.01em;
+    margin: 0 0 0.5rem;
+  }
+  .gate__body {
+    color: var(--dim);
+    font-size: 0.88rem;
+    margin: 0 0 1.25rem;
+  }
+  .gate__field {
+    display: block;
+    margin-bottom: 0.85rem;
+    font-family: var(--cond);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--dim);
+  }
+  .gate__field input {
+    display: block;
+    width: 100%;
+    margin-top: 0.35rem;
+    font: 0.95rem/1.4 var(--sans);
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: var(--r);
+    padding: 0.5rem 0.65rem;
+  }
+  .gate__field input:focus { outline: none; border-color: var(--signal); }
+  .gate__error {
+    min-height: 1.2em;
+    color: var(--alert);
+    font-size: 0.82rem;
+    margin: 0 0 0.75rem;
+  }
+  .gate__submit {
+    width: 100%;
+    font-family: var(--cond);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.85rem;
+    color: var(--panel);
+    background: var(--ink);
+    border: 0;
+    border-radius: var(--r);
+    padding: 0.6rem;
+    cursor: pointer;
+  }
+  .gate__submit:disabled { opacity: 0.5; cursor: default; }
 
   /* ---------- log ---------- */
   .log {
@@ -379,6 +472,13 @@ const seeds = [
   const status = document.getElementById('status')!;
   const convLabel = document.getElementById('conv')!;
 
+  const gate = document.getElementById('gate') as HTMLDivElement;
+  const gateForm = document.getElementById('gateForm') as HTMLFormElement;
+  const gateUser = document.getElementById('gateUser') as HTMLInputElement;
+  const gatePass = document.getElementById('gatePass') as HTMLInputElement;
+  const gateError = document.getElementById('gateError')!;
+  const gateSubmit = document.getElementById('gateSubmit') as HTMLButtonElement;
+
   let conversationId: number | null = null;
   let busy = false;
 
@@ -391,6 +491,58 @@ const seeds = [
 
   const pad = (n: number) => String(n).padStart(2, '0');
   const toBottom = () => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+
+  /* ---- auth ----
+     Basic-auth token lives only in this tab's sessionStorage — never
+     localStorage, never a cookie — so it's gone when the tab closes. */
+  const AUTH_KEY = 'agent.auth.basic';
+  const getToken = () => sessionStorage.getItem(AUTH_KEY);
+  const setToken = (user: string, pass: string) => sessionStorage.setItem(AUTH_KEY, btoa(`${user}:${pass}`));
+  const clearToken = () => sessionStorage.removeItem(AUTH_KEY);
+  const authHeaders = (): HeadersInit => {
+    const t = getToken();
+    return t ? { Authorization: `Basic ${t}` } : {};
+  };
+
+  function openGate(message?: string) {
+    gateError.textContent = message ?? '';
+    gate.hidden = false;
+    gateUser.focus();
+  }
+  function closeGate() {
+    gate.hidden = true;
+  }
+
+  /* Confirms a token actually works by calling a cheap authenticated route
+     (no Bedrock invocation) — wrong or missing credentials never reach the
+     chat UI, they fail right here with an inline message. */
+  async function verifyToken(): Promise<boolean> {
+    const token = getToken();
+    if (!token) return false;
+    try {
+      const r = await fetch(`${API}/tools`, { headers: authHeaders() });
+      return r.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  gateForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    gateSubmit.disabled = true;
+    gateError.textContent = '';
+    setToken(gateUser.value, gatePass.value);
+    if (await verifyToken()) {
+      closeGate();
+      ping();
+    } else {
+      clearToken();
+      gateError.textContent = 'Invalid credentials, or the backend is unreachable.';
+      gatePass.value = '';
+      gatePass.focus();
+    }
+    gateSubmit.disabled = false;
+  });
 
   /* ---- backend health ---- */
   async function ping() {
@@ -405,6 +557,20 @@ const seeds = [
     }
   }
   ping();
+
+  /* ---- gate on load ----
+     A stored token from an earlier visit this session is re-checked (the
+     backend may have redeployed with different credentials); no token means
+     straight to the login form. Either way the composer stays inert until
+     this resolves. */
+  (async () => {
+    if (await verifyToken()) {
+      closeGate();
+    } else {
+      clearToken();
+      openGate();
+    }
+  })();
 
   /* ---- rendering ---- */
   function addYou(text: string) {
@@ -472,9 +638,14 @@ const seeds = [
     try {
       const res = await fetch(`${API}/chat/stream`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ message, conversation_id: conversationId }),
       });
+      if (res.status === 401) {
+        clearToken();
+        openGate('Session expired — sign in again.');
+        throw new Error('unauthorized');
+      }
       if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
 
       const reader = res.body.getReader();
@@ -524,6 +695,11 @@ const seeds = [
         }
       }
     } catch (e) {
+      if (e instanceof Error && e.message === 'unauthorized') {
+        // The gate is already showing the "session expired" message — no
+        // need to also drop a failure step into the chat log.
+        return;
+      }
       const step = addStep(turn, ++stepNo);
       step.append(
         el(

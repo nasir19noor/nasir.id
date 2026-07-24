@@ -29,6 +29,13 @@ MAX_AGENT_STEPS = int(os.getenv("MAX_AGENT_STEPS", "10"))
 # --- Memory ---
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://agent:agent@localhost:5432/agent")
 
+# --- Auth ---
+# HTTP Basic auth, required on every endpoint except /health. This agent can
+# run shell commands and query production data, so it must never be reachable
+# without credentials.
+AUTH_USERNAME = os.getenv("AUTH_USERNAME", "")
+AUTH_PASSWORD = os.getenv("AUTH_PASSWORD", "")
+
 # --- Tool guardrails ---
 SHELL_ALLOWLIST = [
     c.strip()
