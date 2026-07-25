@@ -53,7 +53,15 @@ export async function generateMetadata(): Promise<Metadata> {
     keywords: ['Cloud Engineer', 'DevOps', 'AWS', 'Azure', 'GCP', 'Kubernetes', 'Docker', 'Terraform', 'AI/ML', 'Infrastruktur'],
     authors: [{ name: settings.hero_title || 'Nasir Noor' }],
     creator: settings.hero_title || 'Nasir Noor',
-    
+
+    alternates: {
+      canonical: `${baseUrl}/id`,
+      languages: {
+        'en-US': baseUrl,
+        'id-ID': `${baseUrl}/id`,
+      },
+    },
+
     openGraph: {
       title,
       description,

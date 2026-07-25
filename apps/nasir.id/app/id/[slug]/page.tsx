@@ -79,12 +79,22 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     return {
       title,
       description,
-      keywords: item.is_portfolio 
+      keywords: item.is_portfolio
         ? ['Portfolio', 'Proyek', 'Cloud Engineering', 'DevOps', 'AWS', 'Azure', 'GCP']
         : ['Artikel', 'Blog', 'Cloud Engineering', 'DevOps', 'AWS', 'Azure', 'GCP', 'Tutorial'],
       authors: [{ name: 'Nasir Noor' }],
       creator: 'Nasir Noor',
-      
+
+      // Canonical + language variant so Google doesn't treat the EN/ID
+      // versions of the same slug as duplicate content.
+      alternates: {
+        canonical: `${baseUrl}/id/${slug}`,
+        languages: {
+          'en-US': `${baseUrl}/${slug}`,
+          'id-ID': `${baseUrl}/id/${slug}`,
+        },
+      },
+
       // Open Graph tags
       openGraph: {
         title,
@@ -178,14 +188,35 @@ export default async function IndonesianSlugPage({ params }: PageProps) {
       featuredImage = convertToAssetsUrl(item.image_url);
     }
 
+    const jsonLd = {
+      '@context': 'https://schema.org',
+      '@type': isPortfolio ? 'CreativeWork' : 'BlogPosting',
+      headline: item.title,
+      description: item.summary || undefined,
+      image: featuredImage || undefined,
+      datePublished: new Date(item.published_at).toISOString(),
+      url: `https://nasir.id/id/${slug}`,
+      inLanguage: 'id',
+      author: { '@type': 'Person', name: 'Nasir Noor', url: 'https://nasir.id' },
+      publisher: {
+        '@type': 'Organization',
+        name: 'Nasir.id',
+        logo: { '@type': 'ImageObject', url: 'https://nasir.id/favicon-32x32.png' },
+      },
+    };
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50">
-        <AnalyticsTracker 
-          pageType={isPortfolio ? "portfolio" : "article"} 
-          articleId={item.id} 
-          articleSlug={slug} 
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
-        
+        <AnalyticsTracker
+          pageType={isPortfolio ? "portfolio" : "article"}
+          articleId={item.id}
+          articleSlug={slug}
+        />
+
         {/* Header */}
         <header className="bg-white/90 backdrop-blur-sm border-b border-slate-200 sticky top-0 z-10">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">

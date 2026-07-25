@@ -55,12 +55,21 @@ export async function generateMetadata(): Promise<Metadata> {
   console.log('🖼️ [HOMEPAGE EN METADATA] Using about description:', cleanDescription);
   
   return {
+    metadataBase: new URL(baseUrl),
     title,
     description: cleanDescription,
     keywords: ['Cloud Engineer', 'DevOps', 'AWS', 'Azure', 'GCP', 'Kubernetes', 'Docker', 'Terraform', 'AI/ML', 'Infrastructure'],
     authors: [{ name: settings.hero_title || 'Nasir Noor' }],
     creator: settings.hero_title || 'Nasir Noor',
-    
+
+    alternates: {
+      canonical: baseUrl,
+      languages: {
+        'en-US': baseUrl,
+        'id-ID': `${baseUrl}/id`,
+      },
+    },
+
     // Open Graph tags for social media
     openGraph: {
       title,
@@ -122,6 +131,24 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
+const siteJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'Nasir.id',
+    url: 'https://nasir.id',
+    inLanguage: ['en', 'id'],
+    author: {
+        '@type': 'Person',
+        name: 'Nasir Noor',
+        url: 'https://nasir.id',
+        jobTitle: 'Cloud Architect | DevOps Engineer',
+        sameAs: [
+            'https://github.com/nasir19noor',
+            'https://linkedin.com/in/nasir19noor',
+        ],
+    },
+};
+
 export default function RootLayout({
     children,
 }: {
@@ -130,6 +157,12 @@ export default function RootLayout({
     return (
         <html lang="en">
             <head>
+                {/* Site-wide structured data (WebSite + Person) */}
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: JSON.stringify(siteJsonLd) }}
+                />
+
                 {/* Favicon and app icons */}
                 <link rel="icon" href="/favicon.ico" />
                 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
