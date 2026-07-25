@@ -4,6 +4,8 @@ from agent.tools.postgres import PostgresQueryTool
 from agent.tools.aws_tools import ListEC2Tool, ListS3Tool, TailLogsTool
 from agent.tools.http_fetch import HttpFetchTool
 from agent.tools.github_tools import (
+    CreateGithubRepoTool,
+    ListGithubRepositoriesTool,
     ListGithubIssuesTool,
     ListGithubPullRequestsTool,
     ListGithubActionsRunsTool,
@@ -19,6 +21,8 @@ def build_registry() -> dict:
         ListS3Tool(),
         TailLogsTool(),
         HttpFetchTool(),
+        CreateGithubRepoTool(),
+        ListGithubRepositoriesTool(),
         ListGithubIssuesTool(),
         ListGithubPullRequestsTool(),
         ListGithubActionsRunsTool(),

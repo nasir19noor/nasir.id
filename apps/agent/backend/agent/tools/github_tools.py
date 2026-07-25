@@ -1,25 +1,29 @@
-"""Read-only GitHub inspection via the REST API. No new dependency — plain
-`requests`, same as http_fetch.py. Needs GITHUB_TOKEN (a read-only PAT) in
-env; every tool refuses cleanly if it's not set rather than raising."""
+"""GitHub inspection via the REST API — mostly read-only (issues, PRs, Actions
+runs, commits, repo listing), plus one write tool (create_github_repo). No new
+dependency — plain `requests`, same as http_fetch.py. Needs GITHUB_TOKEN in
+env; every tool refuses cleanly if it's not set rather than raising. The
+read-only tools work with a read-only PAT; create_github_repo additionally
+needs write access (classic PAT `repo`/`public_repo` scope, or a fine-grained
+PAT with the "Administration: read and write" account permission)."""
 import requests
 from config import GITHUB_TOKEN
 from agent.tools.base import Tool
 
 _API = "https://api.github.com"
 _MAX_CHARS = 4000
+_HEADERS = {
+    "Authorization": f"Bearer {GITHUB_TOKEN}",
+    "Accept": "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28",
+}
 
 
-def _gh_get(path: str, params: dict | None = None) -> tuple[list | dict | None, str | None]:
-    """GET the GitHub API. Returns (json, None) on success or (None, error_string)."""
+def _gh_request(method: str, path: str, **kwargs) -> tuple[list | dict | None, str | None]:
+    """Call the GitHub API. Returns (json, None) on success or (None, error_string)."""
     if not GITHUB_TOKEN:
         return None, "Error: GITHUB_TOKEN is not configured."
-    headers = {
-        "Authorization": f"Bearer {GITHUB_TOKEN}",
-        "Accept": "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-    }
     try:
-        r = requests.get(f"{_API}{path}", headers=headers, params=params, timeout=15)
+        r = requests.request(method, f"{_API}{path}", headers=_HEADERS, timeout=15, **kwargs)
     except Exception as e:
         return None, f"Error: {e}"
     if r.status_code >= 400:
@@ -28,7 +32,15 @@ def _gh_get(path: str, params: dict | None = None) -> tuple[list | dict | None, 
         except Exception:
             msg = r.text[:200]
         return None, f"Error: GitHub API {r.status_code} — {msg}"
-    return r.json(), None
+    return (r.json() if r.text else {}), None
+
+
+def _gh_get(path: str, params: dict | None = None) -> tuple[list | dict | None, str | None]:
+    return _gh_request("GET", path, params=params)
+
+
+def _gh_post(path: str, json: dict | None = None) -> tuple[list | dict | None, str | None]:
+    return _gh_request("POST", path, json=json)
 
 
 def _render(lines: list[str], empty: str) -> str:
@@ -36,6 +48,98 @@ def _render(lines: list[str], empty: str) -> str:
 
 
 _REPO_PROP = {"repo": {"type": "string", "description": "owner/repo, e.g. 'nasir/nasir.id'."}}
+
+
+class CreateGithubRepoTool(Tool):
+    name = "create_github_repo"
+    description = (
+        "Create a new GitHub repository owned by the authenticated token's user "
+        "or, if 'org' is given, an organization the token has access to. This is "
+        "a write action — it actually creates the repo, it does not ask for "
+        "confirmation itself."
+    )
+    input_schema = {
+        "type": "object",
+        "properties": {
+            "name": {"type": "string", "description": "Repository name, e.g. 'test123'."},
+            "org": {
+                "type": "string",
+                "description": "Organization login to create the repo under. Omit to "
+                "create it under the authenticated user's own account.",
+            },
+            "private": {
+                "type": "boolean",
+                "description": "Whether the repo should be private. Default true.",
+            },
+            "description": {"type": "string", "description": "Optional repo description."},
+            "auto_init": {
+                "type": "boolean",
+                "description": "Initialize with a README so the repo isn't empty. Default true.",
+            },
+        },
+        "required": ["name"],
+    }
+
+    def run(
+        self,
+        name: str,
+        org: str | None = None,
+        private: bool = True,
+        description: str | None = None,
+        auto_init: bool = True,
+    ) -> str:
+        body = {"name": name, "private": private, "auto_init": auto_init}
+        if description:
+            body["description"] = description
+        path = f"/orgs/{org}/repos" if org else "/user/repos"
+        data, err = _gh_post(path, body)
+        if err:
+            return err
+        return (
+            f"Created {data['full_name']} "
+            f"({'private' if data['private'] else 'public'}) — {data['html_url']}"
+        )
+
+
+class ListGithubRepositoriesTool(Tool):
+    name = "list_github_repos"
+    description = (
+        "List GitHub repositories, sorted by most recently pushed (a useful proxy "
+        "for 'most active'). Defaults to the authenticated token's own repos "
+        "(including private ones it can see); pass 'owner' to list a specific "
+        "user's or org's public repos instead."
+    )
+    input_schema = {
+        "type": "object",
+        "properties": {
+            "owner": {
+                "type": "string",
+                "description": "GitHub username or org to list repos for. Omit to list "
+                "the authenticated token's own repos.",
+            },
+            "limit": {"type": "integer", "description": "Max repos, default 30, max 100."},
+        },
+        "required": [],
+    }
+
+    def run(self, owner: str | None = None, limit: int = 30) -> str:
+        params = {"per_page": min(max(limit, 1), 100), "sort": "pushed", "direction": "desc"}
+        if owner:
+            path = f"/users/{owner}/repos"
+        else:
+            path = "/user/repos"
+            params["affiliation"] = "owner,collaborator,organization_member"
+        data, err = _gh_get(path, params)
+        if err:
+            return err
+        lines = [
+            f"{r['full_name']} — {'private' if r['private'] else 'public'} — "
+            f"pushed {r['pushed_at']} — {r.get('language') or 'n/a'} — "
+            f"★{r['stargazers_count']} — {r['html_url']}"
+            for r in data
+        ]
+        header = f"{len(data)} repo(s), sorted by most recently pushed (index 0 = most active):"
+        return f"{header}\n{_render(lines, 'No repositories found.')}"
 
 
 class ListGithubIssuesTool(Tool):

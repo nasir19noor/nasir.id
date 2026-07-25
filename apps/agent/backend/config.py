@@ -29,10 +29,13 @@ MAX_AGENT_STEPS = int(os.getenv("MAX_AGENT_STEPS", "10"))
 # --- Memory ---
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://agent:agent@localhost:5432/agent")
 
-# --- GitHub (read-only inspection tools) ---
-# A fine-grained PAT with read-only access (Issues, Pull requests, Actions,
-# Contents) to whichever repos you want the agent to inspect. Classic PATs
-# with the `repo` (private) or `public_repo` (public-only) scope also work.
+# --- GitHub (inspection tools + repo creation) ---
+# The agent can inspect repos (issues, PRs, Actions, commits) and also create
+# new ones. For inspection only, a fine-grained PAT with read-only access
+# (Issues, Pull requests, Actions, Contents) is enough. To let it create repos
+# too, use a classic PAT with the `repo` (private) or `public_repo`
+# (public-only) scope, or a fine-grained PAT with "Administration: read and
+# write" under Account permissions.
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
 
 # --- Auth ---
