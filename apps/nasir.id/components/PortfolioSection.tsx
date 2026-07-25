@@ -91,10 +91,12 @@ export default function PortfolioSection({ language = 'en' }: PortfolioSectionPr
                         {/* Portfolio grid */}
                         <div className="grid md:grid-cols-3 gap-6 mb-12">
                             {projects.map((project) => (
-                                <article
+                                <a
                                     key={project.id}
-                                    className="group card card-hover cursor-pointer"
-                                    onClick={() => window.open(`/${project.slug}`, '_blank')}
+                                    href={`${language === 'id' ? '/id' : ''}/${project.slug}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="group card card-hover block"
                                 >
                                     {/* Image */}
                                     {(() => {
@@ -139,7 +141,7 @@ export default function PortfolioSection({ language = 'en' }: PortfolioSectionPr
                                             />
                                         </div>
                                     </div>
-                                </article>
+                                </a>
                             ))}
                         </div>
 

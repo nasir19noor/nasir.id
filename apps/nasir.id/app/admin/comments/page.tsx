@@ -14,6 +14,7 @@ interface Comment {
   created_at: string;
   article_title: string;
   article_slug: string;
+  article_language: string;
 }
 
 export default function AdminCommentsPage() {
@@ -318,7 +319,7 @@ export default function AdminCommentsPage() {
                 <p className="text-sm text-gray-600">
                   Comment on:{' '}
                   <a
-                    href={`/${comment.article_slug}`}
+                    href={`${comment.article_language === 'id' ? '/id' : ''}/${comment.article_slug}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-blue-600 hover:text-blue-700 font-medium"

@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS articles (
 CREATE TABLE IF NOT EXISTS comments (
   id SERIAL PRIMARY KEY,
   article_id INTEGER NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
+  parent_id INTEGER REFERENCES comments(id) ON DELETE CASCADE,
   name VARCHAR(100) NOT NULL,
   email VARCHAR(255) NOT NULL,
   website VARCHAR(255),
@@ -71,6 +72,7 @@ CREATE TABLE IF NOT EXISTS analytics (
 CREATE INDEX IF NOT EXISTS idx_comments_article_id ON comments(article_id);
 CREATE INDEX IF NOT EXISTS idx_comments_approved ON comments(approved);
 CREATE INDEX IF NOT EXISTS idx_comments_created_at ON comments(created_at);
+CREATE INDEX IF NOT EXISTS idx_comments_parent_id ON comments(parent_id);
 
 -- Analytics indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_analytics_visited_at ON analytics(visited_at);

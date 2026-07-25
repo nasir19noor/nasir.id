@@ -1,14 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { MessageCircle, Send, User, Globe, Calendar } from 'lucide-react';
+import { MessageCircle, Send, User, Globe, Calendar, Reply, ShieldCheck } from 'lucide-react';
 
 interface Comment {
   id: number;
+  parent_id: number | null;
   name: string;
   website?: string;
   comment: string;
   created_at: string;
+  replies: Comment[];
 }
 
 interface CommentsProps {
@@ -16,24 +18,287 @@ interface CommentsProps {
   articleTitle: string;
 }
 
+interface FormValues {
+  name: string;
+  email: string;
+  website: string;
+  comment: string;
+}
+
+const EMPTY_FORM: FormValues = { name: '', email: '', website: '', comment: '' };
+
+// Groups the flat, approved-only list the API returns into a reply tree.
+// Top-level threads newest first; replies within a thread oldest first, so a
+// conversation reads top-to-bottom the way it happened.
+function buildCommentTree(flat: Omit<Comment, 'replies'>[]): Comment[] {
+  const byId = new Map<number, Comment>();
+  flat.forEach((c) => byId.set(c.id, { ...c, replies: [] }));
+
+  const roots: Comment[] = [];
+  byId.forEach((c) => {
+    if (c.parent_id && byId.has(c.parent_id)) {
+      byId.get(c.parent_id)!.replies.push(c);
+    } else {
+      roots.push(c);
+    }
+  });
+
+  const byCreatedAsc = (a: Comment, b: Comment) =>
+    new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+  byId.forEach((c) => c.replies.sort(byCreatedAsc));
+  roots.sort((a, b) => byCreatedAsc(b, a));
+
+  return roots;
+}
+
+const formatDate = (dateString: string) =>
+  new Date(dateString).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+function CommentForm({
+  isAdmin,
+  submitting,
+  submitLabel,
+  placeholder,
+  onSubmit,
+  onCancel,
+}: {
+  isAdmin: boolean;
+  submitting: boolean;
+  submitLabel: string;
+  placeholder: string;
+  onSubmit: (values: FormValues) => void;
+  onCancel?: () => void;
+}) {
+  const [form, setForm] = useState<FormValues>(EMPTY_FORM);
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit(form);
+      }}
+      className="space-y-4"
+    >
+      {isAdmin ? (
+        <div className="flex items-center gap-2 text-sm text-emerald-400">
+          <ShieldCheck size={16} />
+          Replying as admin (nasir19noor@gmail.com)
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">Name *</label>
+              <input
+                type="text"
+                required
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Your name"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">Email *</label>
+              <input
+                type="email"
+                required
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="your@email.com"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Email will not be published. Used only to notify you of replies.
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Website (optional)</label>
+            <input
+              type="url"
+              value={form.website}
+              onChange={(e) => setForm({ ...form, website: e.target.value })}
+              className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="https://yourwebsite.com"
+            />
+          </div>
+        </>
+      )}
+
+      <div>
+        <label className="block text-sm font-medium text-gray-300 mb-1">
+          {isAdmin ? 'Reply *' : 'Comment *'}
+        </label>
+        <textarea
+          required
+          rows={4}
+          value={form.comment}
+          onChange={(e) => setForm({ ...form, comment: e.target.value })}
+          className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+          placeholder={placeholder}
+        />
+      </div>
+
+      <div className="flex items-center justify-between gap-3">
+        {!isAdmin ? (
+          <p className="text-xs text-gray-500">Comments are moderated and will appear after approval.</p>
+        ) : <span />}
+
+        <div className="flex items-center gap-2">
+          {onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+            >
+              Cancel
+            </button>
+          )}
+          <button
+            type="submit"
+            disabled={submitting}
+            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors font-medium"
+          >
+            <Send size={16} />
+            {submitting ? 'Submitting...' : submitLabel}
+          </button>
+        </div>
+      </div>
+    </form>
+  );
+}
+
+function CommentNode({
+  comment,
+  depth,
+  isAdmin,
+  replyingTo,
+  submitting,
+  onStartReply,
+  onCancelReply,
+  onSubmitReply,
+}: {
+  comment: Comment;
+  depth: number;
+  isAdmin: boolean;
+  replyingTo: number | null;
+  submitting: boolean;
+  onStartReply: (id: number) => void;
+  onCancelReply: () => void;
+  onSubmitReply: (parentId: number, values: FormValues) => void;
+}) {
+  return (
+    <div id={`comment-${comment.id}`} className={depth > 0 ? 'mt-4 ml-6 sm:ml-10' : ''}>
+      <div className="p-6 bg-gray-900/30 border border-gray-700 rounded-xl">
+        {/* Comment Header */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+              <User className="text-white" size={20} />
+            </div>
+
+            <div>
+              {comment.website ? (
+                <a
+                  href={comment.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1"
+                >
+                  {comment.name}
+                  <Globe size={14} />
+                </a>
+              ) : (
+                <span className="font-semibold text-white">{comment.name}</span>
+              )}
+
+              <div className="flex items-center gap-1 text-xs text-gray-500">
+                <Calendar size={12} />
+                {formatDate(comment.created_at)}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Comment Content */}
+        <div className="text-gray-300 leading-relaxed whitespace-pre-wrap">{comment.comment}</div>
+
+        {/* Reply toggle */}
+        <button
+          onClick={() => (replyingTo === comment.id ? onCancelReply() : onStartReply(comment.id))}
+          className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-blue-400 hover:text-blue-300 transition-colors"
+        >
+          <Reply size={14} />
+          {replyingTo === comment.id ? 'Cancel' : 'Reply'}
+        </button>
+
+        {replyingTo === comment.id && (
+          <div className="mt-4 pt-4 border-t border-gray-700">
+            <CommentForm
+              isAdmin={isAdmin}
+              submitting={submitting}
+              submitLabel="Post Reply"
+              placeholder={`Replying to ${comment.name}...`}
+              onCancel={onCancelReply}
+              onSubmit={(values) => onSubmitReply(comment.id, values)}
+            />
+          </div>
+        )}
+      </div>
+
+      {comment.replies.map((reply) => (
+        <CommentNode
+          key={reply.id}
+          comment={reply}
+          depth={depth + 1}
+          isAdmin={isAdmin}
+          replyingTo={replyingTo}
+          submitting={submitting}
+          onStartReply={onStartReply}
+          onCancelReply={onCancelReply}
+          onSubmitReply={onSubmitReply}
+        />
+      ))}
+    </div>
+  );
+}
+
 export default function Comments({ articleId, articleTitle }: CommentsProps) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<number | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  
-  const [form, setForm] = useState({
-    name: '',
-    email: '',
-    website: '',
-    comment: ''
-  });
 
   useEffect(() => {
     fetchComments();
+    checkAdminStatus();
   }, [articleId]);
+
+  const checkAdminStatus = async () => {
+    try {
+      const res = await fetch('/api/auth/status', { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setIsAdmin(!!data.authenticated);
+      }
+    } catch (err) {
+      // Not logged in / status check failed -- treat as a regular visitor.
+      setIsAdmin(false);
+    }
+  };
 
   const fetchComments = async () => {
     try {
@@ -41,7 +306,7 @@ export default function Comments({ articleId, articleTitle }: CommentsProps) {
       const res = await fetch(`/api/comments?articleId=${articleId}`);
       if (res.ok) {
         const data = await res.json();
-        setComments(data);
+        setComments(buildCommentTree(data));
         console.log(`✅ [COMMENTS] Loaded ${data.length} comments`);
       }
     } catch (err) {
@@ -51,30 +316,39 @@ export default function Comments({ articleId, articleTitle }: CommentsProps) {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const totalCount = (nodes: Comment[]): number =>
+    nodes.reduce((sum, c) => sum + 1 + totalCount(c.replies), 0);
+
+  const submitComment = async (values: FormValues, parentId: number | null) => {
     setSubmitting(true);
     setError('');
     setSuccess('');
 
     try {
-      console.log('📝 [COMMENTS] Submitting new comment');
-      
       const res = await fetch('/api/comments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           articleId,
-          ...form
-        })
+          parentId,
+          ...(isAdmin
+            ? { name: 'admin', email: 'nasir19noor@gmail.com', comment: values.comment }
+            : values),
+        }),
       });
 
       const data = await res.json();
 
       if (res.ok) {
         setSuccess(data.message);
-        setForm({ name: '', email: '', website: '', comment: '' });
         setShowForm(false);
+        setReplyingTo(null);
+        // Admin replies are auto-approved and visible immediately; regular
+        // comments still wait for moderation, so only refetch for the former.
+        if (data.approved) {
+          fetchComments();
+        }
         console.log('✅ [COMMENTS] Comment submitted successfully');
       } else {
         setError(data.error || 'Failed to submit comment');
@@ -88,15 +362,7 @@ export default function Comments({ articleId, articleTitle }: CommentsProps) {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+  const commentCount = totalCount(comments);
 
   return (
     <div className="mt-16 pt-8 border-t border-white/10">
@@ -104,12 +370,15 @@ export default function Comments({ articleId, articleTitle }: CommentsProps) {
       <div className="flex items-center justify-between mb-8">
         <h3 className="text-2xl font-bold text-white flex items-center gap-3">
           <MessageCircle className="text-blue-400" size={28} />
-          Comments ({comments.length})
+          Comments ({commentCount})
         </h3>
-        
+
         {!showForm && (
           <button
-            onClick={() => setShowForm(true)}
+            onClick={() => {
+              setReplyingTo(null);
+              setShowForm(true);
+            }}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
           >
             <MessageCircle size={16} />
@@ -131,7 +400,7 @@ export default function Comments({ articleId, articleTitle }: CommentsProps) {
         </div>
       )}
 
-      {/* Comment Form */}
+      {/* Top-level Comment Form */}
       {showForm && (
         <div className="mb-8 p-6 bg-gray-900/50 border border-gray-700 rounded-xl">
           <div className="flex items-center justify-between mb-4">
@@ -144,80 +413,13 @@ export default function Comments({ articleId, articleTitle }: CommentsProps) {
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Your name"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Email *
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="your@email.com"
-                />
-                <p className="text-xs text-gray-500 mt-1">Email will not be published</p>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                Website (optional)
-              </label>
-              <input
-                type="url"
-                value={form.website}
-                onChange={(e) => setForm({ ...form, website: e.target.value })}
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="https://yourwebsite.com"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                Comment *
-              </label>
-              <textarea
-                required
-                rows={4}
-                value={form.comment}
-                onChange={(e) => setForm({ ...form, comment: e.target.value })}
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                placeholder="Share your thoughts about this article..."
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-gray-500">
-                Comments are moderated and will appear after approval.
-              </p>
-              
-              <button
-                type="submit"
-                disabled={submitting}
-                className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors font-medium"
-              >
-                <Send size={16} />
-                {submitting ? 'Submitting...' : 'Submit Comment'}
-              </button>
-            </div>
-          </form>
+          <CommentForm
+            isAdmin={isAdmin}
+            submitting={submitting}
+            submitLabel="Submit Comment"
+            placeholder="Share your thoughts about this article..."
+            onSubmit={(values) => submitComment(values, null)}
+          />
         </div>
       )}
 
@@ -238,42 +440,20 @@ export default function Comments({ articleId, articleTitle }: CommentsProps) {
       ) : (
         <div className="space-y-6">
           {comments.map((comment) => (
-            <div key={comment.id} className="p-6 bg-gray-900/30 border border-gray-700 rounded-xl">
-              {/* Comment Header */}
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-                    <User className="text-white" size={20} />
-                  </div>
-                  
-                  <div>
-                    {comment.website ? (
-                      <a
-                        href={comment.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-semibold text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1"
-                      >
-                        {comment.name}
-                        <Globe size={14} />
-                      </a>
-                    ) : (
-                      <span className="font-semibold text-white">{comment.name}</span>
-                    )}
-                    
-                    <div className="flex items-center gap-1 text-xs text-gray-500">
-                      <Calendar size={12} />
-                      {formatDate(comment.created_at)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Comment Content */}
-              <div className="text-gray-300 leading-relaxed whitespace-pre-wrap">
-                {comment.comment}
-              </div>
-            </div>
+            <CommentNode
+              key={comment.id}
+              comment={comment}
+              depth={0}
+              isAdmin={isAdmin}
+              replyingTo={replyingTo}
+              submitting={submitting}
+              onStartReply={(id) => {
+                setShowForm(false);
+                setReplyingTo(id);
+              }}
+              onCancelReply={() => setReplyingTo(null)}
+              onSubmitReply={(parentId, values) => submitComment(values, parentId)}
+            />
           ))}
         </div>
       )}

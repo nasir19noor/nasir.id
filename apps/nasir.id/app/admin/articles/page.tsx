@@ -468,7 +468,7 @@ export default function AdminArticlesPage() {
                                 >
                                     <td className="px-6 py-4">
                                         <a
-                                            href={`/${article.slug}`}
+                                            href={`${article.language === 'id' ? '/id' : ''}/${article.slug}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="block hover:bg-gray-50 -mx-2 -my-1 px-2 py-1 rounded transition-colors"

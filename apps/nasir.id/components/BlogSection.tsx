@@ -92,10 +92,12 @@ export default function BlogSection({ language = 'en' }: BlogSectionProps) {
                         {/* Articles grid */}
                         <div className="grid md:grid-cols-3 gap-6 mb-12">
                             {articles.map((article) => (
-                                <article
+                                <a
                                     key={article.id}
-                                    className="group card card-hover cursor-pointer"
-                                    onClick={() => window.open(`/${article.slug}`, '_blank')}
+                                    href={`${language === 'id' ? '/id' : ''}/${article.slug}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="group card card-hover block"
                                 >
                                     {/* Image */}
                                     {(() => {
@@ -140,7 +142,7 @@ export default function BlogSection({ language = 'en' }: BlogSectionProps) {
                                             />
                                         </div>
                                     </div>
-                                </article>
+                                </a>
                             ))}
                         </div>
 
