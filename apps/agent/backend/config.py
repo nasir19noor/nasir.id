@@ -38,6 +38,15 @@ DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://agent:agent@localhost:543
 # write" under Account permissions.
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
 
+# --- Google Drive (read-only inspection, nasir19noor@gmail.com only) ---
+# Needs an OAuth client from https://console.cloud.google.com (APIs & Services
+# > Credentials) with the Drive API enabled, plus a refresh token minted once
+# via `python scripts/google_drive_oauth_setup.py`. See that script's
+# docstring for the full one-time setup steps.
+GOOGLE_OAUTH_CLIENT_ID = os.getenv("GOOGLE_OAUTH_CLIENT_ID", "")
+GOOGLE_OAUTH_CLIENT_SECRET = os.getenv("GOOGLE_OAUTH_CLIENT_SECRET", "")
+GOOGLE_DRIVE_REFRESH_TOKEN = os.getenv("GOOGLE_DRIVE_REFRESH_TOKEN", "")
+
 # --- Auth ---
 # HTTP Basic auth, required on every endpoint except /health. This agent can
 # run shell commands and query production data, so it must never be reachable

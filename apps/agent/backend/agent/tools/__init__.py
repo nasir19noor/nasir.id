@@ -11,6 +11,7 @@ from agent.tools.github_tools import (
     ListGithubActionsRunsTool,
     ListGithubCommitsTool,
 )
+from agent.tools.google_drive_tools import SearchGoogleDriveTool, ReadGoogleDriveFileTool
 
 
 def build_registry() -> dict:
@@ -27,6 +28,8 @@ def build_registry() -> dict:
         ListGithubPullRequestsTool(),
         ListGithubActionsRunsTool(),
         ListGithubCommitsTool(),
+        SearchGoogleDriveTool(),
+        ReadGoogleDriveFileTool(),
     ]
     return {t.name: t for t in tools}
 
