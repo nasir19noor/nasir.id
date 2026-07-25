@@ -3,6 +3,12 @@ from agent.tools.shell import ShellTool
 from agent.tools.postgres import PostgresQueryTool
 from agent.tools.aws_tools import ListEC2Tool, ListS3Tool, TailLogsTool
 from agent.tools.http_fetch import HttpFetchTool
+from agent.tools.github_tools import (
+    ListGithubIssuesTool,
+    ListGithubPullRequestsTool,
+    ListGithubActionsRunsTool,
+    ListGithubCommitsTool,
+)
 
 
 def build_registry() -> dict:
@@ -13,6 +19,10 @@ def build_registry() -> dict:
         ListS3Tool(),
         TailLogsTool(),
         HttpFetchTool(),
+        ListGithubIssuesTool(),
+        ListGithubPullRequestsTool(),
+        ListGithubActionsRunsTool(),
+        ListGithubCommitsTool(),
     ]
     return {t.name: t for t in tools}
 

@@ -29,6 +29,12 @@ MAX_AGENT_STEPS = int(os.getenv("MAX_AGENT_STEPS", "10"))
 # --- Memory ---
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://agent:agent@localhost:5432/agent")
 
+# --- GitHub (read-only inspection tools) ---
+# A fine-grained PAT with read-only access (Issues, Pull requests, Actions,
+# Contents) to whichever repos you want the agent to inspect. Classic PATs
+# with the `repo` (private) or `public_repo` (public-only) scope also work.
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
+
 # --- Auth ---
 # HTTP Basic auth, required on every endpoint except /health. This agent can
 # run shell commands and query production data, so it must never be reachable
