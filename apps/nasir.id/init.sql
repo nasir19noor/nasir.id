@@ -16,7 +16,9 @@ CREATE TABLE IF NOT EXISTS articles (
   images TEXT[] DEFAULT '{}',
   is_portfolio BOOLEAN DEFAULT FALSE,
   language VARCHAR(5) DEFAULT 'en',
+  tags TEXT[] DEFAULT '{}',
   published_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   UNIQUE(slug, language)
 );
 
@@ -86,6 +88,7 @@ CREATE INDEX IF NOT EXISTS idx_articles_slug_language ON articles(slug, language
 CREATE INDEX IF NOT EXISTS idx_articles_language ON articles(language);
 CREATE INDEX IF NOT EXISTS idx_articles_is_portfolio ON articles(is_portfolio);
 CREATE INDEX IF NOT EXISTS idx_articles_published_at ON articles(published_at);
+CREATE INDEX IF NOT EXISTS idx_articles_tags ON articles USING GIN(tags);
 
 -- Settings indexes
 CREATE INDEX IF NOT EXISTS idx_settings_key_language ON settings(key, language);

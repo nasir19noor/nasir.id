@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Calendar, ArrowRight, Search, Filter, Briefcase } from 'lucide-react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { Calendar, ArrowRight, Search, Filter, Briefcase, X } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { getThumbnailUrl } from '@/lib/image-utils';
@@ -12,11 +13,16 @@ interface PortfolioItem {
     description: string;
     image_url: string;
     images: string[];
+    tags?: string[];
     slug: string;
     published_at: string;
 }
 
 export default function PortfolioClientID() {
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const activeTag = searchParams.get('tag');
+
     const [projects, setProjects] = useState<PortfolioItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -42,11 +48,12 @@ export default function PortfolioClientID() {
 
     useEffect(() => {
         const filtered = projects.filter(project =>
-            project.project_title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            project.description?.toLowerCase().includes(searchTerm.toLowerCase())
+            (project.project_title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                project.description?.toLowerCase().includes(searchTerm.toLowerCase())) &&
+            (!activeTag || project.tags?.includes(activeTag))
         );
         setFilteredProjects(filtered);
-    }, [searchTerm, projects]);
+    }, [searchTerm, projects, activeTag]);
 
     // Extract plain text from HTML for summary
     const getTextSummary = (html: string) => {
@@ -114,6 +121,22 @@ export default function PortfolioClientID() {
                                 className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                             />
                         </div>
+
+                        {/* Active tag filter */}
+                        {activeTag && (
+                            <div className="mt-4 flex items-center justify-center gap-2">
+                                <span className="text-sm text-slate-600">
+                                    Menampilkan proyek dengan tag <strong>#{activeTag}</strong>
+                                </span>
+                                <button
+                                    onClick={() => router.push('/id/portfolio')}
+                                    className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full bg-slate-200 text-slate-700 hover:bg-slate-300 transition-colors"
+                                >
+                                    <X size={12} />
+                                    Hapus
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

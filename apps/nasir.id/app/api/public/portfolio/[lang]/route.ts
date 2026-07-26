@@ -15,7 +15,7 @@ export async function GET(
         }
 
         const projects = await sql`
-            SELECT id, title as project_title, content as description, image_url, images, slug, published_at 
+            SELECT id, title as project_title, content as description, image_url, images, tags, slug, published_at
             FROM articles
             WHERE is_portfolio = TRUE AND language = ${lang}
             ORDER BY published_at DESC

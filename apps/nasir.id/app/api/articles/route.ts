@@ -11,8 +11,8 @@ export async function GET() {
 
     try {
         const articles = await sql`
-      SELECT id, title, slug, summary, image_url, images, published_at, is_portfolio, language 
-      FROM articles 
+      SELECT id, title, slug, summary, image_url, images, tags, published_at, updated_at, is_portfolio, language
+      FROM articles
       ORDER BY published_at DESC
     `;
         
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     }
 
     try {
-        const { title, slug, summary, content, image_url, images, is_portfolio, language } = await request.json();
+        const { title, slug, summary, content, image_url, images, tags, is_portfolio, language } = await request.json();
 
         if (!title || !slug || !content) {
             return NextResponse.json(
@@ -43,12 +43,13 @@ export async function POST(request: Request) {
         }
 
         const imagesArray = Array.isArray(images) ? images : [];
+        const tagsArray = Array.isArray(tags) ? tags.map((t: string) => t.trim()).filter(Boolean) : [];
         const articleLanguage = language || 'en'; // Default to 'en' if not provided
 
         const [article] = await sql`
-      INSERT INTO articles (title, slug, summary, content, image_url, images, is_portfolio, language, published_at)
-      VALUES (${title}, ${slug}, ${summary || ''}, ${content}, ${image_url || ''}, ${imagesArray}, ${is_portfolio || false}, ${articleLanguage}, NOW())
-      RETURNING id, title, slug, summary, image_url, images, is_portfolio, language, published_at
+      INSERT INTO articles (title, slug, summary, content, image_url, images, tags, is_portfolio, language, published_at, updated_at)
+      VALUES (${title}, ${slug}, ${summary || ''}, ${content}, ${image_url || ''}, ${imagesArray}, ${tagsArray}, ${is_portfolio || false}, ${articleLanguage}, NOW(), NOW())
+      RETURNING id, title, slug, summary, image_url, images, tags, is_portfolio, language, published_at, updated_at
     `;
 
         return NextResponse.json(article, { status: 201 });

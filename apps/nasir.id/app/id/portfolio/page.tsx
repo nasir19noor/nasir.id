@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import PortfolioClientID from './PortfolioClientID';
 
 const baseUrl = 'https://nasir.id';
@@ -26,5 +27,9 @@ export const metadata: Metadata = {
 };
 
 export default function PortfolioPageID() {
-    return <PortfolioClientID />;
+    return (
+        <Suspense>
+            <PortfolioClientID />
+        </Suspense>
+    );
 }

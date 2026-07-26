@@ -11,6 +11,7 @@ interface Article {
     content?: string;
     image_url?: string;
     images?: string[];
+    tags?: string[];
     published_at: string;
     is_portfolio: boolean;
     language?: string;
@@ -23,17 +24,19 @@ interface FormData {
     content: string;
     image_url: string;
     images: string[];
+    tags: string; // comma-separated in the form; split into an array on save
     is_portfolio: boolean;
     language: string;
 }
 
-const emptyForm: FormData = { 
-    title: '', 
-    slug: '', 
-    summary: '', 
-    content: '', 
-    image_url: '', 
-    images: [], 
+const emptyForm: FormData = {
+    title: '',
+    slug: '',
+    summary: '',
+    content: '',
+    image_url: '',
+    images: [],
+    tags: '',
     is_portfolio: false,
     language: 'en'
 };
@@ -116,6 +119,7 @@ export default function AdminArticlesPage() {
                 content: data.content || '',
                 image_url: data.image_url || '',
                 images: data.images || [],
+                tags: Array.isArray(data.tags) ? data.tags.join(', ') : '',
                 is_portfolio: data.is_portfolio || false,
                 language: data.language || 'en',
             });
@@ -140,11 +144,16 @@ export default function AdminArticlesPage() {
             const url = editing ? `/api/articles/${editing}` : '/api/articles';
             const method = editing ? 'PUT' : 'POST';
 
+            const tagsArray = form.tags
+                .split(',')
+                .map((t) => t.trim())
+                .filter(Boolean);
+
             const res = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify(form),
+                body: JSON.stringify({ ...form, tags: tagsArray }),
             });
 
             if (!res.ok) {
@@ -655,6 +664,22 @@ export default function AdminArticlesPage() {
                                         className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                                         placeholder="Brief summary of the article"
                                     />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                        Tags
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={form.tags}
+                                        onChange={(e) => setForm({ ...form, tags: e.target.value })}
+                                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        placeholder="e.g. Kubernetes, AWS, Career (comma-separated)"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Used for SEO keywords and shown as clickable tags on the article.
+                                    </p>
                                 </div>
 
                                 <div className="flex items-center gap-3 p-4 bg-purple-50 border border-purple-200 rounded-xl">

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Calendar, ArrowRight, Search, Filter } from 'lucide-react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { Calendar, ArrowRight, Search, Filter, X } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { getThumbnailUrl } from '@/lib/image-utils';
@@ -13,10 +14,15 @@ interface Article {
     summary: string;
     image_url: string;
     images: string[];
+    tags?: string[];
     published_at: string;
 }
 
 export default function ArticlesClient() {
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const activeTag = searchParams.get('tag');
+
     const [articles, setArticles] = useState<Article[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -42,11 +48,12 @@ export default function ArticlesClient() {
 
     useEffect(() => {
         const filtered = articles.filter(article =>
-            article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            article.summary?.toLowerCase().includes(searchTerm.toLowerCase())
+            (article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                article.summary?.toLowerCase().includes(searchTerm.toLowerCase())) &&
+            (!activeTag || article.tags?.includes(activeTag))
         );
         setFilteredArticles(filtered);
-    }, [searchTerm, articles]);
+    }, [searchTerm, articles, activeTag]);
 
     // Helper function to get the best image URL for an article
     const getArticleImageUrl = (article: Article): string | null => {
@@ -106,6 +113,22 @@ export default function ArticlesClient() {
                                 className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             />
                         </div>
+
+                        {/* Active tag filter */}
+                        {activeTag && (
+                            <div className="mt-4 flex items-center justify-center gap-2">
+                                <span className="text-sm text-slate-600">
+                                    Showing articles tagged <strong>#{activeTag}</strong>
+                                </span>
+                                <button
+                                    onClick={() => router.push('/articles')}
+                                    className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full bg-slate-200 text-slate-700 hover:bg-slate-300 transition-colors"
+                                >
+                                    <X size={12} />
+                                    Clear
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

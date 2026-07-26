@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next';
 import sql from '@/lib/db';
+import { convertToAssetsUrl } from '@/lib/image-utils';
 
 const baseUrl = 'https://nasir.id';
 
@@ -23,18 +24,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   try {
     const rows = await sql`
-      SELECT slug, language, is_portfolio, published_at
+      SELECT slug, language, is_portfolio, image_url, images, published_at, updated_at
       FROM articles
       ORDER BY published_at DESC
     `;
 
     const contentRoutes: MetadataRoute.Sitemap = rows.map((row) => {
       const path = row.language === 'id' ? `/id/${row.slug}` : `/${row.slug}`;
+      const image = Array.isArray(row.images) && row.images.length > 0
+        ? row.images[0]
+        : row.image_url;
+
       return {
         url: `${baseUrl}${path}`,
-        lastModified: new Date(row.published_at),
+        lastModified: new Date(row.updated_at || row.published_at),
         changeFrequency: row.is_portfolio ? 'monthly' : 'yearly',
         priority: row.is_portfolio ? 0.6 : 0.7,
+        images: image ? [convertToAssetsUrl(image)] : undefined,
       };
     });
 

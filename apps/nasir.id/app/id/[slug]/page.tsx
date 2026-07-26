@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   try {
     const results = await sql`
-      SELECT id, title, summary, content, image_url, images, published_at, is_portfolio, language
+      SELECT id, title, summary, content, image_url, images, tags, published_at, updated_at, is_portfolio, language
       FROM articles
       WHERE slug = ${slug} AND language = 'id'
       LIMIT 1
@@ -75,13 +75,19 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
     const title = `${item.title} | Nasir.id`;
     const publishedDate = new Date(item.published_at).toISOString();
+    const modifiedDate = new Date(item.updated_at || item.published_at).toISOString();
+
+    // Real tags when the author set them; otherwise fall back to the old
+    // generic list so pages never ship with empty keywords/article:tag.
+    const fallbackTags = item.is_portfolio
+      ? ['Portfolio', 'Proyek', 'Cloud Engineering', 'DevOps', 'AWS', 'Azure', 'GCP']
+      : ['Artikel', 'Blog', 'Cloud Engineering', 'DevOps', 'AWS', 'Azure', 'GCP', 'Tutorial'];
+    const tags: string[] = Array.isArray(item.tags) && item.tags.length > 0 ? item.tags : fallbackTags;
 
     return {
       title,
       description,
-      keywords: item.is_portfolio
-        ? ['Portfolio', 'Proyek', 'Cloud Engineering', 'DevOps', 'AWS', 'Azure', 'GCP']
-        : ['Artikel', 'Blog', 'Cloud Engineering', 'DevOps', 'AWS', 'Azure', 'GCP', 'Tutorial'],
+      keywords: tags,
       authors: [{ name: 'Nasir Noor' }],
       creator: 'Nasir Noor',
 
@@ -104,11 +110,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         type: item.is_portfolio ? 'website' : 'article',
         locale: 'id_ID',
         publishedTime: publishedDate,
+        modifiedTime: modifiedDate,
         authors: ['Nasir Noor'],
         section: item.is_portfolio ? 'Portfolio' : 'Teknologi',
-        tags: item.is_portfolio 
-          ? ['Portfolio', 'Proyek', 'Cloud Engineering', 'DevOps']
-          : ['Artikel', 'Teknologi', 'Cloud Engineering', 'DevOps'],
+        tags,
         images: [
           {
             url: itemImage,
@@ -133,6 +138,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       // Additional structured data
       other: {
         'article:published_time': publishedDate,
+        'article:modified_time': modifiedDate,
         'article:author': 'Nasir Noor',
         'article:section': item.is_portfolio ? 'Portfolio' : 'Teknologi',
         'og:image:width': '1200',
@@ -164,7 +170,7 @@ export default async function IndonesianSlugPage({ params }: PageProps) {
 
   try {
     const results = await sql`
-      SELECT id, title, content, published_at, is_portfolio, summary, image_url, images
+      SELECT id, title, content, published_at, updated_at, is_portfolio, summary, image_url, images, tags
       FROM articles
       WHERE slug = ${slug} AND language = 'id'
       LIMIT 1
@@ -188,6 +194,9 @@ export default async function IndonesianSlugPage({ params }: PageProps) {
       featuredImage = convertToAssetsUrl(item.image_url);
     }
 
+    const pageUrl = `https://nasir.id/id/${slug}`;
+    const tags: string[] = Array.isArray(item.tags) ? item.tags : [];
+
     const jsonLd = {
       '@context': 'https://schema.org',
       '@type': isPortfolio ? 'CreativeWork' : 'BlogPosting',
@@ -195,7 +204,11 @@ export default async function IndonesianSlugPage({ params }: PageProps) {
       description: item.summary || undefined,
       image: featuredImage || undefined,
       datePublished: new Date(item.published_at).toISOString(),
-      url: `https://nasir.id/id/${slug}`,
+      dateModified: new Date(item.updated_at || item.published_at).toISOString(),
+      url: pageUrl,
+      mainEntityOfPage: { '@type': 'WebPage', '@id': pageUrl },
+      articleSection: isPortfolio ? 'Portfolio' : 'Teknologi',
+      keywords: tags.length > 0 ? tags.join(', ') : undefined,
       inLanguage: 'id',
       author: { '@type': 'Person', name: 'Nasir Noor', url: 'https://nasir.id' },
       publisher: {
@@ -205,11 +218,30 @@ export default async function IndonesianSlugPage({ params }: PageProps) {
       },
     };
 
+    const breadcrumbJsonLd = {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Beranda', item: 'https://nasir.id/id' },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: isPortfolio ? 'Portfolio' : 'Artikel',
+          item: isPortfolio ? 'https://nasir.id/id/portfolio' : 'https://nasir.id/id/articles',
+        },
+        { '@type': 'ListItem', position: 3, name: item.title, item: pageUrl },
+      ],
+    };
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50">
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
         />
         <AnalyticsTracker
           pageType={isPortfolio ? "portfolio" : "article"}
@@ -289,6 +321,21 @@ export default async function IndonesianSlugPage({ params }: PageProps) {
                 })}
               </span>
             </div>
+
+            {/* Tags */}
+            {tags.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-4">
+                {tags.map((tag) => (
+                  <Link
+                    key={tag}
+                    href={`/id/${isPortfolio ? 'portfolio' : 'articles'}?tag=${encodeURIComponent(tag)}`}
+                    className="text-xs font-medium px-3 py-1 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                  >
+                    #{tag}
+                  </Link>
+                ))}
+              </div>
+            )}
           </header>
 
           {/* Featured Image */}

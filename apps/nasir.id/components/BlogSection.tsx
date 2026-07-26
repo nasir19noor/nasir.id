@@ -26,7 +26,9 @@ export default function BlogSection({ language = 'en' }: BlogSectionProps) {
     useEffect(() => {
         async function fetchArticles() {
             try {
-                const res = await fetch(`/api/public/articles/${language}`);
+                // Homepage teaser only -- the full /articles page fetches
+                // without a limit to get everything.
+                const res = await fetch(`/api/public/articles/${language}?limit=4`);
                 if (res.ok) {
                     const data = await res.json();
                     setArticles(data);
