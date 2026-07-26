@@ -69,9 +69,17 @@ export default function VisitorMap({ days }: VisitorMapProps) {
     useEffect(() => {
         if (!leafletLoaded || !mapRef.current || locations.length === 0) return;
 
-        // Clean up existing map
+        // Clean up existing map. Guarded with try/catch + nulling the ref
+        // afterwards -- Leaflet throws if .remove() is ever called twice on
+        // the same instance, which otherwise happens the moment this effect
+        // re-runs (its own cleanup below already removed it once).
         if (mapInstanceRef.current) {
-            mapInstanceRef.current.remove();
+            try {
+                mapInstanceRef.current.remove();
+            } catch (error) {
+                console.error('Error removing previous map instance:', error);
+            }
+            mapInstanceRef.current = null;
         }
 
         // Initialize map
@@ -138,7 +146,12 @@ export default function VisitorMap({ days }: VisitorMapProps) {
         // Cleanup function
         return () => {
             if (mapInstanceRef.current) {
-                mapInstanceRef.current.remove();
+                try {
+                    mapInstanceRef.current.remove();
+                } catch (error) {
+                    console.error('Error removing map instance on cleanup:', error);
+                }
+                mapInstanceRef.current = null;
             }
         };
     }, [leafletLoaded, locations]);

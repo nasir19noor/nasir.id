@@ -124,7 +124,7 @@ function CommentForm({
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">Website (optional)</label>
             <input
-              type="url"
+              type="text"
               value={form.website}
               onChange={(e) => setForm({ ...form, website: e.target.value })}
               className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"

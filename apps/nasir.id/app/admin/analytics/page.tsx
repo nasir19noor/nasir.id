@@ -129,6 +129,7 @@ export default function AnalyticsPage() {
     }, [days]);
 
     const fetchAnalytics = async () => {
+        setLoading(true);
         try {
             const res = await fetch(`/api/analytics/stats?days=${days}`, {
                 credentials: 'include',
