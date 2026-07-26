@@ -7,6 +7,13 @@ import { sendCommentReplyNotification } from '@/lib/mail';
 // logged in are always attributed to these, regardless of what the client sends.
 const ADMIN_NAME = 'admin';
 const ADMIN_EMAIL = 'nasir19noor@gmail.com';
+const ADMIN_AVATAR = '🛡️';
+
+// Commenters pick one of these instead of uploading an image -- keeps the
+// feature moderation-free and avoids needing image storage for avatars.
+// Kept in sync with AVATAR_OPTIONS in components/Comments.tsx.
+const AVATAR_OPTIONS = ['😀', '😎', '🤓', '🥳', '🦊', '🐱', '🐼', '🚀'];
+const DEFAULT_AVATAR = AVATAR_OPTIONS[0];
 
 // GET /api/comments - Get comments for an article (public, only approved comments)
 // GET /api/comments?admin=true - Get all comments for admin (requires authentication)
@@ -31,9 +38,10 @@ export async function GET(request: Request) {
           c.article_id, 
           c.name, 
           c.email, 
-          c.website, 
-          c.comment, 
-          c.approved, 
+          c.website,
+          c.comment,
+          c.avatar,
+          c.approved,
           c.created_at,
           a.title as article_title,
           a.slug as article_slug,
@@ -60,7 +68,7 @@ export async function GET(request: Request) {
     console.log(`📝 [COMMENTS] Fetching comments for article ${articleId}`);
     
     const comments = await sql`
-      SELECT id, parent_id, name, website, comment, created_at
+      SELECT id, parent_id, name, website, comment, avatar, created_at
       FROM comments
       WHERE article_id = ${articleId} AND approved = true
       ORDER BY created_at ASC
@@ -81,14 +89,19 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const { articleId, comment, parentId } = body;
-    let { name, email, website } = body;
+    let { name, email, website, avatar } = body;
 
-    // Logged-in admin replies skip the name/email form entirely -- the
+    // Logged-in admin replies skip the name/email/avatar form entirely -- the
     // identity comes from the session, never from client-supplied fields.
     const isAdmin = await isAuthenticated();
     if (isAdmin) {
       name = ADMIN_NAME;
       email = ADMIN_EMAIL;
+      avatar = ADMIN_AVATAR;
+    } else if (!AVATAR_OPTIONS.includes(avatar)) {
+      // Ignore anything outside the picker's allow-list rather than reject
+      // the whole comment over it.
+      avatar = DEFAULT_AVATAR;
     }
 
     // Validation
@@ -137,8 +150,8 @@ export async function POST(request: Request) {
     // Admin comments/replies are auto-approved -- they're already the site
     // owner's own words, there's nothing to moderate.
     const result = await sql`
-      INSERT INTO comments (article_id, parent_id, name, email, website, comment, approved)
-      VALUES (${articleId}, ${parentId || null}, ${name}, ${email}, ${website || null}, ${comment}, ${isAdmin})
+      INSERT INTO comments (article_id, parent_id, name, email, website, comment, avatar, approved)
+      VALUES (${articleId}, ${parentId || null}, ${name}, ${email}, ${website || null}, ${comment}, ${avatar}, ${isAdmin})
       RETURNING id, created_at
     `;
 

@@ -9,6 +9,7 @@ interface Comment {
   name: string;
   website?: string;
   comment: string;
+  avatar?: string;
   created_at: string;
   replies: Comment[];
 }
@@ -23,9 +24,14 @@ interface FormValues {
   email: string;
   website: string;
   comment: string;
+  avatar: string;
 }
 
-const EMPTY_FORM: FormValues = { name: '', email: '', website: '', comment: '' };
+// Kept in sync with AVATAR_OPTIONS in app/api/comments/route.ts -- the
+// server re-validates against the same list, this is just what's offered.
+const AVATAR_OPTIONS = ['😀', '😎', '🤓', '🥳', '🦊', '🐱', '🐼', '🚀'];
+
+const EMPTY_FORM: FormValues = { name: '', email: '', website: '', comment: '', avatar: AVATAR_OPTIONS[0] };
 
 // Groups the flat, approved-only list the API returns into a reply tree.
 // Top-level threads newest first; replies within a thread oldest first, so a
@@ -92,6 +98,28 @@ function CommentForm({
         </div>
       ) : (
         <>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Avatar</label>
+            <div className="flex flex-wrap gap-2">
+              {AVATAR_OPTIONS.map((emoji) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => setForm({ ...form, avatar: emoji })}
+                  aria-label={`Choose avatar ${emoji}`}
+                  aria-pressed={form.avatar === emoji}
+                  className={`w-10 h-10 flex items-center justify-center text-xl rounded-full border-2 transition-colors ${
+                    form.avatar === emoji
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-transparent bg-slate-100 hover:bg-slate-200'
+                  }`}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Name *</label>
@@ -202,8 +230,8 @@ function CommentNode({
         {/* Comment Header */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center flex-none">
-              <User className="text-white" size={20} />
+            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center flex-none text-xl">
+              {comment.avatar || <User className="text-white" size={20} />}
             </div>
 
             <div>
