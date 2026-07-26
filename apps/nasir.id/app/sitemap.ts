@@ -3,6 +3,14 @@ import sql from '@/lib/db';
 
 const baseUrl = 'https://nasir.id';
 
+// The Docker build stage has no DATABASE_URL (it's only injected via
+// --env-file at `docker run`, after the image is already built), so without
+// this, Next.js generates the sitemap once at build time, the DB query
+// fails, and the fallback below gets permanently baked in with zero
+// articles/portfolio items. Forcing dynamic makes it run per-request in the
+// running container, which does have DB access.
+export const dynamic = 'force-dynamic';
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: baseUrl, changeFrequency: 'weekly', priority: 1 },

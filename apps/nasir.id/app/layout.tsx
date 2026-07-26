@@ -35,8 +35,12 @@ export async function generateMetadata(): Promise<Metadata> {
   // Use about_bio for description instead of hero_description for more professional social previews
   const description = settings.about_bio || settings.hero_description || 'Cloud & DevOps engineer passionate about building resilient, scalable infrastructure and exploring AI/ML integration.';
   
-  // Clean up description for meta tags (remove emojis and extra formatting)
-  const cleanDescription = description.replace(/[^\w\s.,!?-]/g, '').trim();
+  // Clean up description for meta tags (strip emojis, keep normal punctuation
+  // like apostrophes/ampersands/slashes so "I'm"/"AI/ML" don't get mangled)
+  const cleanDescription = description
+    .replace(/[^\w\s.,!?'&/-]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
   
   const title = `${settings.hero_title} | ${settings.hero_subtitle}` || 'Nasir Noor | Cloud & DevOps Engineer';
   
@@ -182,14 +186,14 @@ export default function RootLayout({
                 <meta name="mobile-web-app-capable" content="yes" />
                 <meta name="apple-mobile-web-app-capable" content="yes" />
                 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-                
-                {/* Fallback Open Graph tags */}
-                <meta property="og:site_name" content="Nasir.id" />
-                <meta property="og:type" content="website" />
-                <meta property="og:locale" content="en_US" />
-                <meta name="twitter:card" content="summary_large_image" />
-                <meta name="twitter:site" content="@nasir19noor" />
-                <meta name="twitter:creator" content="@nasir19noor" />
+
+                {/* Note: og:site_name / og:type / og:locale / twitter:* are NOT
+                    hardcoded here -- every page's generateMetadata() already
+                    emits its own correct values (e.g. id_ID vs en_US) via the
+                    Metadata API's openGraph/twitter fields. Static tags here
+                    would render in addition to those, not instead of them,
+                    producing duplicate/conflicting tags (this used to ship a
+                    hardcoded og:locale=en_US on every page, including /id). */}
             </head>
             <body>{children}</body>
         </html>
