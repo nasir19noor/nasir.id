@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AWS Solution Architect Professional Exam Simulator</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- ── Loading ─────────────────────────────────────────── -->
+    <div id="screen-loading" class="screen">
+      <div class="loader"></div>
+      <p>Loading exam questions…</p>
+    </div>
+
+    <!-- ── Start ───────────────────────────────────────────── -->
+    <div id="screen-start" class="screen hidden">
+      <div class="start-wrap">
+        <div class="start-card">
+          <div class="start-icon">📋</div>
+          <span class="badge badge-lg">AWS</span>
+          <h1 class="start-title">AWS Solution Architect Professional</h1>
+          <p class="start-subtitle">Exam Simulator</p>
+
+          <div class="start-meta">
+            <div class="meta-item">
+              <span class="meta-num" id="start-total">—</span>
+              <span class="meta-label">Total</span>
+            </div>
+            <div class="meta-divider"></div>
+            <div class="meta-item">
+              <span class="meta-num" id="start-part-count">—</span>
+              <span class="meta-label">Parts</span>
+            </div>
+            <div class="meta-divider"></div>
+            <div class="meta-item">
+              <span class="meta-num">70%</span>
+              <span class="meta-label">Pass mark</span>
+            </div>
+          </div>
+
+          <div class="part-section">
+            <div class="part-section-label">Select Part</div>
+            <div id="part-grid" class="part-grid">
+              <!-- built dynamically by app.js -->
+            </div>
+          </div>
+
+          <div class="option-row">
+            <label class="toggle-label" for="toggle-randomize">
+              <div class="toggle-text">
+                <span class="toggle-title">Randomize questions</span>
+                <span class="toggle-desc">Shuffle order on each session</span>
+              </div>
+              <div class="toggle-wrap">
+                <input type="checkbox" id="toggle-randomize" />
+                <span class="toggle-track"></span>
+              </div>
+            </label>
+          </div>
+
+          <button id="btn-start" class="btn btn-primary btn-full btn-lg">Start Quiz</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Quiz ────────────────────────────────────────────── -->
+    <div id="screen-quiz" class="screen hidden">
+      <header class="exam-header">
+        <div class="header-title">
+          <span class="badge">AWS</span>
+          <h1>AWS Solution Architect Professional</h1>
+          <span id="header-part" class="part-badge hidden"></span>
+        </div>
+        <div class="header-stats">
+          <div class="stat-pill">
+            <span class="stat-label">Question</span>
+            <span id="q-counter" class="stat-value">1 / 0</span>
+          </div>
+          <div class="stat-pill">
+            <span class="stat-label">Score</span>
+            <span id="score-display" class="stat-value">0 / 0</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="progress-track">
+        <div id="progress-bar" class="progress-fill"></div>
+      </div>
+
+      <main class="quiz-body">
+        <div class="question-card">
+          <div id="question-number" class="question-number">Q1</div>
+          <div id="question-text" class="question-text"></div>
+        </div>
+
+        <div id="choices" class="choices"></div>
+
+        <div id="feedback" class="feedback hidden"></div>
+
+        <div id="explanation" class="explanation hidden"></div>
+
+        <div class="actions">
+          <button id="btn-prev"   class="btn btn-prev" disabled>← Previous</button>
+          <button id="btn-submit" class="btn btn-primary">Submit Answer</button>
+          <button id="btn-next"   class="btn btn-next">Next →</button>
+        </div>
+      </main>
+    </div>
+
+    <!-- ── Results ──────────────────────────────────────────── -->
+    <div id="screen-results" class="screen hidden">
+      <div class="results-wrap">
+        <div class="results-card">
+          <div id="results-emoji" class="results-emoji">🎓</div>
+          <h2 class="results-title">Quiz Complete!</h2>
+
+          <div class="score-ring-wrap">
+            <svg class="score-ring" viewBox="0 0 120 120">
+              <circle class="ring-bg" cx="60" cy="60" r="50"/>
+              <circle id="ring-fill" class="ring-fill" cx="60" cy="60" r="50"
+                stroke-dasharray="314 314" stroke-dashoffset="314"/>
+            </svg>
+            <div class="score-ring-label">
+              <div id="result-pct"  class="result-pct">0%</div>
+              <div id="result-frac" class="result-frac">0 / 0</div>
+            </div>
+          </div>
+
+          <p id="result-msg" class="result-msg"></p>
+
+          <div class="result-breakdown">
+            <div class="breakdown-item correct-bg">
+              <span id="res-correct" class="breakdown-num">0</span>
+              <span class="breakdown-label">Correct</span>
+            </div>
+            <div class="breakdown-item incorrect-bg">
+              <span id="res-incorrect" class="breakdown-num">0</span>
+              <span class="breakdown-label">Incorrect</span>
+            </div>
+          </div>
+
+          <button id="btn-restart" class="btn btn-primary btn-full">New Quiz</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- #app -->
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

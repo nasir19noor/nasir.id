@@ -1,0 +1,15 @@
+services:
+  exam-simulator:
+    build: .
+    ports:
+      - "6000:6000"
+    volumes:
+      # Mount the whole bank/ so you can add .docx files or switch the active
+      # quiz (edit bank/config.json) without rebuilding. Changes are picked up
+      # on the next "Start New Quiz" click.
+      - ./bank:/app/bank:ro
+    # The active bank is chosen by bank/config.json. Uncomment to force a
+    # specific file regardless of config:
+    # environment:
+    #   - QUIZ_DOCX=/app/bank/aws/AWS-Solution-Architect-Professional.docx
+    restart: unless-stopped

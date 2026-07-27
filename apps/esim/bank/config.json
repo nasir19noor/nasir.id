@@ -1,0 +1,8 @@
+{
+  "_comment": "Selects which quiz bank (.docx) the app serves. 'active' is a path relative to this bank/ directory. Change it and click 'Start New Quiz' — no rebuild needed. The QUIZ_DOCX env var, if set, overrides this file.",
+  "active": "aws/AWS-Solution-Architect-Professional.docx",
+  "available": [
+    "aws/AWS-Solution-Architect-Professional.docx",
+    "gcp/Professional-Cloud-Security-Engineer.docx"
+  ]
+}
