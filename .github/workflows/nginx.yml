@@ -28,12 +28,15 @@ jobs:
         NGINX_STOPPED=false
 
         while IFS=',' read -r DOMAIN PORT || [ -n "$DOMAIN" ]; do
-          # Skip empty lines
-          [ -z "$DOMAIN" ] && continue
-
-          # Trim whitespace and carriage returns
+          # Trim whitespace and carriage returns first -- a line containing
+          # only "\r" (e.g. a stray blank line at EOF in a CRLF-saved file)
+          # is length 1, not empty, so checking -z before trimming lets it
+          # slip through and certbot chokes on an empty domain.
           DOMAIN=$(echo "$DOMAIN" | tr -d '\r\n ')
           PORT=$(echo "$PORT" | tr -d '\r\n ')
+
+          # Skip empty/blank lines
+          [ -z "$DOMAIN" ] && continue
 
           # Use full domain as directory name
           ROOT="/var/www/html/$DOMAIN"
