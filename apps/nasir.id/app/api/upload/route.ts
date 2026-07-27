@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { isAuthenticated } from '@/lib/auth';
 import { uploadImageWithSizes } from '@/lib/s3';
+import { recordGalleryUpload } from '@/lib/gallery';
 
 // Configure maximum file size (50MB)
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB in bytes
@@ -85,9 +86,13 @@ export async function POST(request: Request) {
     const url = result.medium || result.original;
     console.log(`🎯 [UPLOAD] Primary URL selected: ${url}`);
 
-    return NextResponse.json({ 
+    // Record in the shared gallery so this shows up in /admin/gallery
+    // regardless of which page (Gallery, Articles, Portfolio) uploaded it.
+    await recordGalleryUpload({ url, name: file.name, size: file.size });
+
+    return NextResponse.json({
       url,
-      sizes: result 
+      sizes: result
     });
   } catch (error) {
     console.error('💥 [UPLOAD] Error uploading file:', error);

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Upload, Trash2, Copy, Eye, X, Image as ImageIcon, Search, Filter } from 'lucide-react';
+import { Upload, Trash2, Copy, Eye, X, Image as ImageIcon, Search, Filter, RefreshCw } from 'lucide-react';
 
 interface GalleryImage {
     url: string;
@@ -21,15 +21,64 @@ export default function AdminGalleryPage() {
     const [success, setSuccess] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [sortBy, setSortBy] = useState<'name' | 'date' | 'size'>('date');
+    const [syncing, setSyncing] = useState(false);
 
-    // Load images from localStorage (simulating a gallery)
-    useEffect(() => {
-        const savedImages = localStorage.getItem('gallery-images');
-        if (savedImages) {
-            setImages(JSON.parse(savedImages));
+    const fetchGallery = async () => {
+        try {
+            const res = await fetch('/api/gallery', { credentials: 'include' });
+            if (res.status === 401) {
+                window.location.href = '/admin/login';
+                return;
+            }
+            if (res.ok) {
+                const data = await res.json();
+                setImages(data.images || []);
+            } else {
+                setError('Failed to load gallery');
+            }
+        } catch (err) {
+            console.error('Failed to load gallery:', err);
+            setError('Failed to load gallery');
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
+    };
+
+    // Load images from the shared gallery table -- this is what makes images
+    // uploaded via the Articles/Portfolio editors show up here too, not just
+    // ones uploaded through this page in this specific browser.
+    useEffect(() => {
+        fetchGallery();
     }, []);
+
+    // One-off backfill: scans the S3 bucket directly for images uploaded
+    // before gallery_images existed (or uploaded via the old localStorage-only
+    // Gallery), and records anything not already tracked. Safe to run more
+    // than once -- already-tracked images are skipped.
+    const handleSync = async () => {
+        setSyncing(true);
+        setError('');
+        setSuccess('');
+        try {
+            const res = await fetch('/api/gallery/sync', {
+                method: 'POST',
+                credentials: 'include',
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                throw new Error(data.error || 'Sync failed');
+            }
+            setSuccess(
+                `Scanned ${data.scanned} file(s) in S3, found ${data.groupsFound} image(s), imported ${data.imported} new one(s).`
+            );
+            await fetchGallery();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to sync from S3');
+        } finally {
+            setSyncing(false);
+            setTimeout(() => setSuccess(''), 8000);
+        }
+    };
 
     // Filter and sort images
     useEffect(() => {
@@ -53,11 +102,10 @@ export default function AdminGalleryPage() {
         setFilteredImages(filtered);
     }, [images, searchTerm, sortBy]);
 
-    // Save images to localStorage
-    const saveImages = (newImages: GalleryImage[]) => {
-        localStorage.setItem('gallery-images', JSON.stringify(newImages));
-        setImages(newImages);
-    };
+    // Note: uploads/deletes are already persisted server-side (in
+    // gallery_images) by the /api/upload and /api/gallery/delete routes --
+    // setImages() below is just for immediate UI feedback, no local
+    // persistence needed.
 
     // Image resizing function
     const resizeImage = (file: File, maxWidth: number = 1920, quality: number = 0.8): Promise<File> => {
@@ -293,8 +341,7 @@ export default function AdminGalleryPage() {
             }
 
             if (uploadedImages.length > 0) {
-                const newImages = [...images, ...uploadedImages];
-                saveImages(newImages);
+                setImages([...images, ...uploadedImages]);
             }
             
             // Show results
@@ -366,9 +413,9 @@ export default function AdminGalleryPage() {
                 throw new Error(result.error || `HTTP ${response.status}: Failed to delete image from S3`);
             }
             
-            // Remove from local gallery storage
+            // Remove from local state (already deleted server-side above)
             const newImages = images.filter(img => img.url !== imageUrl);
-            saveImages(newImages);
+            setImages(newImages);
             
             // Show detailed success message
             const successMsg = `Image permanently deleted from S3 storage`;
@@ -431,18 +478,29 @@ export default function AdminGalleryPage() {
                         Upload and manage your images ({images.length} total) • Auto-resize large images (&gt;1MB)
                     </p>
                 </div>
-                <label className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
-                    <Upload size={18} />
-                    {uploading ? 'Uploading...' : 'Upload Images'}
-                    <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        onChange={handleFileUpload}
-                        disabled={uploading}
-                        className="hidden"
-                    />
-                </label>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={handleSync}
+                        disabled={syncing}
+                        title="Find images uploaded via Articles/Portfolio (or before this feature existed) that aren't showing here yet"
+                        className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <RefreshCw size={18} className={syncing ? 'animate-spin' : ''} />
+                        {syncing ? 'Syncing...' : 'Sync existing uploads'}
+                    </button>
+                    <label className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                        <Upload size={18} />
+                        {uploading ? 'Uploading...' : 'Upload Images'}
+                        <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            onChange={handleFileUpload}
+                            disabled={uploading}
+                            className="hidden"
+                        />
+                    </label>
+                </div>
             </div>
 
             {/* Search and Filter Bar */}

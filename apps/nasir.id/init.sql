@@ -37,6 +37,19 @@ CREATE TABLE IF NOT EXISTS comments (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Gallery images -- a shared record of every image uploaded through
+-- /api/upload or /api/upload/chunked, regardless of whether the upload was
+-- initiated from the Gallery page itself or from the Articles/Portfolio
+-- editors. This is what lets the Gallery page show images uploaded from
+-- anywhere, instead of only images uploaded through Gallery in that browser.
+CREATE TABLE IF NOT EXISTS gallery_images (
+  id SERIAL PRIMARY KEY,
+  url TEXT NOT NULL UNIQUE,
+  name VARCHAR(500),
+  size BIGINT,
+  uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Settings table for landing page configuration - with language support
 CREATE TABLE IF NOT EXISTS settings (
   id SERIAL PRIMARY KEY,
@@ -76,6 +89,9 @@ CREATE INDEX IF NOT EXISTS idx_comments_article_id ON comments(article_id);
 CREATE INDEX IF NOT EXISTS idx_comments_approved ON comments(approved);
 CREATE INDEX IF NOT EXISTS idx_comments_created_at ON comments(created_at);
 CREATE INDEX IF NOT EXISTS idx_comments_parent_id ON comments(parent_id);
+
+-- Gallery indexes
+CREATE INDEX IF NOT EXISTS idx_gallery_images_uploaded_at ON gallery_images(uploaded_at);
 
 -- Analytics indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_analytics_visited_at ON analytics(visited_at);

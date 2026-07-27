@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { isAuthenticated } from '@/lib/auth';
 import { uploadImageWithSizes } from '@/lib/s3';
+import { recordGalleryUpload } from '@/lib/gallery';
 
 // Configure route for chunked uploads
 export const runtime = 'nodejs';
@@ -136,7 +137,11 @@ export async function POST(request: Request) {
         // Return the medium size as the primary URL (or original if no medium exists)
         const url = result.medium || result.original;
 
-        return NextResponse.json({ 
+        // Record in the shared gallery so this shows up in /admin/gallery
+        // regardless of which page (Gallery, Articles, Portfolio) uploaded it.
+        await recordGalleryUpload({ url, name: fileName, size: fileSize });
+
+        return NextResponse.json({
           url,
           sizes: result,
           complete: true

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { DeleteObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { s3Client } from '@/lib/s3';
 import { isAuthenticated } from '@/lib/auth';
+import sql from '@/lib/db';
 
 export async function DELETE(request: NextRequest) {
     try {
@@ -123,8 +124,16 @@ export async function DELETE(request: NextRequest) {
         const failCount = results.filter(r => !r.success).length;
         
         console.log(`🗑️ [DELETE] Deletion complete: ${successCount} successful, ${failCount} failed`);
-        
-        return NextResponse.json({ 
+
+        // Remove the tracking row too -- best-effort, the S3 deletion above
+        // already succeeded so this shouldn't fail the request either way.
+        try {
+            await sql`DELETE FROM gallery_images WHERE url = ${imageUrl}`;
+        } catch (dbError) {
+            console.error('⚠️ [DELETE] Failed to remove gallery_images row:', dbError);
+        }
+
+        return NextResponse.json({
             success: true, 
             message: `Deleted ${successCount} file variants from S3`,
             deletedKeys: results.filter(r => r.success).map(r => r.key),
