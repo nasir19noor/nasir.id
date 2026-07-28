@@ -169,7 +169,12 @@ function renderQuestion() {
   qCounter.textContent     = `${currentIdx + 1} / ${total}`;
   scoreDisplay.textContent = `${score} / ${answered}`;
   progressBar.style.width  = `${((currentIdx + 1) / total) * 100}%`;
-  qNumber.textContent      = `Q${currentIdx + 1}`;
+  // q.id is the question's stable 0-based position across the *whole* bank
+  // (assigned by the backend, same document order the Part N · Qx-Qy ranges
+  // are built from) -- currentIdx is only the position within this session's
+  // slice, which resets to 0 for every part and was showing e.g. "Q9" for
+  // the 9th question of Part 2 instead of its real number "Q34".
+  qNumber.textContent      = `Q${q.id + 1}`;
 
   qText.innerHTML = '';
   q.text.split('\n').forEach(line => {
