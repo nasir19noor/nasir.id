@@ -1,0 +1,12 @@
+# backend
+__pycache__/
+*.pyc
+venv/
+.venv/
+backend/.env
+
+# frontend
+node_modules/
+.next/
+next-env.d.ts
+*.tsbuildinfo

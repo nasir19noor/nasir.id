@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+@theme {
+  --color-night:  #0b164a;
+  --color-accent: #e3c268;
+  --color-chalk:  #f6f8fd;
+}
+
+html, body {
+  background: var(--color-chalk);
+  color: #111;
+}
+
+.card {
+  @apply rounded-xl border border-black/10 bg-white shadow-sm;
+}

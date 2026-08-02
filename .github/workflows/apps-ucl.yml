@@ -1,0 +1,116 @@
+name: 'Deploy ucl.nasir.id'
+
+on:
+  push:
+    paths:
+      - 'apps/ucl/frontend/**'
+      - 'apps/ucl/backend/**'
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  changes:
+    runs-on: [self-hosted, nasir-contabo]
+    outputs:
+      backend:  ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - name: Remove stale nested .git directories
+        run: find "$GITHUB_WORKSPACE" -mindepth 2 -name ".git" -exec rm -rf {} + 2>/dev/null || true
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Detect changed paths
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'apps/ucl/backend/**'
+            frontend:
+              - 'apps/ucl/frontend/**'
+
+  deploy-backend:
+    needs: changes
+    if: ${{ needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch' }}
+    runs-on: [self-hosted, nasir-contabo]
+    steps:
+      - name: Deploy backend
+        env:
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+        working-directory: apps/ucl/backend
+        run: |
+          echo "Pulling .env from S3..."
+          rm -f .env
+          if ! aws s3 cp s3://ucl.nasir.id/backend/.env .env; then
+            # First deploy: no .env in the bucket yet. Bootstrap one — same
+            # Postgres server as wc2026 (database name 'ucl'; the backend
+            # creates the database itself on first start), fresh random admin
+            # password. Stored only in S3, never in the repo or logs.
+            echo "No .env in S3 — bootstrapping one..."
+            aws s3 cp s3://wc2026.nasir.id/backend/.env wc2026.env
+            DB_URL=$(grep '^DATABASE_URL=' wc2026.env | cut -d= -f2- | sed 's#/[^/]*$#/ucl#')
+            rm -f wc2026.env
+            ADMIN_PW=$(openssl rand -hex 16)
+            cat > .env <<EOF
+          DATABASE_URL=$DB_URL
+
+          ESPN_SCOREBOARD_URL=https://site.api.espn.com/apis/site/v2/sports/soccer/uefa.champions/scoreboard
+          ESPN_START_DATE=2026-09-14
+          ESPN_END_DATE=2027-06-06
+
+          SEASON_ACTIVE=true
+          REFRESH_INTERVAL_MIN=60
+
+          CORS_ORIGINS=https://ucl.nasir.id,http://localhost:5004
+
+          ENVIRONMENT=production
+
+          ADMIN_USERNAME=admin
+          ADMIN_PASSWORD=$ADMIN_PW
+          EOF
+            aws s3 cp .env s3://ucl.nasir.id/backend/.env
+          fi
+
+          echo "Stopping and removing existing backend container..."
+          echo "$SSH_PASSWORD" | sudo -S docker stop ucl-backend 2>/dev/null || true
+          echo "$SSH_PASSWORD" | sudo -S docker rm   ucl-backend 2>/dev/null || true
+          echo "$SSH_PASSWORD" | sudo -S docker rmi  ucl-backend:latest 2>/dev/null || true
+
+          echo "Building backend image..."
+          echo "$SSH_PASSWORD" | sudo -S docker build -t ucl-backend:latest .
+
+          echo "Running backend container..."
+          echo "$SSH_PASSWORD" | sudo -S docker run -d -p 9004:9004 --env-file .env \
+              --restart unless-stopped \
+              --name ucl-backend ucl-backend:latest
+
+          echo "Backend deployed successfully"
+
+  deploy-frontend:
+    needs: changes
+    if: ${{ needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch' }}
+    runs-on: [self-hosted, nasir-contabo]
+    steps:
+      - name: Deploy frontend
+        env:
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+        working-directory: apps/ucl/frontend
+        run: |
+          echo "Stopping and removing existing frontend container..."
+          echo "$SSH_PASSWORD" | sudo -S docker stop ucl-frontend 2>/dev/null || true
+          echo "$SSH_PASSWORD" | sudo -S docker rm   ucl-frontend 2>/dev/null || true
+
+          echo "Building frontend image..."
+          echo "$SSH_PASSWORD" | sudo -S docker build \
+              --build-arg NEXT_PUBLIC_API_URL=https://api.ucl.nasir.id \
+              -t ucl-frontend:latest .
+
+          echo "Running frontend container..."
+          echo "$SSH_PASSWORD" | sudo -S docker run -d -p 5004:5004 \
+              --restart unless-stopped \
+              --name ucl-frontend ucl-frontend:latest
+
+          echo "Frontend deployed successfully"
