@@ -44,8 +44,13 @@ jobs:
         run: |
           echo "Pulling .env from S3..."
           rm -f .env
-          if ! aws s3 cp s3://ucl.nasir.id/backend/.env .env; then
-            # First deploy: no .env in the bucket yet. Bootstrap one — same
+          aws s3 cp s3://ucl.nasir.id/backend/.env .env || true
+          # Bootstrap when the .env is missing OR still carries the
+          # .env.example placeholder (user:password@host) — a real
+          # DATABASE_URL is required for the backend to boot.
+          if ! grep -q '^DATABASE_URL=postgresql://' .env 2>/dev/null \
+             || grep -q '@host:' .env; then
+            # Same
             # Postgres server as wc2026 (database name 'ucl'; the backend
             # creates the database itself on first start), fresh random admin
             # password. Stored only in S3, never in the repo or logs.
