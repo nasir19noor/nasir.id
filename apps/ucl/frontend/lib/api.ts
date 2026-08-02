@@ -11,6 +11,31 @@ export const API_BASE =
 
 const REVALIDATE_SECONDS = 300
 
+// ─── Admin auth (HTTP Basic) ──────────────────────────────────────
+// Credentials live only in browser sessionStorage — never cookies, never
+// localStorage — so they vanish when the tab closes.
+
+const ADMIN_KEY = 'ucl.admin.basic'
+
+export function getAdminAuth(): string | null {
+  if (typeof window === 'undefined') return null
+  return sessionStorage.getItem(ADMIN_KEY)
+}
+
+export function setAdminAuth(user: string, pass: string) {
+  const token = btoa(`${user}:${pass}`)
+  sessionStorage.setItem(ADMIN_KEY, token)
+}
+
+export function clearAdminAuth() {
+  sessionStorage.removeItem(ADMIN_KEY)
+}
+
+export function adminHeaders(): HeadersInit {
+  const token = getAdminAuth()
+  return token ? { Authorization: `Basic ${token}` } : {}
+}
+
 // ─── Time formatting (always WIB / Asia/Jakarta) ──────────────────
 // Server components format in the container's zone (UTC) unless told
 // otherwise, which is misleading for an Indonesian audience. Pin to WIB.
@@ -23,6 +48,14 @@ export function fmtWIB(value?: string | number | Date | null): string {
     timeZone: WIB_TZ,
     month: 'short', day: 'numeric',
     hour: '2-digit', minute: '2-digit', hour12: false,
+  }) + ' WIB'
+}
+
+export function fmtWIBTime(value?: string | number | Date | null): string {
+  if (value === null || value === undefined || value === '') return '—'
+  return new Date(value).toLocaleTimeString('en-GB', {
+    timeZone: WIB_TZ,
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
   }) + ' WIB'
 }
 
