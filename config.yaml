@@ -21,6 +21,7 @@ aws:
     bucket_name_transform: "transform.nasir.id"
     bucket_name_agent: "agent.nasir.id"
     bucket_name_ck_nets: "ck-nets.nasir.id"
+    bucket_name_ucl: "ucl.nasir.id"
   acm:
     domain_name_nasir: "assets.nasir.id" 
     domain_name_itung_nasir: "assets.itung.nasir.id" 

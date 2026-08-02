@@ -8,5 +8,6 @@ locals {
   bucket_name_transform   = local.config.aws.s3.bucket_name_transform
   bucket_name_agent       = local.config.aws.s3.bucket_name_agent
   bucket_name_ck_nets     = local.config.aws.s3.bucket_name_ck_nets
+  bucket_name_ucl         = local.config.aws.s3.bucket_name_ucl 
 }    
 
