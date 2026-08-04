@@ -14,6 +14,13 @@ class TeamBase(BaseModel):
     logo: Optional[str] = None
 
 
+class TeamInfo(TeamBase):
+    color:   Optional[str] = None
+    venue:   Optional[str] = None
+    city:    Optional[str] = None
+    country: Optional[str] = None
+
+
 # ─── Fixture / Standings ──────────────────────────────────────────
 
 class FixtureOut(BaseModel):
@@ -68,6 +75,20 @@ class RoundOut(BaseModel):
     round_code: str                        # playoff | r16 | qf | sf | final
     label:      str
     ties:       List[TieOut]
+
+
+# ─── Team detail ──────────────────────────────────────────────────
+
+class TeamScorer(BaseModel):
+    player: str
+    goals:  int
+
+
+class TeamDetail(BaseModel):
+    team:     TeamInfo
+    standing: Optional["StandingRow"] = None   # None before the draw
+    fixtures: List[FixtureOut]                 # all rounds, chronological
+    scorers:  List[TeamScorer]
 
 
 # ─── Top scorers ──────────────────────────────────────────────────

@@ -12,9 +12,11 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
+from sqlalchemy import inspect, text
+
 from database import engine, Base, SessionLocal, ensure_database
 from models import Team, Player, Fixture  # noqa: F401 — register models for create_all
-from routers import table, fixtures, knockout, scorers
+from routers import table, fixtures, knockout, scorers, teams
 from schemas import StatusOut
 from services.scheduler import start_scheduler, get_last_refresh, get_last_summary, season_active
 from services.espn_fetcher import refresh_from_espn
@@ -25,10 +27,30 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 logger = logging.getLogger(__name__)
 
 
+def run_migrations() -> None:
+    """create_all() only creates *new* tables; columns added to an existing
+    table land here. Idempotent — checks current state first."""
+    insp = inspect(engine)
+    if not insp.has_table("teams"):
+        return  # fresh DB — create_all produces the right schema
+    cols = {c["name"] for c in insp.get_columns("teams")}
+    for col, ddl in (("color", "VARCHAR(8)"), ("venue", "VARCHAR"),
+                     ("city", "VARCHAR"), ("country", "VARCHAR")):
+        if col not in cols:
+            logger.info("Migration: adding teams.%s", col)
+            with engine.begin() as c:
+                c.execute(text(f"ALTER TABLE teams ADD COLUMN {col} {ddl}"))
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     ensure_database()
     Base.metadata.create_all(bind=engine)
+
+    try:
+        run_migrations()
+    except Exception as e:
+        logger.exception("Migrations failed: %s", e)
 
     if season_active():
         try:
@@ -58,6 +80,7 @@ app.include_router(table.router)
 app.include_router(fixtures.router)
 app.include_router(knockout.router)
 app.include_router(scorers.router)
+app.include_router(teams.router)
 
 
 @app.get("/")

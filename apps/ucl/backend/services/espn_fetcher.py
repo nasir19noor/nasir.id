@@ -112,6 +112,8 @@ def _upsert_team(db: Session, idx: dict[str, Team], block: dict) -> Team | None:
         team.code = str(block["abbreviation"])[:8]
     if block.get("logo"):
         team.logo = block["logo"]
+    if block.get("color"):
+        team.color = str(block["color"])[:8]
     return team
 
 
@@ -152,6 +154,15 @@ def _parse_event(db: Session, ev: dict, idx: dict[str, Team]) -> dict | None:
 
     state = ((comp.get("status") or {}).get("type") or {}).get("state", "pre")
     status_map = {"pre": "scheduled", "in": "live", "post": "finished"}
+
+    # The venue block names the home team's ground (city + country in the
+    # address). The final is played at a neutral venue, so skip it there.
+    venue = comp.get("venue") or {}
+    if round_code != "final" and venue.get("fullName"):
+        addr = venue.get("address") or {}
+        home.venue   = venue["fullName"]
+        home.city    = addr.get("city") or home.city
+        home.country = addr.get("country") or home.country
 
     return {
         "espn_event_id": str(ev.get("id")),

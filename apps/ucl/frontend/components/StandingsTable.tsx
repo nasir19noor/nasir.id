@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import type { Standing } from '@/lib/api'
 import TeamBadge from './TeamBadge'
 
@@ -35,10 +36,10 @@ export default function StandingsTable({ rows }: { rows: Standing[] }) {
               className={`border-t border-black/5 ${ZONE_BG[r.zone]}`}>
             <td className="py-2 pl-3 font-mono text-xs text-black/40">{r.position}</td>
             <td className="py-2">
-              <span className="flex items-center gap-2">
+              <Link href={`/teams/${r.team.id}`} className="flex items-center gap-2 hover:underline">
                 <TeamBadge team={r.team} size="sm" showName={false} />
                 <span className="font-semibold">{r.team.name}</span>
-              </span>
+              </Link>
             </td>
             <td className="py-2 pr-2 text-right">{r.played}</td>
             <td className="py-2 pr-2 text-right">{r.won}</td>

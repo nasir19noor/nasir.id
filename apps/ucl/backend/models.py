@@ -19,6 +19,12 @@ class Team(Base):
     code     = Column(String(8), index=True)   # ESPN abbreviation: RMA, BAY, ...
     name     = Column(String, nullable=False)
     logo     = Column(String)                  # a.espncdn.com club crest URL
+    color    = Column(String(8))               # primary kit color hex from ESPN
+    # Home ground, learned from the venue block of this club's home fixtures
+    # (the final is skipped — neutral venue).
+    venue    = Column(String)
+    city     = Column(String)
+    country  = Column(String)
 
     players = relationship("Player", back_populates="team", cascade="all, delete-orphan")
 

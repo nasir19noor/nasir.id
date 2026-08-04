@@ -131,6 +131,20 @@ export type Scorer = {
   rank: number; player: string; team: Team; goals: number
 }
 
+export type TeamInfo = Team & {
+  color?: string | null
+  venue?: string | null
+  city?: string | null
+  country?: string | null
+}
+
+export type TeamDetail = {
+  team: TeamInfo
+  standing?: Standing | null
+  fixtures: Fixture[]
+  scorers: { player: string; goals: number }[]
+}
+
 export type Status = {
   seeded: boolean; teams: number; players: number
   fixtures: number; last_refresh?: string | null
