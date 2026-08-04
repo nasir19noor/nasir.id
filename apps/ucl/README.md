@@ -36,7 +36,8 @@ backend/
 │  ├─ table.py           — /table (single 36-club league table + zones)
 │  ├─ fixtures.py        — /fixtures[?round=&matchday=&status=], /fixtures/today
 │  ├─ knockout.py        — /knockout (rounds → two-leg ties with aggregates)
-│  └─ scorers.py         — /scorers
+│  ├─ scorers.py         — /scorers
+│  └─ teams.py           — /teams, /teams/{id} (club info + standing + fixtures + scorers)
 └─ services/
    ├─ espn_fetcher.py    — Pull events/teams/scorers from ESPN
    ├─ scheduler.py       — Hourly APScheduler job (SEASON_ACTIVE gate)
@@ -52,7 +53,9 @@ app/
 ├─ table/page.tsx        — Full 36-club table with qualification zones
 ├─ fixtures/page.tsx     — League fixtures with a matchday filter
 ├─ knockout/page.tsx     — Play-offs → final as two-leg ties
-└─ scorers/page.tsx      — Top-scorer race
+├─ scorers/page.tsx      — Top-scorer race
+├─ teams/page.tsx        — Clubs grid (crest, name, country)
+└─ teams/[id]/page.tsx   — Club detail (venue, standing, fixtures, scorers)
 ```
 
 All pages are server-rendered with `revalidate: 300` (5 min) so the public

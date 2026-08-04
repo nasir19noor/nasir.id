@@ -43,7 +43,11 @@ final is single-leg and may carry a shootout score.
 
 `/table` (standings + zones: 1-8 direct, 9-24 playoff, 25-36 out) ·
 `/fixtures[?round=&matchday=&status=]` · `/fixtures/today` · `/knockout` ·
-`/scorers?limit=` · `/status` · `/docs`. Admin (HTTP Basic from env):
+`/scorers?limit=` · `/teams` · `/teams/{id}` (club + standing + fixtures +
+scorers) · `/status` · `/docs`. Team rows carry `color`/`venue`/`city`/
+`country`, learned from ESPN competitor blocks and home-fixture venue
+addresses (final skipped — neutral venue); `main.run_migrations()` adds
+these columns to a pre-existing `teams` table. Admin (HTTP Basic from env):
 `GET /admin/check`, `POST /admin/refresh`, `GET /admin/last-summary`.
 Frontend `/admin` page uses these (creds in sessionStorage).
 
