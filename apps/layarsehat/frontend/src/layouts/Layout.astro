@@ -3,7 +3,10 @@ interface Props {
   title: string;
   description?: string;
 }
-const { title, description = 'LayarSehat — pantau dan kendalikan aktivitas smartphone anak Anda.' } = Astro.props;
+const {
+  title,
+  description = 'LayarSehat — pantau dan kendalikan aktivitas smartphone anak Anda.',
+} = Astro.props;
 ---
 
 <!doctype html>
@@ -14,128 +17,268 @@ const { title, description = 'LayarSehat — pantau dan kendalikan aktivitas sma
     <meta name="description" content={description} />
     <title>{title} · LayarSehat</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📱</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
     <slot />
 
     <style is:global>
+      /* ─────────────────────────────────────────────────────────────
+         Sistem desain — mengikuti gaya dasbor Argon
+         ───────────────────────────────────────────────────────────── */
       :root {
-        --hijau: #17876d;
-        --hijau-tua: #0f5f4c;
-        --hijau-muda: #e6f5f0;
-        --teks: #16201d;
-        --teks-lembut: #5c6b66;
-        --garis: #dfe7e4;
-        --latar: #f6f9f8;
+        --primary: #5e72e4;
+        --primary-dark: #324cdd;
+        --info: #11cdef;
+        --success: #2dce89;
+        --danger: #f5365c;
+        --warning: #fb6340;
+        --dark: #172b4d;
+        --dark-2: #1a1f37;
+
         --putih: #ffffff;
-        --merah: #c0392b;
-        --merah-muda: #fdecea;
-        --kuning: #b7791f;
-        --kuning-muda: #fdf6e3;
-        --radius: 12px;
-        --bayangan: 0 1px 2px rgba(16, 40, 34, .06), 0 4px 16px rgba(16, 40, 34, .05);
+        --abu-100: #f8f9fe;
+        --abu-200: #f6f9fc;
+        --abu-300: #e9ecef;
+        --abu-400: #ced4da;
+        --abu-600: #8898aa;
+        --abu-700: #525f7f;
+        --abu-800: #32325d;
+
+        --radius: .5rem;
+        --bayangan: 0 0 2rem 0 rgba(136, 152, 170, .15);
+        --bayangan-kuat: 0 .5rem 1.5rem rgba(50, 50, 93, .12), 0 .25rem .5rem rgba(0, 0, 0, .06);
+        --gradien: linear-gradient(87deg, #11cdef 0, #1171ef 100%);
+        --gradien-gelap: linear-gradient(87deg, #172b4d 0, #1a174d 100%);
+        --sidebar-lebar: 250px;
       }
 
       * { box-sizing: border-box; }
 
       body {
         margin: 0;
-        background: var(--latar);
-        color: var(--teks);
-        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        background: var(--abu-200);
+        color: var(--abu-700);
+        font-family: 'Open Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        font-size: .875rem;
         line-height: 1.6;
         -webkit-font-smoothing: antialiased;
       }
 
-      h1, h2, h3 { line-height: 1.25; margin: 0 0 .5rem; letter-spacing: -.015em; }
-      h1 { font-size: 1.9rem; }
-      h2 { font-size: 1.3rem; }
-      h3 { font-size: 1.05rem; }
+      h1, h2, h3, h4, h5 {
+        margin: 0 0 .5rem;
+        color: var(--abu-800);
+        font-weight: 600;
+        line-height: 1.3;
+      }
+      h1 { font-size: 1.75rem; }
+      h2 { font-size: 1.35rem; }
+      h3 { font-size: 1.0625rem; }
       p { margin: 0 0 1rem; }
-      a { color: var(--hijau); }
+      a { color: var(--primary); text-decoration: none; }
+      a:hover { color: var(--primary-dark); }
 
-      .wadah { max-width: 1080px; margin: 0 auto; padding: 0 1.25rem; }
-      .sempit { max-width: 420px; margin: 0 auto; padding: 0 1.25rem; }
+      .wadah { max-width: 1200px; margin: 0 auto; padding: 0 1.5rem; width: 100%; }
 
-      /* ── Navbar ── */
-      .navbar {
+      /* ── Tipografi pembantu ── */
+      .lembut { color: var(--abu-600); }
+      .kecil { font-size: .8125rem; }
+      .label-kartu {
+        display: block;
+        font-size: .6875rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        color: var(--abu-600);
+        margin-bottom: .25rem;
+      }
+      .angka-besar {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--abu-800);
+        line-height: 1.2;
+      }
+      .sembunyi { display: none !important; }
+
+      /* ── Kartu ── */
+      .kartu {
         background: var(--putih);
-        border-bottom: 1px solid var(--garis);
-        position: sticky; top: 0; z-index: 20;
+        border-radius: var(--radius);
+        box-shadow: var(--bayangan);
+        border: 0;
       }
-      .navbar-isi {
-        display: flex; align-items: center; justify-content: space-between;
-        gap: 1rem; height: 62px;
+      .kartu-isi { padding: 1.25rem 1.5rem; }
+      .kartu-kepala {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 1.15rem 1.5rem;
+        border-bottom: 1px solid var(--abu-300);
       }
-      .merek {
-        display: flex; align-items: center; gap: .5rem;
-        font-weight: 700; font-size: 1.1rem; color: var(--teks); text-decoration: none;
-      }
-      .merek span:first-child { font-size: 1.35rem; }
-      .nav-tautan { display: flex; align-items: center; gap: 1.25rem; font-size: .93rem; }
-      .nav-tautan a { color: var(--teks-lembut); text-decoration: none; }
-      .nav-tautan a:hover { color: var(--hijau); }
+      .kartu-kepala h3 { margin: 0; }
 
       /* ── Tombol ── */
       .tombol {
-        display: inline-flex; align-items: center; justify-content: center; gap: .45rem;
-        padding: .6rem 1.1rem; border-radius: 9px; border: 1px solid transparent;
-        background: var(--hijau); color: #fff; font: inherit; font-weight: 600; font-size: .93rem;
-        cursor: pointer; text-decoration: none; transition: background .15s, opacity .15s;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: .4rem;
+        padding: .625rem 1.25rem;
+        border: 1px solid transparent;
+        border-radius: .375rem;
+        background: var(--primary);
+        color: #fff;
+        font: inherit;
+        font-size: .8125rem;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 4px 6px rgba(50, 50, 93, .11), 0 1px 3px rgba(0, 0, 0, .08);
+        transition: transform .15s, box-shadow .15s, background .15s;
       }
-      .tombol:hover { background: var(--hijau-tua); }
-      .tombol:disabled { opacity: .55; cursor: not-allowed; }
-      .tombol.sekunder { background: var(--putih); color: var(--teks); border-color: var(--garis); }
-      .tombol.sekunder:hover { background: var(--latar); }
-      .tombol.bahaya { background: var(--merah); }
-      .tombol.bahaya:hover { background: #a13224; }
-      .tombol.kecil { padding: .35rem .7rem; font-size: .83rem; }
+      .tombol:hover {
+        background: var(--primary-dark);
+        color: #fff;
+        transform: translateY(-1px);
+        box-shadow: 0 7px 14px rgba(50, 50, 93, .1), 0 3px 6px rgba(0, 0, 0, .08);
+      }
+      .tombol:disabled { opacity: .65; cursor: not-allowed; transform: none; }
+      .tombol.sekunder {
+        background: var(--putih);
+        color: var(--abu-700);
+        border-color: var(--abu-300);
+      }
+      .tombol.sekunder:hover { background: var(--abu-100); color: var(--abu-800); }
+      .tombol.bahaya { background: var(--danger); }
+      .tombol.bahaya:hover { background: #ec0c38; }
+      .tombol.terang {
+        background: rgba(255, 255, 255, .18);
+        color: #fff;
+        border-color: rgba(255, 255, 255, .35);
+        box-shadow: none;
+      }
+      .tombol.terang:hover { background: rgba(255, 255, 255, .3); }
+      .tombol.kecil { padding: .375rem .75rem; font-size: .75rem; }
       .tombol.penuh { width: 100%; }
 
-      /* ── Kartu & form ── */
-      .kartu {
-        background: var(--putih); border: 1px solid var(--garis);
-        border-radius: var(--radius); box-shadow: var(--bayangan); padding: 1.25rem;
+      /* ── Formulir ── */
+      .kolom { margin-bottom: 1rem; }
+      .kolom label {
+        display: block;
+        font-size: .75rem;
+        font-weight: 600;
+        color: var(--abu-800);
+        margin-bottom: .35rem;
       }
-      .kolom { display: block; margin-bottom: 1rem; }
-      .kolom label { display: block; font-size: .87rem; font-weight: 600; margin-bottom: .35rem; }
       input, select {
-        width: 100%; padding: .6rem .75rem; font: inherit; font-size: .95rem;
-        border: 1px solid var(--garis); border-radius: 9px; background: var(--putih); color: var(--teks);
+        width: 100%;
+        padding: .625rem .85rem;
+        font: inherit;
+        font-size: .875rem;
+        color: var(--abu-700);
+        background: var(--putih);
+        border: 1px solid var(--abu-400);
+        border-radius: .375rem;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, .04);
+        transition: border-color .15s, box-shadow .15s;
       }
-      input:focus, select:focus { outline: 2px solid var(--hijau); outline-offset: -1px; border-color: var(--hijau); }
+      input:focus, select:focus {
+        outline: none;
+        border-color: rgba(50, 151, 211, .55);
+        box-shadow: 0 0 0 3px rgba(94, 114, 228, .18);
+      }
+      input::placeholder { color: var(--abu-400); }
 
-      /* ── Lencana & pesan ── */
+      /* ── Lencana ── */
       .lencana {
-        display: inline-block; padding: .15rem .55rem; border-radius: 999px;
-        font-size: .76rem; font-weight: 600; white-space: nowrap;
+        display: inline-block;
+        padding: .28rem .6rem;
+        border-radius: 10rem;
+        font-size: .6875rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .02em;
+        white-space: nowrap;
       }
-      .lencana.izin { background: var(--hijau-muda); color: var(--hijau-tua); }
-      .lencana.blokir { background: var(--merah-muda); color: var(--merah); }
-      .lencana.tunggu { background: var(--kuning-muda); color: var(--kuning); }
-      .lencana.sistem { background: #eef1f0; color: var(--teks-lembut); }
+      .lencana.izin { background: #b0eed3; color: #0b7a4b; }
+      .lencana.blokir { background: #fdd1da; color: #b81a3c; }
+      .lencana.tunggu { background: #fee6d8; color: #cc4b1c; }
+      .lencana.netral { background: var(--abu-300); color: var(--abu-700); }
+      .lencana.info { background: #aaedf9; color: #0a7c95; }
 
-      .pesan { padding: .7rem .9rem; border-radius: 9px; font-size: .9rem; margin-bottom: 1rem; }
-      .pesan.galat { background: var(--merah-muda); color: var(--merah); }
-      .pesan.sukses { background: var(--hijau-muda); color: var(--hijau-tua); }
-      .sembunyi { display: none !important; }
-
-      .kosong { text-align: center; color: var(--teks-lembut); padding: 2.5rem 1rem; }
-      .lembut { color: var(--teks-lembut); font-size: .88rem; }
-
-      table { width: 100%; border-collapse: collapse; font-size: .92rem; }
-      th, td { text-align: left; padding: .7rem .5rem; border-bottom: 1px solid var(--garis); }
-      th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--teks-lembut); font-weight: 600; }
-      tr:last-child td { border-bottom: none; }
-
-      footer {
-        margin-top: 3rem; padding: 2rem 0; border-top: 1px solid var(--garis);
-        color: var(--teks-lembut); font-size: .87rem; text-align: center;
+      /* ── Pesan ── */
+      .pesan {
+        padding: .75rem 1rem;
+        border-radius: .375rem;
+        font-size: .8125rem;
+        margin-bottom: 1rem;
       }
+      .pesan.galat { background: #fdd1da; color: #b81a3c; }
+      .pesan.sukses { background: #b0eed3; color: #0b7a4b; }
 
-      @media (max-width: 640px) {
-        h1 { font-size: 1.55rem; }
-        .nav-tautan { gap: .85rem; font-size: .88rem; }
+      /* ── Tabel ── */
+      table { width: 100%; border-collapse: collapse; }
+      thead th {
+        padding: .75rem 1.5rem;
+        background: var(--abu-100);
+        border-top: 1px solid var(--abu-300);
+        border-bottom: 1px solid var(--abu-300);
+        font-size: .65rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        color: var(--abu-600);
+        text-align: left;
+        white-space: nowrap;
+      }
+      tbody td {
+        padding: 1rem 1.5rem;
+        border-top: 1px solid var(--abu-300);
+        font-size: .8125rem;
+        vertical-align: middle;
+      }
+      tbody tr:first-child td { border-top: 0; }
+      .tabel-gulir { overflow-x: auto; }
+
+      /* ── Status kosong ── */
+      .kosong {
+        text-align: center;
+        color: var(--abu-600);
+        padding: 3rem 1.5rem;
+      }
+      .kosong-ikon { font-size: 2.5rem; display: block; margin-bottom: .5rem; }
+
+      /* ── Ikon lingkaran berwarna ── */
+      .ikon-bulat {
+        display: grid;
+        place-items: center;
+        width: 3rem;
+        height: 3rem;
+        border-radius: 50%;
+        color: #fff;
+        flex-shrink: 0;
+        box-shadow: 0 4px 6px rgba(50, 50, 93, .11);
+      }
+      .ikon-bulat svg { width: 1.15rem; height: 1.15rem; }
+      .bg-primary { background: var(--primary); }
+      .bg-info { background: var(--info); }
+      .bg-success { background: var(--success); }
+      .bg-danger { background: var(--danger); }
+      .bg-warning { background: var(--warning); }
+      .bg-dark { background: var(--dark); }
+
+      .teks-sukses { color: var(--success); }
+      .teks-bahaya { color: var(--danger); }
+      .teks-peringatan { color: var(--warning); }
+
+      @media (max-width: 768px) {
+        .wadah { padding: 0 1rem; }
+        h1 { font-size: 1.4rem; }
       }
     </style>
   </body>

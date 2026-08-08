@@ -1,0 +1,311 @@
+---
+import Layout from './Layout.astro';
+import Ikon from '../components/Ikon.astro';
+
+interface Props {
+  title: string;
+  /** Judul kecil di kiri atas bilah navigasi. */
+  breadcrumb?: string;
+  aktif?: string;
+}
+const { title, breadcrumb = title, aktif = '' } = Astro.props;
+
+const menu = [
+  { id: 'dasbor', label: 'Dasbor', href: '/dasbor', ikon: 'dasbor' },
+  { id: 'anak', label: 'Anak & Perangkat', href: '/dasbor#anak', ikon: 'anak' },
+];
+const menuBantuan = [
+  { id: 'unduh', label: 'Unduh Aplikasi', href: '/unduh', ikon: 'unduh' },
+  { id: 'panduan', label: 'Panduan Pemasangan', href: '/unduh#panduan', ikon: 'perisai' },
+];
+---
+
+<Layout title={title}>
+  <div class="cangkang">
+    <!-- ── Bilah sisi ── -->
+    <aside class="sisi" id="sisi">
+      <div class="sisi-kepala">
+        <a class="merek" href="/dasbor">
+          <span class="merek-ikon">📱</span>
+          <span class="merek-nama">LayarSehat</span>
+        </a>
+        <button class="tutup-sisi" id="tutup-sisi" aria-label="Tutup menu">×</button>
+      </div>
+
+      <nav class="sisi-nav">
+        <ul>
+          {menu.map((m) => (
+            <li>
+              <a class={`sisi-tautan ${aktif === m.id ? 'aktif' : ''}`} href={m.href}>
+                <Ikon nama={m.ikon} kelas="sisi-ikon" />
+                <span>{m.label}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+
+        <div class="sisi-judul">Bantuan</div>
+        <ul>
+          {menuBantuan.map((m) => (
+            <li>
+              <a class={`sisi-tautan ${aktif === m.id ? 'aktif' : ''}`} href={m.href}>
+                <Ikon nama={m.ikon} kelas="sisi-ikon" />
+                <span>{m.label}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+
+        <div class="sisi-judul">Akun</div>
+        <ul>
+          <li>
+            <button class="sisi-tautan sisi-tombol" id="keluar-sisi">
+              <Ikon nama="keluar" kelas="sisi-ikon" />
+              <span>Keluar</span>
+            </button>
+          </li>
+        </ul>
+      </nav>
+
+      <div class="sisi-catatan">
+        <strong>Pantau dengan jujur</strong>
+        <p class="kecil" style="margin:.35rem 0 0">
+          Aplikasi tetap terlihat di HP anak. Bicarakan aturannya bersama.
+        </p>
+      </div>
+    </aside>
+    <div class="tirai-sisi" id="tirai-sisi"></div>
+
+    <!-- ── Bagian utama ── -->
+    <div class="utama">
+      <nav class="bilah-atas">
+        <div class="wadah bilah-isi">
+          <button class="tombol-menu" id="buka-sisi" aria-label="Buka menu">
+            <Ikon nama="menu" kelas="ikon-menu" />
+          </button>
+          <span class="bilah-judul">{breadcrumb}</span>
+
+          <form class="cari" role="search" onsubmit="return false">
+            <Ikon nama="cari" kelas="cari-ikon" />
+            <input id="cari-global" type="search" placeholder="Cari…" aria-label="Cari" />
+          </form>
+
+          <div class="pengguna">
+            <span class="avatar" id="avatar-inisial">?</span>
+            <span class="pengguna-nama" id="pengguna-nama">Memuat…</span>
+          </div>
+        </div>
+      </nav>
+
+      <header class="kepala-gradien">
+        <div class="wadah">
+          <slot name="kepala" />
+        </div>
+      </header>
+
+      <main class="konten">
+        <div class="wadah">
+          <slot />
+        </div>
+      </main>
+
+      <footer class="kaki">
+        <div class="wadah kaki-isi">
+          <span>© {new Date().getFullYear()} LayarSehat</span>
+          <span class="kecil">layarsehat.nasir.id</span>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <style>
+    .cangkang { min-height: 100vh; }
+
+    /* ── Bilah sisi ── */
+    .sisi {
+      position: fixed;
+      inset: 0 auto 0 0;
+      width: var(--sidebar-lebar);
+      background: var(--putih);
+      box-shadow: 0 0 2rem 0 rgba(136, 152, 170, .15);
+      display: flex;
+      flex-direction: column;
+      z-index: 60;
+      transition: transform .25s ease;
+      overflow-y: auto;
+    }
+    .sisi-kepala {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.5rem 1.5rem 1rem;
+    }
+    .merek { display: flex; align-items: center; gap: .55rem; }
+    .merek-ikon { font-size: 1.4rem; }
+    .merek-nama { font-size: 1.05rem; font-weight: 700; color: var(--abu-800); }
+    .tutup-sisi {
+      display: none;
+      background: none; border: 0; font-size: 1.6rem; line-height: 1;
+      color: var(--abu-600); cursor: pointer;
+    }
+
+    .sisi-nav { flex: 1; padding: .5rem 0 1rem; }
+    .sisi-nav ul { list-style: none; margin: 0; padding: 0 .75rem; }
+    .sisi-judul {
+      padding: 1.25rem 1.5rem .4rem;
+      font-size: .6875rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--abu-600);
+    }
+    .sisi-tautan {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      width: 100%;
+      padding: .65rem .75rem;
+      border-radius: .375rem;
+      color: var(--abu-700);
+      font-size: .8125rem;
+      font-weight: 600;
+    }
+    .sisi-tautan:hover { color: var(--primary); background: var(--abu-100); }
+    .sisi-tautan.aktif { color: var(--primary); background: rgba(94, 114, 228, .08); }
+    .sisi-tombol {
+      background: none; border: 0; font-family: inherit; cursor: pointer; text-align: left;
+    }
+    :global(.sisi-ikon) { width: 1.1rem; height: 1.1rem; flex-shrink: 0; }
+
+    .sisi-catatan {
+      margin: 0 1rem 1.25rem;
+      padding: 1rem;
+      background: var(--abu-100);
+      border-radius: var(--radius);
+      color: var(--abu-700);
+      font-size: .8125rem;
+    }
+
+    .tirai-sisi {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(23, 43, 77, .45);
+      z-index: 55;
+    }
+    .tirai-sisi.tampil { display: block; }
+
+    /* ── Utama ── */
+    .utama {
+      margin-left: var(--sidebar-lebar);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .bilah-atas { background: var(--gradien); }
+    .bilah-isi {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      height: 66px;
+    }
+    .bilah-judul {
+      color: #fff;
+      font-size: .8125rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      white-space: nowrap;
+    }
+    .tombol-menu {
+      display: none;
+      background: none; border: 0; color: #fff; cursor: pointer; padding: .25rem;
+    }
+    :global(.ikon-menu) { width: 1.4rem; height: 1.4rem; }
+
+    .cari { position: relative; margin-left: auto; width: min(260px, 34vw); }
+    :global(.cari-ikon) {
+      position: absolute; left: .8rem; top: 50%; transform: translateY(-50%);
+      width: 1rem; height: 1rem; color: rgba(255, 255, 255, .8); pointer-events: none;
+    }
+    .cari input {
+      width: 100%;
+      padding: .5rem .9rem .5rem 2.3rem;
+      border-radius: 10rem;
+      border: 1px solid rgba(255, 255, 255, .35);
+      background: rgba(255, 255, 255, .15);
+      color: #fff;
+      font-size: .8125rem;
+      box-shadow: none;
+    }
+    .cari input::placeholder { color: rgba(255, 255, 255, .75); }
+    .cari input:focus {
+      background: #fff;
+      color: var(--abu-700);
+      border-color: #fff;
+      box-shadow: none;
+    }
+
+    .pengguna { display: flex; align-items: center; gap: .6rem; }
+    .avatar {
+      display: grid; place-items: center;
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, .25);
+      border: 1px solid rgba(255, 255, 255, .4);
+      color: #fff; font-weight: 700; font-size: .8125rem;
+    }
+    .pengguna-nama { color: #fff; font-size: .8125rem; font-weight: 600; white-space: nowrap; }
+
+    .kepala-gradien { background: var(--gradien); padding: 1.5rem 0 8rem; }
+    .konten { flex: 1; margin-top: -7rem; padding-bottom: 2rem; }
+
+    .kaki { padding: 1.25rem 0 2rem; }
+    .kaki-isi {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 1rem; color: var(--abu-600); font-size: .8125rem;
+    }
+
+    @media (max-width: 992px) {
+      .sisi { transform: translateX(-100%); }
+      .sisi.buka { transform: translateX(0); }
+      .tutup-sisi { display: block; }
+      .utama { margin-left: 0; }
+      .tombol-menu { display: block; }
+      .bilah-judul { display: none; }
+      .cari { margin-left: 0; flex: 1; width: auto; }
+      .pengguna-nama { display: none; }
+    }
+    @media (max-width: 576px) {
+      .kepala-gradien { padding-bottom: 7rem; }
+      .konten { margin-top: -6.25rem; }
+      .kaki-isi { flex-direction: column; gap: .25rem; }
+    }
+  </style>
+
+  <script>
+    import { ambilOrangTua, keluar, wajibMasuk } from '../lib/api.js';
+
+    if (wajibMasuk()) {
+      const orangTua = ambilOrangTua();
+      if (orangTua) {
+        const nama = orangTua.full_name || orangTua.email || 'Orang Tua';
+        document.getElementById('pengguna-nama').textContent = nama;
+        document.getElementById('avatar-inisial').textContent =
+          nama.trim().charAt(0).toUpperCase() || '?';
+      }
+
+      document.getElementById('keluar-sisi').addEventListener('click', keluar);
+
+      // Buka/tutup bilah sisi pada layar kecil
+      const sisi = document.getElementById('sisi');
+      const tirai = document.getElementById('tirai-sisi');
+      const buka = () => { sisi.classList.add('buka'); tirai.classList.add('tampil'); };
+      const tutup = () => { sisi.classList.remove('buka'); tirai.classList.remove('tampil'); };
+
+      document.getElementById('buka-sisi').addEventListener('click', buka);
+      document.getElementById('tutup-sisi').addEventListener('click', tutup);
+      tirai.addEventListener('click', tutup);
+    }
+  </script>
+</Layout>

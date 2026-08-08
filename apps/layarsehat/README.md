@@ -33,10 +33,16 @@ Dua mode aturan aplikasi baru:
 ## Struktur
 
 ```
-backend/    FastAPI: parents, children, devices, agent
+backend/    FastAPI: parents, children, devices, agent, dashboard
 frontend/   Astro: /, /masuk, /daftar, /dasbor, /perangkat/[id], /unduh
 android/    Flutter (lib/) + Kotlin (android/app/src/main/kotlin/id/nasir/layarsehat/)
 ```
+
+Tampilan dasbor mengikuti gaya Argon: bilah sisi tetap, kepala bergradien, kartu
+statistik yang menimpa gradien, dan grafik Chart.js. Berkas tata letaknya ada di
+`frontend/src/layouts/` (`PanelLayout` untuk halaman ber-login, `AuthLayout` untuk
+masuk/daftar), sementara token warna dan komponen dasar ada di `Layout.astro`.
+Angka pada kartu statistik diambil dari `GET /dashboard/summary`.
 
 Sisi Kotlin memuat `AppInspector` (daftar aplikasi & UsageStatsManager), `PolicyStore`
 (kebijakan tersimpan), `MonitorService` (layanan latar depan), `BlockActivity` (layar

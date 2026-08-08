@@ -1,59 +1,108 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import Ikon from '../components/Ikon.astro';
 
 const apkUrl = 'https://layarsehat.nasir.id.s3.ap-southeast-1.amazonaws.com/android/LayarSehat.apk';
+
+const langkah = [
+  'Unduh berkas APK di HP anak, lalu buka berkasnya.',
+  'Jika muncul peringatan, izinkan pemasangan dari sumber ini pada pengaturan.',
+  'Buka aplikasi LayarSehat, masukkan kode pemasangan 6 digit dari dasbor orang tua.',
+  'Berikan izin Akses Penggunaan agar laporan waktu layar bisa terbaca.',
+  'Berikan izin Tampil di atas aplikasi lain agar penguncian aplikasi berfungsi.',
+];
 ---
 
 <Layout title="Unduh Aplikasi">
   <nav class="navbar">
     <div class="wadah navbar-isi">
-      <a class="merek" href="/"><span>📱</span><span>LayarSehat</span></a>
-      <div class="nav-tautan"><a href="/dasbor">Dasbor</a></div>
+      <a class="merek" href="/"><span class="merek-ikon">📱</span><span>LayarSehat</span></a>
+      <div class="nav-tautan">
+        <a href="/masuk">Masuk</a>
+        <a class="tombol kecil" href="/dasbor">Dasbor</a>
+      </div>
     </div>
   </nav>
 
-  <main class="wadah" style="max-width:640px; padding-top:2.5rem; padding-bottom:3rem">
-    <h1>Unduh LayarSehat untuk Android</h1>
-    <p class="lembut">
-      Aplikasi ini dipasang di <strong>HP anak</strong>. Orang tua cukup memakai dasbor web ini.
-    </p>
+  <header class="kepala">
+    <div class="wadah" style="max-width:760px">
+      <h1>Unduh LayarSehat untuk Android</h1>
+      <p>Aplikasi ini dipasang di <strong>HP anak</strong>. Orang tua cukup memakai dasbor web.</p>
+    </div>
+  </header>
 
-    <div class="kartu" style="text-align:center; margin:1.5rem 0">
-      <p style="font-size:2.5rem; margin:0">📥</p>
-      <p class="lembut" style="margin:.25rem 0 1rem">Berkas APK · Android 8.0 ke atas</p>
-      <a class="tombol" href={apkUrl}>Unduh APK</a>
+  <main class="wadah konten" style="max-width:760px">
+    <div class="kartu kartu-unduh">
+      <div class="kartu-isi" style="text-align:center; padding:2rem 1.5rem">
+        <div class="ikon-bulat bg-primary" style="margin:0 auto .85rem"><Ikon nama="unduh" /></div>
+        <h3>LayarSehat APK</h3>
+        <p class="kecil lembut">Android 8.0 ke atas · gratis</p>
+        <a class="tombol" href={apkUrl}>Unduh Sekarang</a>
+      </div>
     </div>
 
-    <div class="kartu">
-      <h3>Langkah pemasangan</h3>
-      <ol class="langkah">
-        <li>Unduh berkas APK di HP anak, lalu buka berkasnya.</li>
-        <li>Jika muncul peringatan, izinkan pemasangan dari sumber ini di pengaturan.</li>
-        <li>Buka aplikasi LayarSehat, masukkan <strong>kode pemasangan 6 digit</strong> dari dasbor orang tua.</li>
-        <li>Berikan izin <strong>Akses Penggunaan</strong> (Usage Access) agar laporan waktu layar bisa terbaca.</li>
-        <li>Berikan izin <strong>Tampilkan di atas aplikasi lain</strong> agar penguncian aplikasi berfungsi.</li>
-      </ol>
-      <p class="lembut" style="margin:0">
-        Izin-izin di atas diminta langsung oleh aplikasi saat pertama dijalankan — cukup ikuti panduannya di layar.
-      </p>
-    </div>
+    <section class="kartu" id="panduan">
+      <div class="kartu-kepala"><h3>Langkah pemasangan</h3></div>
+      <div class="kartu-isi">
+        <ol class="langkah">
+          {langkah.map((l) => <li>{l}</li>)}
+        </ol>
+        <p class="kecil lembut" style="margin:0">
+          Izin di atas diminta langsung oleh aplikasi saat pertama dijalankan — cukup ikuti
+          panduannya di layar.
+        </p>
+      </div>
+    </section>
 
-    <div class="kartu" style="margin-top:1rem; background:var(--hijau-muda); border-color:#cfe8e0">
-      <h3>Catatan penting</h3>
-      <p style="margin:0" class="lembut">
-        LayarSehat tidak menyembunyikan diri dari HP anak dan tidak membaca isi pesan pribadi.
-        Yang dipantau hanyalah daftar aplikasi terpasang dan lama pemakaiannya. Pasanglah
-        dengan sepengetahuan anak agar tumbuh kepercayaan.
-      </p>
-    </div>
+    <section class="kartu kartu-catatan">
+      <div class="kartu-isi">
+        <h3>Catatan penting</h3>
+        <p style="margin:0">
+          LayarSehat tidak menyembunyikan diri dari HP anak dan tidak membaca isi pesan
+          pribadi. Yang dipantau hanya daftar aplikasi terpasang dan lama pemakaiannya.
+          Pasanglah dengan sepengetahuan anak agar tumbuh kepercayaan.
+        </p>
+      </div>
+    </section>
   </main>
 
-  <footer>
+  <footer class="kaki">
     <div class="wadah"><p style="margin:0">© {new Date().getFullYear()} LayarSehat · layarsehat.nasir.id</p></div>
   </footer>
 
   <style>
-    .langkah { padding-left: 1.15rem; margin: 0 0 1rem; }
+    .navbar { background: var(--putih); box-shadow: 0 1px 3px rgba(50, 50, 93, .08); }
+    .navbar-isi {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 1rem; height: 68px;
+    }
+    .merek {
+      display: inline-flex; align-items: center; gap: .5rem;
+      color: var(--abu-800); font-weight: 700; font-size: 1.05rem;
+    }
+    .merek-ikon { font-size: 1.35rem; }
+    .nav-tautan { display: flex; align-items: center; gap: 1.25rem; }
+    .nav-tautan a { color: var(--abu-700); font-size: .8125rem; font-weight: 600; }
+    .nav-tautan a.tombol { color: #fff; }
+
+    .kepala { background: var(--gradien); padding: 2.5rem 0 6rem; }
+    .kepala h1 { color: #fff; }
+    .kepala p { color: rgba(255, 255, 255, .85); margin: 0; }
+    .kepala strong { color: #fff; }
+
+    .konten { margin-top: -4.5rem; padding-bottom: 2.5rem; display: grid; gap: 1.5rem; }
+    .kartu-unduh h3 { margin-bottom: .15rem; }
+    .kartu-unduh .tombol { margin-top: 1rem; }
+
+    .langkah { margin: 0 0 1rem; padding-left: 1.15rem; }
     .langkah li { margin-bottom: .5rem; }
+    .kartu-catatan { background: var(--dark-2); }
+    .kartu-catatan h3 { color: #fff; }
+    .kartu-catatan p { color: rgba(255, 255, 255, .78); font-size: .8125rem; }
+
+    .kaki {
+      padding: 2rem 0; border-top: 1px solid var(--abu-300);
+      color: var(--abu-600); font-size: .8125rem; text-align: center;
+    }
   </style>
 </Layout>

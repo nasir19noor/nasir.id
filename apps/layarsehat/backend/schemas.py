@@ -108,6 +108,18 @@ class UsageReport(BaseModel):
     top_apps: List[UsageApp]
 
 
+class DashboardSummary(BaseModel):
+    children_count: int
+    devices_count: int
+    active_devices: int
+    blocked_apps: int
+    pending_apps: int
+    screen_time_today: int
+    screen_time_yesterday: int
+    days: List[UsageDay]
+    top_apps: List[UsageApp]
+
+
 # ─── Agent (child device) ────────────────────────────────────────
 class AgentPairRequest(BaseModel):
     code: str

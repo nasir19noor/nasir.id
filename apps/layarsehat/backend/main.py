@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from database import engine, Base
-from routers import parents, children, devices, agent
+from routers import parents, children, devices, agent, dashboard
 
 Base.metadata.create_all(bind=engine)
 
@@ -28,6 +28,7 @@ app.include_router(parents.router)
 app.include_router(children.router)
 app.include_router(devices.router)
 app.include_router(agent.router)
+app.include_router(dashboard.router)
 
 
 @app.get("/")

@@ -1,151 +1,263 @@
 ---
-import Layout from '../../layouts/Layout.astro';
+import PanelLayout from '../../layouts/PanelLayout.astro';
+import Ikon from '../../components/Ikon.astro';
 const { id } = Astro.params;
 ---
 
-<Layout title="Detail Perangkat">
-  <nav class="navbar">
-    <div class="wadah navbar-isi">
-      <a class="merek" href="/dasbor"><span>📱</span><span>LayarSehat</span></a>
-      <div class="nav-tautan">
-        <a href="/dasbor">← Kembali ke dasbor</a>
-        <button class="tombol sekunder kecil" id="tombol-keluar">Keluar</button>
-      </div>
-    </div>
-  </nav>
+<PanelLayout title="Detail Perangkat" breadcrumb="Perangkat" aktif="anak">
+  <div slot="kepala" class="kepala-teks">
+    <a class="kembali" href="/dasbor">← Kembali ke dasbor</a>
+    <h1 id="judul-perangkat">Memuat perangkat…</h1>
+    <p id="subjudul-perangkat">&nbsp;</p>
+  </div>
 
-  <main class="wadah" style="padding-top:2rem; padding-bottom:3rem" data-device-id={id}>
+  <div data-device-id={id} id="akar">
     <div id="galat" class="pesan galat sembunyi"></div>
 
-    <div id="kepala-perangkat">
-      <p class="kosong">Memuat perangkat…</p>
-    </div>
+    <!-- ── Kartu statistik ── -->
+    <section class="kisi-statistik">
+      <article class="kartu statistik">
+        <div class="statistik-atas">
+          <div>
+            <span class="label-kartu">Waktu layar hari ini</span>
+            <span class="angka-besar" id="s-hari">—</span>
+          </div>
+          <div class="ikon-bulat bg-info"><Ikon nama="waktu" /></div>
+        </div>
+        <p class="statistik-kaki" id="s-hari-kaki">Memuat…</p>
+      </article>
 
+      <article class="kartu statistik">
+        <div class="statistik-atas">
+          <div>
+            <span class="label-kartu">Rata-rata harian</span>
+            <span class="angka-besar" id="s-rata">—</span>
+          </div>
+          <div class="ikon-bulat bg-primary"><Ikon nama="grafik" /></div>
+        </div>
+        <p class="statistik-kaki lembut">Dihitung dari 7 hari terakhir</p>
+      </article>
+
+      <article class="kartu statistik">
+        <div class="statistik-atas">
+          <div>
+            <span class="label-kartu">Aplikasi terpasang</span>
+            <span class="angka-besar" id="s-aplikasi">—</span>
+          </div>
+          <div class="ikon-bulat bg-warning"><Ikon nama="aplikasi" /></div>
+        </div>
+        <p class="statistik-kaki" id="s-aplikasi-kaki">Memuat…</p>
+      </article>
+
+      <article class="kartu statistik">
+        <div class="statistik-atas">
+          <div>
+            <span class="label-kartu">Dikunci</span>
+            <span class="angka-besar" id="s-kunci">—</span>
+          </div>
+          <div class="ikon-bulat bg-danger"><Ikon nama="kunci" /></div>
+        </div>
+        <p class="statistik-kaki" id="s-kunci-kaki">Memuat…</p>
+      </article>
+    </section>
+
+    <!-- ── Tab ── -->
     <div class="tab" role="tablist">
       <button class="tab-tombol aktif" data-tab="aplikasi">Aplikasi</button>
       <button class="tab-tombol" data-tab="pemakaian">Pemakaian</button>
       <button class="tab-tombol" data-tab="pengaturan">Pengaturan</button>
     </div>
 
-    <!-- ── Tab Aplikasi ── -->
+    <!-- ── Aplikasi ── -->
     <section id="tab-aplikasi" class="tab-isi">
-      <div class="saring">
-        <input id="cari" type="search" placeholder="Cari aplikasi…" style="max-width:280px" />
-        <select id="filter" style="max-width:200px">
-          <option value="semua">Semua aplikasi</option>
-          <option value="pending">Menunggu persetujuan</option>
-          <option value="blocked">Diblokir</option>
-          <option value="allowed">Diizinkan</option>
-          <option value="pengguna">Bukan aplikasi sistem</option>
-        </select>
-      </div>
-      <div class="kartu" style="padding:.5rem 1rem">
+      <div class="kartu">
+        <div class="kartu-kepala">
+          <div>
+            <h3>Aplikasi di perangkat ini</h3>
+            <span class="kecil lembut">Ketuk Blokir untuk mengunci aplikasi dari anak</span>
+          </div>
+          <select id="filter" class="filter-pilih">
+            <option value="semua">Semua aplikasi</option>
+            <option value="pending">Menunggu persetujuan</option>
+            <option value="blocked">Diblokir</option>
+            <option value="allowed">Diizinkan</option>
+            <option value="pengguna">Bukan aplikasi sistem</option>
+          </select>
+        </div>
         <div id="daftar-aplikasi"><p class="kosong">Memuat…</p></div>
       </div>
     </section>
 
-    <!-- ── Tab Pemakaian ── -->
+    <!-- ── Pemakaian ── -->
     <section id="tab-pemakaian" class="tab-isi sembunyi">
-      <div id="ringkas-pemakaian" class="kisi-ringkas"></div>
-      <div class="kartu" style="margin-top:1rem">
-        <h3>7 hari terakhir</h3>
-        <div id="grafik" class="grafik"></div>
-      </div>
-      <div class="kartu" style="margin-top:1rem">
-        <h3>Aplikasi paling sering dipakai</h3>
-        <div id="aplikasi-teratas"></div>
+      <div class="kisi-grafik">
+        <article class="kartu kartu-gelap">
+          <div class="kartu-isi">
+            <span class="label-kartu terang">Ikhtisar</span>
+            <h3 class="judul-terang">Waktu layar 7 hari</h3>
+          </div>
+          <div class="kartu-isi" style="padding-top:0">
+            <div class="bingkai-grafik"><canvas id="grafik-garis"></canvas></div>
+          </div>
+        </article>
+
+        <article class="kartu">
+          <div class="kartu-kepala"><h3>Aplikasi teratas</h3></div>
+          <div id="aplikasi-teratas"></div>
+        </article>
       </div>
     </section>
 
-    <!-- ── Tab Pengaturan ── -->
+    <!-- ── Pengaturan ── -->
     <section id="tab-pengaturan" class="tab-isi sembunyi">
       <div id="pesan-simpan" class="pesan sukses sembunyi">Pengaturan tersimpan.</div>
-      <form id="form-pengaturan" class="kartu" style="max-width:520px">
-        <div class="kolom">
-          <label for="kebijakan">Aturan aplikasi baru</label>
-          <select id="kebijakan">
-            <option value="allow">Terbuka — aplikasi baru boleh dipakai kecuali saya blokir</option>
-            <option value="block_new">Ketat — aplikasi baru diblokir sampai saya setujui</option>
-          </select>
-          <p class="lembut" style="margin:.4rem 0 0">
-            Mode ketat cocok untuk anak yang lebih kecil: setiap aplikasi yang baru terpasang
-            langsung terkunci hingga Anda menyetujuinya dari tab Aplikasi.
-          </p>
-        </div>
-        <div class="kolom">
-          <label for="batas">Batas pemakaian harian (menit)</label>
-          <input id="batas" type="number" min="0" max="1440" placeholder="Kosongkan untuk tanpa batas" />
-        </div>
-        <div class="dua-kolom">
-          <div class="kolom">
-            <label for="tidur-mulai">Jam tidur mulai</label>
-            <input id="tidur-mulai" type="time" />
-          </div>
-          <div class="kolom">
-            <label for="tidur-selesai">Jam tidur selesai</label>
-            <input id="tidur-selesai" type="time" />
-          </div>
-        </div>
-        <button class="tombol" type="submit" id="simpan">Simpan Pengaturan</button>
-      </form>
 
-      <div class="kartu" style="max-width:520px; margin-top:1rem; border-color:#f0d5d1">
-        <h3 style="color:var(--merah)">Putuskan perangkat</h3>
-        <p class="lembut">
-          Perangkat berhenti menerima aturan dan seluruh riwayat pemakaiannya dihapus.
-          Tindakan ini tidak bisa dibatalkan.
-        </p>
-        <button class="tombol bahaya" id="hapus-perangkat">Putuskan &amp; Hapus</button>
+      <div class="kisi-pengaturan">
+        <form id="form-pengaturan" class="kartu">
+          <div class="kartu-kepala"><h3>Aturan perangkat</h3></div>
+          <div class="kartu-isi">
+            <div class="kolom">
+              <label for="kebijakan">Aturan aplikasi baru</label>
+              <select id="kebijakan">
+                <option value="allow">Terbuka — aplikasi baru boleh dipakai kecuali saya blokir</option>
+                <option value="block_new">Ketat — aplikasi baru dikunci sampai saya setujui</option>
+              </select>
+              <p class="kecil lembut" style="margin:.4rem 0 0">
+                Mode ketat cocok untuk anak yang lebih kecil: setiap aplikasi baru yang
+                dipasang langsung terkunci sampai Anda menyetujuinya.
+              </p>
+            </div>
+
+            <div class="kolom">
+              <label for="batas">Batas pemakaian harian (menit)</label>
+              <input id="batas" type="number" min="0" max="1440" placeholder="Kosongkan untuk tanpa batas" />
+            </div>
+
+            <div class="kisi-dua">
+              <div class="kolom">
+                <label for="tidur-mulai">Jam tidur mulai</label>
+                <input id="tidur-mulai" type="time" />
+              </div>
+              <div class="kolom">
+                <label for="tidur-selesai">Jam tidur selesai</label>
+                <input id="tidur-selesai" type="time" />
+              </div>
+            </div>
+
+            <button class="tombol" type="submit" id="simpan">Simpan Pengaturan</button>
+          </div>
+        </form>
+
+        <div class="kartu kartu-bahaya">
+          <div class="kartu-kepala"><h3 class="teks-bahaya">Putuskan perangkat</h3></div>
+          <div class="kartu-isi">
+            <p class="kecil lembut">
+              Perangkat berhenti menerima aturan dan seluruh riwayat pemakaiannya dihapus.
+              Aplikasi di HP anak akan meminta kode pemasangan baru. Tindakan ini tidak
+              bisa dibatalkan.
+            </p>
+            <button class="tombol bahaya" id="hapus-perangkat">Putuskan &amp; Hapus</button>
+          </div>
+        </div>
       </div>
     </section>
-  </main>
+  </div>
 
   <style>
-    .kartu-perangkat { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
-    .tab { display: flex; gap: .25rem; margin: 1.5rem 0 1rem; border-bottom: 1px solid var(--garis); }
+    .kepala-teks h1 { color: #fff; margin: .35rem 0 .15rem; }
+    .kepala-teks p { color: rgba(255, 255, 255, .8); margin: 0; font-size: .875rem; }
+    .kembali { color: rgba(255, 255, 255, .85); font-size: .8125rem; font-weight: 600; }
+    .kembali:hover { color: #fff; }
+
+    .kisi-statistik {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(215px, 1fr));
+      gap: 1.5rem;
+    }
+    .statistik { padding: 1.25rem 1.5rem; }
+    .statistik-atas { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+    .statistik-kaki {
+      margin: .75rem 0 0; font-size: .8125rem; color: var(--abu-600);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    .tab { display: flex; gap: .4rem; margin: 1.75rem 0 1rem; flex-wrap: wrap; }
     .tab-tombol {
-      background: none; border: none; border-bottom: 2px solid transparent;
-      padding: .6rem .9rem; font: inherit; font-size: .95rem; font-weight: 600;
-      color: var(--teks-lembut); cursor: pointer;
+      padding: .55rem 1.1rem;
+      border: 0; border-radius: .375rem;
+      background: rgba(255, 255, 255, .75);
+      color: var(--abu-700);
+      font: inherit; font-size: .8125rem; font-weight: 600;
+      cursor: pointer;
+      box-shadow: var(--bayangan);
     }
-    .tab-tombol.aktif { color: var(--hijau); border-bottom-color: var(--hijau); }
-    .saring { display: flex; gap: .6rem; margin-bottom: .85rem; flex-wrap: wrap; }
-    .dua-kolom { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+    .tab-tombol.aktif { background: var(--primary); color: #fff; }
 
+    .filter-pilih { width: auto; min-width: 190px; font-size: .8125rem; }
+
+    .kisi-grafik { display: grid; grid-template-columns: 1.85fr 1fr; gap: 1.5rem; }
+    .kartu-gelap { background: var(--dark-2); }
+    .kartu-gelap .judul-terang { color: #fff; margin: 0; }
+    .label-kartu.terang { color: rgba(255, 255, 255, .6); }
+    .bingkai-grafik { height: 280px; position: relative; }
+
+    .kisi-pengaturan { display: grid; grid-template-columns: 1.4fr 1fr; gap: 1.5rem; align-items: start; }
+    .kisi-dua { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .kartu-bahaya { border: 1px solid #fdd1da; }
+
+    /* Baris aplikasi */
     .baris-aplikasi {
-      display: flex; align-items: center; justify-content: space-between; gap: 1rem;
-      padding: .7rem .25rem; border-bottom: 1px solid var(--garis); flex-wrap: wrap;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 1rem; padding: .85rem 1.5rem;
+      border-top: 1px solid var(--abu-300);
     }
-    .baris-aplikasi:last-child { border-bottom: none; }
-    .aplikasi-nama { font-weight: 600; }
-    .aplikasi-paket { font-size: .8rem; color: var(--teks-lembut); font-family: ui-monospace, monospace; }
+    .baris-aplikasi:first-child { border-top: 0; }
+    .aplikasi-kiri { min-width: 0; display: flex; align-items: center; gap: .85rem; }
+    .aplikasi-inisial {
+      display: grid; place-items: center;
+      width: 38px; height: 38px; border-radius: .5rem;
+      background: var(--abu-100); color: var(--abu-700);
+      font-weight: 700; font-size: .9rem; flex-shrink: 0;
+    }
+    .aplikasi-nama { font-weight: 600; color: var(--abu-800); }
+    .aplikasi-paket {
+      font-size: .75rem; color: var(--abu-600);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      overflow-wrap: anywhere;
+    }
+    .aplikasi-kanan { display: flex; align-items: center; gap: .6rem; flex-shrink: 0; }
 
-    .kisi-ringkas { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: .75rem; }
-    .ringkas { background: var(--putih); border: 1px solid var(--garis); border-radius: var(--radius); padding: 1rem; }
-    .ringkas-angka { font-size: 1.6rem; font-weight: 700; line-height: 1.2; }
-
-    .grafik { display: flex; align-items: flex-end; gap: .5rem; height: 170px; padding-top: .5rem; }
-    .batang-bungkus { flex: 1; display: flex; flex-direction: column; align-items: center; gap: .35rem; height: 100%; justify-content: flex-end; }
-    .batang { width: 100%; max-width: 46px; background: var(--hijau); border-radius: 5px 5px 0 0; min-height: 3px; }
-    .batang-label { font-size: .74rem; color: var(--teks-lembut); text-align: center; }
-
-    @media (max-width: 560px) { .dua-kolom { grid-template-columns: 1fr; } }
+    @media (max-width: 992px) {
+      .kisi-grafik, .kisi-pengaturan { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 560px) {
+      .kisi-dua { grid-template-columns: 1fr; }
+      .baris-aplikasi { flex-direction: column; align-items: flex-start; }
+      .kartu-kepala { flex-direction: column; align-items: flex-start; }
+      .filter-pilih { width: 100%; }
+    }
   </style>
 
   <script>
-    import { api, keluar, wajibMasuk, waktuLalu, formatDurasi, formatTanggal, escapeHtml } from '../../lib/api.js';
+    import {
+      Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip,
+    } from 'chart.js';
+    import {
+      api, wajibMasuk, waktuLalu, formatDurasi, formatTanggal, escapeHtml,
+    } from '../../lib/api.js';
+
+    Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip);
 
     if (wajibMasuk()) {
-      const deviceId = document.querySelector('main').dataset.deviceId;
+      const deviceId = document.getElementById('akar').dataset.deviceId;
       const galat = document.getElementById('galat');
       let semuaAplikasi = [];
+      let grafikGaris = null;
 
-      document.getElementById('tombol-keluar').addEventListener('click', keluar);
-
-      function tampilGalat(pesan) {
+      const tampilGalat = (pesan) => {
         galat.textContent = pesan;
         galat.classList.remove('sembunyi');
-      }
+      };
 
       // ── Tab ──
       document.querySelectorAll('.tab-tombol').forEach((tombol) => {
@@ -162,29 +274,24 @@ const { id } = Astro.params;
       async function muatPerangkat() {
         try {
           const d = await api(`/devices/${deviceId}`);
-          document.getElementById('kepala-perangkat').innerHTML = `
-            <div class="kartu kartu-perangkat">
-              <div>
-                <h1 style="font-size:1.5rem; margin-bottom:.2rem">${escapeHtml(d.device_name)}</h1>
-                <p class="lembut" style="margin:0">
-                  ${[d.brand, d.model].filter(Boolean).map(escapeHtml).join(' ') || 'Perangkat Android'}
-                  ${d.android_version ? ` · Android ${escapeHtml(d.android_version)}` : ''}
-                </p>
-                <p class="lembut" style="margin:.2rem 0 0">Terakhir aktif: ${waktuLalu(d.last_seen)}</p>
-              </div>
-              <div style="display:flex; gap:.4rem; flex-wrap:wrap">
-                ${d.default_policy === 'block_new'
-                  ? '<span class="lencana tunggu">Mode ketat</span>'
-                  : '<span class="lencana izin">Mode terbuka</span>'}
-                ${d.daily_limit_minutes ? `<span class="lencana sistem">Batas ${d.daily_limit_minutes} mnt/hari</span>` : ''}
-                ${d.bedtime_start ? `<span class="lencana sistem">Tidur ${d.bedtime_start}–${d.bedtime_end || ''}</span>` : ''}
-              </div>
-            </div>`;
+
+          document.getElementById('judul-perangkat').textContent = d.device_name;
+          document.getElementById('subjudul-perangkat').textContent =
+            `${[d.brand, d.model].filter(Boolean).join(' ') || 'Perangkat Android'}` +
+            `${d.android_version ? ` · Android ${d.android_version}` : ''}` +
+            ` · terakhir aktif ${waktuLalu(d.last_seen).toLowerCase()}`;
 
           document.getElementById('kebijakan').value = d.default_policy;
           document.getElementById('batas').value = d.daily_limit_minutes ?? '';
           document.getElementById('tidur-mulai').value = d.bedtime_start || '';
           document.getElementById('tidur-selesai').value = d.bedtime_end || '';
+
+          const aturan = [];
+          if (d.daily_limit_minutes) aturan.push(`batas ${d.daily_limit_minutes} mnt/hari`);
+          if (d.bedtime_start) aturan.push(`tidur ${d.bedtime_start}–${d.bedtime_end || ''}`);
+          document.getElementById('s-kunci-kaki').innerHTML = aturan.length
+            ? `<span class="lembut">Aturan aktif: ${aturan.join(', ')}</span>`
+            : '<span class="lembut">Belum ada batas waktu</span>';
         } catch (err) {
           tampilGalat(err.message);
         }
@@ -192,7 +299,7 @@ const { id } = Astro.params;
 
       // ── Aplikasi ──
       function gambarAplikasi() {
-        const cari = document.getElementById('cari').value.toLowerCase();
+        const cari = (document.getElementById('cari-global').value || '').toLowerCase();
         const filter = document.getElementById('filter').value;
 
         const hasil = semuaAplikasi.filter((a) => {
@@ -208,16 +315,17 @@ const { id } = Astro.params;
 
         const wadah = document.getElementById('daftar-aplikasi');
         if (!hasil.length) {
-          wadah.innerHTML = `<p class="kosong">${semuaAplikasi.length
-            ? 'Tidak ada aplikasi yang cocok dengan pencarian.'
-            : 'Belum ada data aplikasi. Perangkat akan mengirimkannya saat pertama kali tersinkronisasi.'}</p>`;
+          wadah.innerHTML = `<div class="kosong"><p>${semuaAplikasi.length
+            ? 'Tidak ada aplikasi yang cocok dengan penyaring.'
+            : 'Belum ada data aplikasi. Perangkat mengirimkannya saat sinkronisasi pertama.'}</p></div>`;
           return;
         }
 
         wadah.innerHTML = hasil.map((a) => {
+          const nama = a.app_name || a.package_name;
           const lencana =
             a.status === 'blocked' ? '<span class="lencana blokir">Diblokir</span>' :
-            a.status === 'pending' ? '<span class="lencana tunggu">Menunggu persetujuan</span>' :
+            a.status === 'pending' ? '<span class="lencana tunggu">Menunggu</span>' :
             '<span class="lencana izin">Diizinkan</span>';
 
           const aksi = a.status === 'blocked'
@@ -226,16 +334,19 @@ const { id } = Astro.params;
 
           return `
             <div class="baris-aplikasi">
-              <div style="min-width:0">
-                <div class="aplikasi-nama">
-                  ${escapeHtml(a.app_name || a.package_name)}
-                  ${a.is_system ? '<span class="lencana sistem">Sistem</span>' : ''}
-                  ${!a.is_installed ? '<span class="lencana sistem">Sudah dihapus</span>' : ''}
+              <div class="aplikasi-kiri">
+                <span class="aplikasi-inisial">${escapeHtml(nama.charAt(0).toUpperCase())}</span>
+                <div style="min-width:0">
+                  <div class="aplikasi-nama">
+                    ${escapeHtml(nama)}
+                    ${a.is_system ? '<span class="lencana netral">Sistem</span>' : ''}
+                    ${!a.is_installed ? '<span class="lencana netral">Sudah dihapus</span>' : ''}
+                  </div>
+                  <div class="aplikasi-paket">${escapeHtml(a.package_name)}</div>
+                  ${a.first_seen ? `<div class="kecil lembut">Terpasang sejak ${formatTanggal(a.first_seen)}</div>` : ''}
                 </div>
-                <div class="aplikasi-paket">${escapeHtml(a.package_name)}</div>
-                ${a.first_seen ? `<div class="lembut" style="font-size:.78rem">Terpasang sejak ${formatTanggal(a.first_seen)}</div>` : ''}
               </div>
-              <div style="display:flex; gap:.5rem; align-items:center">${lencana}${aksi}</div>
+              <div class="aplikasi-kanan">${lencana}${aksi}</div>
             </div>`;
         }).join('');
 
@@ -243,6 +354,21 @@ const { id } = Astro.params;
           t.addEventListener('click', () => ubahStatus(t.dataset.blokir, 'blocked', t)));
         wadah.querySelectorAll('[data-izinkan]').forEach((t) =>
           t.addEventListener('click', () => ubahStatus(t.dataset.izinkan, 'allowed', t)));
+      }
+
+      function perbaruiStatistikAplikasi() {
+        const terpasang = semuaAplikasi.filter((a) => a.is_installed);
+        const diblokir = semuaAplikasi.filter((a) => a.status === 'blocked').length;
+        const menunggu = semuaAplikasi.filter((a) => a.status === 'pending').length;
+
+        document.getElementById('s-aplikasi').textContent = terpasang.length;
+        document.getElementById('s-aplikasi-kaki').innerHTML =
+          `<span class="lembut">${terpasang.filter((a) => !a.is_system).length} dipasang sendiri oleh anak</span>`;
+        document.getElementById('s-kunci').textContent = diblokir;
+        if (menunggu) {
+          document.getElementById('s-kunci-kaki').innerHTML =
+            `<strong class="teks-peringatan">${menunggu} menunggu</strong> <span class="lembut">persetujuan Anda</span>`;
+        }
       }
 
       async function ubahStatus(paket, status, tombol) {
@@ -255,6 +381,7 @@ const { id } = Astro.params;
           const app = semuaAplikasi.find((a) => a.package_name === paket);
           if (app) app.status = status;
           gambarAplikasi();
+          perbaruiStatistikAplikasi();
         } catch (err) {
           tampilGalat(err.message);
           tombol.disabled = false;
@@ -265,13 +392,14 @@ const { id } = Astro.params;
         try {
           semuaAplikasi = await api(`/devices/${deviceId}/apps`);
           gambarAplikasi();
+          perbaruiStatistikAplikasi();
         } catch (err) {
           tampilGalat(err.message);
         }
       }
 
-      document.getElementById('cari').addEventListener('input', gambarAplikasi);
       document.getElementById('filter').addEventListener('change', gambarAplikasi);
+      document.getElementById('cari-global').addEventListener('input', gambarAplikasi);
 
       // ── Pemakaian ──
       let pemakaianDimuat = false;
@@ -280,46 +408,90 @@ const { id } = Astro.params;
         pemakaianDimuat = true;
         try {
           const laporan = await api(`/devices/${deviceId}/usage?days=7`);
-          const hariIni = new Date().toISOString().slice(0, 10);
-          const detikHariIni = laporan.days.find((d) => d.usage_date === hariIni)?.total_seconds || 0;
-          const totalMinggu = laporan.days.reduce((n, d) => n + d.total_seconds, 0);
-          const rata = laporan.days.length ? Math.round(totalMinggu / laporan.days.length) : 0;
 
-          document.getElementById('ringkas-pemakaian').innerHTML = `
-            <div class="ringkas"><div class="lembut">Hari ini</div><div class="ringkas-angka">${formatDurasi(detikHariIni)}</div></div>
-            <div class="ringkas"><div class="lembut">Total 7 hari</div><div class="ringkas-angka">${formatDurasi(totalMinggu)}</div></div>
-            <div class="ringkas"><div class="lembut">Rata-rata harian</div><div class="ringkas-angka">${formatDurasi(rata)}</div></div>`;
+          const konteks = document.getElementById('grafik-garis').getContext('2d');
+          const isian = konteks.createLinearGradient(0, 0, 0, 280);
+          isian.addColorStop(0, 'rgba(94, 114, 228, .35)');
+          isian.addColorStop(1, 'rgba(94, 114, 228, 0)');
 
-          const maks = Math.max(...laporan.days.map((d) => d.total_seconds), 1);
-          document.getElementById('grafik').innerHTML = laporan.days.length
-            ? laporan.days.map((d) => {
-                const tinggi = Math.round((d.total_seconds / maks) * 130);
-                const tanggal = new Date(d.usage_date + 'T00:00:00');
-                return `
-                  <div class="batang-bungkus" title="${formatDurasi(d.total_seconds)}">
-                    <div class="batang-label">${formatDurasi(d.total_seconds)}</div>
-                    <div class="batang" style="height:${tinggi}px"></div>
-                    <div class="batang-label">${tanggal.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric' })}</div>
-                  </div>`;
-              }).join('')
-            : '<p class="kosong" style="width:100%">Belum ada data pemakaian.</p>';
+          grafikGaris = new Chart(konteks, {
+            type: 'line',
+            data: {
+              labels: laporan.days.map((d) =>
+                new Date(d.usage_date + 'T00:00:00')
+                  .toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })),
+              datasets: [{
+                data: laporan.days.map((d) => Math.round(d.total_seconds / 60)),
+                borderColor: '#5e72e4',
+                backgroundColor: isian,
+                borderWidth: 3,
+                fill: true,
+                tension: .4,
+                pointRadius: 0,
+                pointHoverRadius: 5,
+              }],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                tooltip: { callbacks: { label: (k) => `${k.parsed.y} menit` }, displayColors: false },
+              },
+              scales: {
+                x: {
+                  grid: { color: 'rgba(255,255,255,.06)' },
+                  ticks: { color: 'rgba(255,255,255,.6)', font: { size: 11 } },
+                  border: { display: false },
+                },
+                y: {
+                  beginAtZero: true,
+                  grid: { color: 'rgba(255,255,255,.06)' },
+                  ticks: { color: 'rgba(255,255,255,.6)', font: { size: 11 }, callback: (v) => `${v}m` },
+                  border: { display: false },
+                },
+              },
+            },
+          });
 
           document.getElementById('aplikasi-teratas').innerHTML = laporan.top_apps.length
-            ? `<table>
+            ? `<div class="tabel-gulir"><table>
                  <thead><tr><th>Aplikasi</th><th style="text-align:right">Durasi</th></tr></thead>
                  <tbody>${laporan.top_apps.map((a) => `
                    <tr>
                      <td>
-                       <div style="font-weight:600">${escapeHtml(a.app_name || a.package_name)}</div>
+                       <div class="aplikasi-nama">${escapeHtml(a.app_name || a.package_name)}</div>
                        <div class="aplikasi-paket">${escapeHtml(a.package_name)}</div>
                      </td>
                      <td style="text-align:right; white-space:nowrap">${formatDurasi(a.seconds)}</td>
                    </tr>`).join('')}
-                 </tbody>
-               </table>`
-            : '<p class="kosong">Belum ada data pemakaian aplikasi.</p>';
+                 </tbody></table></div>`
+            : '<div class="kosong"><p>Belum ada data pemakaian.</p></div>';
         } catch (err) {
           pemakaianDimuat = false;
+          tampilGalat(err.message);
+        }
+      }
+
+      // Ringkasan pemakaian untuk kartu statistik (selalu dimuat di awal).
+      async function muatStatistikPemakaian() {
+        try {
+          const laporan = await api(`/devices/${deviceId}/usage?days=7`);
+          const hariIni = new Date().toISOString().slice(0, 10);
+          const detikHariIni = laporan.days.find((d) => d.usage_date === hariIni)?.total_seconds || 0;
+          const kemarin = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+          const detikKemarin = laporan.days.find((d) => d.usage_date === kemarin)?.total_seconds || 0;
+          const total = laporan.days.reduce((n, d) => n + d.total_seconds, 0);
+
+          document.getElementById('s-hari').textContent = formatDurasi(detikHariIni);
+          document.getElementById('s-rata').textContent =
+            formatDurasi(laporan.days.length ? Math.round(total / laporan.days.length) : 0);
+
+          const selisih = detikHariIni - detikKemarin;
+          const persen = detikKemarin ? Math.round((selisih / detikKemarin) * 100) : null;
+          document.getElementById('s-hari-kaki').innerHTML = persen === null
+            ? '<span class="lembut">Belum ada pembanding kemarin</span>'
+            : `<strong class="${selisih > 0 ? 'teks-bahaya' : 'teks-sukses'}">${selisih > 0 ? '↑' : '↓'} ${Math.abs(persen)}%</strong> <span class="lembut">dibanding kemarin</span>`;
+        } catch (err) {
           tampilGalat(err.message);
         }
       }
@@ -345,8 +517,7 @@ const { id } = Astro.params;
           });
           pesan.classList.remove('sembunyi');
           setTimeout(() => pesan.classList.add('sembunyi'), 3000);
-          muatPerangkat();
-          muatAplikasi();
+          await Promise.all([muatPerangkat(), muatAplikasi()]);
         } catch (err) {
           tampilGalat(err.message);
         } finally {
@@ -367,6 +538,7 @@ const { id } = Astro.params;
 
       muatPerangkat();
       muatAplikasi();
+      muatStatistikPemakaian();
     }
   </script>
-</Layout>
+</PanelLayout>

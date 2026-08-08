@@ -1,0 +1,42 @@
+---
+interface Props {
+  nama: string;
+  kelas?: string;
+}
+const { nama, kelas = '' } = Astro.props;
+
+// Ikon garis sederhana (stroke) supaya tidak perlu pustaka ikon eksternal.
+const jalur: Record<string, string> = {
+  dasbor: '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9.5 21v-6h5v6"/>',
+  anak: '<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M17 11.5a2.6 2.6 0 1 0 0-5.2"/><path d="M18 20c0-2.4-.9-4.2-2.4-5.2"/>',
+  perangkat: '<rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 5.5h3"/><path d="M11 18.5h2"/>',
+  aplikasi: '<rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/>',
+  waktu: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5.2l3.4 2"/>',
+  kunci: '<rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7"/>',
+  unduh: '<path d="M12 3v12"/><path d="m7.5 10.5 4.5 4.5 4.5-4.5"/><path d="M4 20h16"/>',
+  keluar: '<path d="M9 4.5H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h3"/><path d="M15.5 15.5 20 12l-4.5-3.5"/><path d="M20 12H9.5"/>',
+  cari: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4.5 4.5"/>',
+  pengaturan: '<circle cx="12" cy="12" r="3.2"/><path d="M19.4 14.4a1.7 1.7 0 0 0 .35 1.9l.05.05a2 2 0 1 1-2.85 2.85l-.05-.05a1.7 1.7 0 0 0-1.9-.35 1.7 1.7 0 0 0-1.05 1.57V21a2 2 0 1 1-4 0v-.13A1.7 1.7 0 0 0 8.8 19.3a1.7 1.7 0 0 0-1.9.35l-.05.05a2 2 0 1 1-2.85-2.85l.05-.05a1.7 1.7 0 0 0 .35-1.9 1.7 1.7 0 0 0-1.57-1.05H3a2 2 0 1 1 0-4h.13A1.7 1.7 0 0 0 4.7 8.8a1.7 1.7 0 0 0-.35-1.9l-.05-.05a2 2 0 1 1 2.85-2.85l.05.05a1.7 1.7 0 0 0 1.9.35h.08A1.7 1.7 0 0 0 10.2 2.9V3a2 2 0 1 1 4 0v.13a1.7 1.7 0 0 0 1.05 1.57 1.7 1.7 0 0 0 1.9-.35l.05-.05a2 2 0 1 1 2.85 2.85l-.05.05a1.7 1.7 0 0 0-.35 1.9v.08a1.7 1.7 0 0 0 1.57 1.05H21a2 2 0 1 1 0 4h-.13a1.7 1.7 0 0 0-1.47 1.07Z"/>',
+  grafik: '<path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/>',
+  tambah: '<path d="M12 5v14"/><path d="M5 12h14"/>',
+  panah: '<path d="m9 6 6 6-6 6"/>',
+  menu: '<path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/>',
+  perisai: '<path d="M12 3 5 6v6c0 4.2 2.9 7.8 7 9 4.1-1.2 7-4.8 7-9V6l-7-3Z"/>',
+  bulan: '<path d="M20 14.5A8.5 8.5 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.5Z"/>',
+};
+---
+
+<!-- width/height jadi cadangan bila tidak ada kelas ukuran; CSS tetap menang. -->
+<svg
+  class={kelas}
+  width="20"
+  height="20"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="1.7"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  aria-hidden="true"
+  set:html={jalur[nama] ?? ''}
+/>

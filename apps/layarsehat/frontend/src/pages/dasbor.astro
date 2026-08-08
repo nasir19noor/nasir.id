@@ -1,173 +1,498 @@
 ---
-import Layout from '../layouts/Layout.astro';
+import PanelLayout from '../layouts/PanelLayout.astro';
+import Ikon from '../components/Ikon.astro';
 ---
 
-<Layout title="Dasbor">
-  <nav class="navbar">
-    <div class="wadah navbar-isi">
-      <a class="merek" href="/dasbor"><span>📱</span><span>LayarSehat</span></a>
-      <div class="nav-tautan">
-        <span class="lembut" id="sapaan"></span>
-        <button class="tombol sekunder kecil" id="tombol-keluar">Keluar</button>
-      </div>
-    </div>
-  </nav>
+<PanelLayout title="Dasbor" breadcrumb="Dasbor" aktif="dasbor">
+  <div slot="kepala" class="kepala-teks">
+    <h1>Selamat datang kembali</h1>
+    <p>Ringkasan aktivitas layar anak Anda hari ini.</p>
+  </div>
 
-  <main class="wadah" style="padding-top:2rem; padding-bottom:3rem">
-    <div class="kepala">
+  <div id="galat" class="pesan galat sembunyi"></div>
+
+  <!-- ── Kartu statistik ── -->
+  <section class="kisi-statistik">
+    <article class="kartu statistik">
+      <div class="statistik-atas">
+        <div>
+          <span class="label-kartu">Anak terpantau</span>
+          <span class="angka-besar" id="s-anak">—</span>
+        </div>
+        <div class="ikon-bulat bg-danger"><Ikon nama="anak" /></div>
+      </div>
+      <p class="statistik-kaki" id="s-anak-kaki">Memuat…</p>
+    </article>
+
+    <article class="kartu statistik">
+      <div class="statistik-atas">
+        <div>
+          <span class="label-kartu">Perangkat aktif</span>
+          <span class="angka-besar" id="s-perangkat">—</span>
+        </div>
+        <div class="ikon-bulat bg-warning"><Ikon nama="perangkat" /></div>
+      </div>
+      <p class="statistik-kaki" id="s-perangkat-kaki">Memuat…</p>
+    </article>
+
+    <article class="kartu statistik">
+      <div class="statistik-atas">
+        <div>
+          <span class="label-kartu">Aplikasi dikunci</span>
+          <span class="angka-besar" id="s-blokir">—</span>
+        </div>
+        <div class="ikon-bulat bg-success"><Ikon nama="kunci" /></div>
+      </div>
+      <p class="statistik-kaki" id="s-blokir-kaki">Memuat…</p>
+    </article>
+
+    <article class="kartu statistik">
+      <div class="statistik-atas">
+        <div>
+          <span class="label-kartu">Waktu layar hari ini</span>
+          <span class="angka-besar" id="s-waktu">—</span>
+        </div>
+        <div class="ikon-bulat bg-info"><Ikon nama="waktu" /></div>
+      </div>
+      <p class="statistik-kaki" id="s-waktu-kaki">Memuat…</p>
+    </article>
+  </section>
+
+  <!-- ── Grafik ── -->
+  <section class="kisi-grafik">
+    <article class="kartu kartu-gelap">
+      <div class="kartu-isi grafik-kepala">
+        <div>
+          <span class="label-kartu terang">Ikhtisar</span>
+          <h3 class="judul-terang">Waktu layar</h3>
+        </div>
+        <div class="pilih-rentang">
+          <button class="pil aktif" data-hari="7">Minggu</button>
+          <button class="pil" data-hari="30">Bulan</button>
+        </div>
+      </div>
+      <div class="kartu-isi" style="padding-top:0">
+        <div class="bingkai-grafik"><canvas id="grafik-garis"></canvas></div>
+      </div>
+    </article>
+
+    <article class="kartu">
+      <div class="kartu-isi">
+        <span class="label-kartu">Peringkat</span>
+        <h3>Aplikasi paling sering</h3>
+      </div>
+      <div class="kartu-isi" style="padding-top:0">
+        <div class="bingkai-grafik"><canvas id="grafik-batang"></canvas></div>
+      </div>
+    </article>
+  </section>
+
+  <!-- ── Anak & perangkat ── -->
+  <section class="kartu" id="anak" style="margin-top:1.5rem">
+    <div class="kartu-kepala">
       <div>
-        <h1>Anak &amp; Perangkat</h1>
-        <p class="lembut" style="margin:0">Tambahkan profil anak, lalu hubungkan HP mereka dengan kode pemasangan.</p>
+        <h3>Anak &amp; Perangkat</h3>
+        <span class="kecil lembut">Hubungkan HP anak memakai kode pemasangan</span>
       </div>
-      <button class="tombol" id="tombol-tambah">+ Tambah Anak</button>
+      <button class="tombol kecil" id="tombol-tambah">
+        <Ikon nama="tambah" kelas="ikon-tombol" /> Tambah Anak
+      </button>
     </div>
 
-    <div id="galat" class="pesan galat sembunyi" style="margin-top:1rem"></div>
-
-    <form id="form-anak" class="kartu sembunyi" style="margin-top:1.25rem; max-width:460px">
-      <h3>Profil anak baru</h3>
-      <div class="kolom">
-        <label for="nama-anak">Nama anak</label>
-        <input id="nama-anak" type="text" required placeholder="Aisyah" />
-      </div>
-      <div class="kolom">
-        <label for="tahun-lahir">Tahun lahir <span class="lembut">(opsional)</span></label>
-        <input id="tahun-lahir" type="number" min="2000" max="2030" placeholder="2014" />
-      </div>
-      <div style="display:flex; gap:.5rem">
-        <button class="tombol" type="submit">Simpan</button>
-        <button class="tombol sekunder" type="button" id="batal-anak">Batal</button>
+    <form id="form-anak" class="kartu-isi sembunyi" style="border-bottom:1px solid var(--abu-300)">
+      <div class="kisi-form">
+        <div class="kolom" style="margin:0">
+          <label for="nama-anak">Nama anak</label>
+          <input id="nama-anak" type="text" required placeholder="Aisyah" />
+        </div>
+        <div class="kolom" style="margin:0">
+          <label for="tahun-lahir">Tahun lahir <span class="lembut">(opsional)</span></label>
+          <input id="tahun-lahir" type="number" min="2000" max="2030" placeholder="2014" />
+        </div>
+        <div class="aksi-form">
+          <button class="tombol" type="submit">Simpan</button>
+          <button class="tombol sekunder" type="button" id="batal-anak">Batal</button>
+        </div>
       </div>
     </form>
 
-    <div id="daftar" style="margin-top:1.5rem">
-      <p class="kosong">Memuat data…</p>
-    </div>
-  </main>
+    <div id="daftar"><p class="kosong">Memuat data…</p></div>
+  </section>
 
-  <!-- Dialog kode pemasangan -->
+  <!-- ── Dialog kode pemasangan ── -->
   <div id="tirai" class="tirai sembunyi">
     <div class="kartu dialog">
-      <h3>Kode Pemasangan</h3>
-      <p class="lembut">
-        Buka aplikasi LayarSehat di HP anak, lalu masukkan kode ini. Kode berlaku 15 menit
-        dan hanya bisa dipakai sekali.
-      </p>
-      <div class="kode" id="kode">——————</div>
-      <p class="lembut" id="kode-kedaluwarsa" style="text-align:center"></p>
-      <button class="tombol penuh sekunder" id="tutup-dialog">Tutup</button>
+      <div class="kartu-isi">
+        <h3>Kode Pemasangan</h3>
+        <p class="kecil lembut">
+          Buka aplikasi LayarSehat di HP anak, lalu masukkan kode ini. Berlaku 15 menit
+          dan hanya bisa dipakai satu kali.
+        </p>
+        <div class="kode" id="kode">——————</div>
+        <p class="kecil lembut" id="kode-kedaluwarsa" style="text-align:center"></p>
+        <button class="tombol sekunder penuh" id="tutup-dialog">Tutup</button>
+      </div>
     </div>
   </div>
 
   <style>
-    .kepala { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
-    .anak { margin-bottom: 1rem; }
-    .anak-kepala { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: .85rem; }
-    .anak-nama { font-weight: 700; font-size: 1.08rem; }
-    .perangkat {
-      display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
-      padding: .8rem; border: 1px solid var(--garis); border-radius: 10px; margin-bottom: .5rem;
-      text-decoration: none; color: inherit;
+    .kepala-teks h1 { color: #fff; margin-bottom: .15rem; }
+    .kepala-teks p { color: rgba(255, 255, 255, .8); margin: 0; font-size: .875rem; }
+
+    .kisi-statistik {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(215px, 1fr));
+      gap: 1.5rem;
     }
-    .perangkat:hover { border-color: var(--hijau); background: var(--hijau-muda); }
-    .titik { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: .4rem; }
-    .titik.aktif { background: #22a06b; }
-    .titik.mati { background: #c2ccc9; }
+    .statistik { padding: 1.25rem 1.5rem; }
+    .statistik-atas { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+    .statistik-kaki {
+      margin: .75rem 0 0;
+      font-size: .8125rem;
+      color: var(--abu-600);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .statistik-kaki strong { font-weight: 600; }
+
+    .kisi-grafik {
+      display: grid;
+      grid-template-columns: 1.85fr 1fr;
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+    .kartu-gelap { background: var(--dark-2); }
+    .kartu-gelap .judul-terang { color: #fff; margin: 0; }
+    .label-kartu.terang { color: rgba(255, 255, 255, .6); }
+    .grafik-kepala { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+    .bingkai-grafik { height: 280px; position: relative; }
+
+    .pilih-rentang { display: flex; gap: .35rem; }
+    .pil {
+      padding: .35rem .85rem;
+      border-radius: 10rem;
+      border: 0;
+      background: rgba(255, 255, 255, .12);
+      color: rgba(255, 255, 255, .85);
+      font: inherit;
+      font-size: .75rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .pil.aktif { background: var(--primary); color: #fff; }
+
+    .kisi-form { display: grid; grid-template-columns: 1fr 1fr auto; gap: 1rem; align-items: end; }
+    .aksi-form { display: flex; gap: .5rem; }
+    :global(.ikon-tombol) { width: .85rem; height: .85rem; }
+
+    /* Baris perangkat di dalam tabel */
+    .sel-utama { display: flex; align-items: center; gap: .75rem; }
+    .titik { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .titik.aktif { background: var(--success); }
+    .titik.mati { background: var(--abu-400); }
+    .nama-tebal { font-weight: 600; color: var(--abu-800); }
+    .baris-anak td { background: var(--abu-100); }
+    .aksi-anak { display: flex; gap: .4rem; justify-content: flex-end; flex-wrap: wrap; }
+    .tautan-perangkat { display: inline-flex; align-items: center; gap: .3rem; font-weight: 600; }
+    :global(.ikon-panah) { width: .8rem; height: .8rem; }
+
     .tirai {
-      position: fixed; inset: 0; background: rgba(16, 32, 29, .5);
-      display: grid; place-items: center; padding: 1.25rem; z-index: 50;
+      position: fixed; inset: 0;
+      background: rgba(23, 43, 77, .5);
+      display: grid; place-items: center;
+      padding: 1.25rem; z-index: 80;
     }
     .dialog { max-width: 380px; width: 100%; }
     .kode {
-      font-size: 2.4rem; font-weight: 700; letter-spacing: .35em; text-align: center;
-      padding: 1rem; background: var(--hijau-muda); color: var(--hijau-tua);
-      border-radius: 10px; margin: .5rem 0; text-indent: .35em;
+      font-size: 2.2rem; font-weight: 700; letter-spacing: .3em;
+      text-align: center; text-indent: .3em;
+      padding: 1rem; margin: .75rem 0 .25rem;
+      background: var(--abu-100); color: var(--primary);
+      border-radius: var(--radius);
+    }
+
+    @media (max-width: 992px) {
+      .kisi-grafik { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 640px) {
+      .kisi-form { grid-template-columns: 1fr; }
     }
   </style>
 
   <script>
-    import { api, ambilOrangTua, keluar, wajibMasuk, waktuLalu, escapeHtml } from '../lib/api.js';
+    import {
+      Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale,
+      BarController, BarElement, Filler, Tooltip,
+    } from 'chart.js';
+    import { api, wajibMasuk, waktuLalu, formatDurasi, escapeHtml } from '../lib/api.js';
+
+    Chart.register(
+      LineController, LineElement, PointElement, LinearScale, CategoryScale,
+      BarController, BarElement, Filler, Tooltip,
+    );
 
     if (wajibMasuk()) {
-      const daftar = document.getElementById('daftar');
       const galat = document.getElementById('galat');
+      const daftar = document.getElementById('daftar');
       const formAnak = document.getElementById('form-anak');
       const tirai = document.getElementById('tirai');
+      let grafikGaris = null;
+      let grafikBatang = null;
+      let semuaAnak = [];
 
-      const orangTua = ambilOrangTua();
-      if (orangTua) {
-        document.getElementById('sapaan').textContent = `Halo, ${orangTua.full_name || orangTua.email}`;
-      }
-
-      document.getElementById('tombol-keluar').addEventListener('click', keluar);
-      document.getElementById('tombol-tambah').addEventListener('click', () => {
-        formAnak.classList.toggle('sembunyi');
-        document.getElementById('nama-anak').focus();
-      });
-      document.getElementById('batal-anak').addEventListener('click', () => formAnak.classList.add('sembunyi'));
-      document.getElementById('tutup-dialog').addEventListener('click', () => tirai.classList.add('sembunyi'));
-
-      function tampilGalat(pesan) {
+      const tampilGalat = (pesan) => {
         galat.textContent = pesan;
         galat.classList.remove('sembunyi');
-      }
+      };
 
-      function gambarAnak(anak) {
-        const perangkat = anak.devices.length
-          ? anak.devices.map((d) => {
-              const aktif = d.last_seen && (Date.now() - new Date(d.last_seen).getTime()) < 30 * 60 * 1000;
-              return `
-                <a class="perangkat" href="/perangkat/${d.id}">
-                  <div>
-                    <div style="font-weight:600">${escapeHtml(d.device_name)}</div>
-                    <div class="lembut">
-                      <span class="titik ${aktif ? 'aktif' : 'mati'}"></span>${waktuLalu(d.last_seen)}
-                      ${d.brand ? ' · ' + escapeHtml(d.brand) : ''}${d.model ? ' ' + escapeHtml(d.model) : ''}
-                    </div>
-                  </div>
-                  <div style="display:flex; gap:.4rem; align-items:center">
-                    ${d.default_policy === 'block_new'
-                      ? '<span class="lencana tunggu">Aplikasi baru diblokir</span>'
-                      : '<span class="lencana izin">Mode terbuka</span>'}
-                    ${d.daily_limit_minutes ? `<span class="lencana sistem">${d.daily_limit_minutes} mnt/hari</span>` : ''}
-                    <span class="lembut">›</span>
-                  </div>
-                </a>`;
-            }).join('')
-          : '<p class="lembut" style="margin:0">Belum ada perangkat terhubung. Buat kode pemasangan lalu masukkan di HP anak.</p>';
+      const menit = (detik) => Math.round(detik / 60);
+      const namaHari = (iso) =>
+        new Date(iso + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
 
-        return `
-          <section class="kartu anak">
-            <div class="anak-kepala">
-              <div>
-                <div class="anak-nama">${escapeHtml(anak.name)}</div>
-                <div class="lembut">${anak.birth_year ? `Lahir ${anak.birth_year}` : 'Tahun lahir belum diisi'} · ${anak.devices.length} perangkat</div>
-              </div>
-              <div style="display:flex; gap:.5rem">
-                <button class="tombol kecil" data-kode="${anak.id}">Kode Pemasangan</button>
-                <button class="tombol sekunder kecil" data-hapus="${anak.id}" data-nama="${escapeHtml(anak.name)}">Hapus</button>
-              </div>
-            </div>
-            ${perangkat}
-          </section>`;
-      }
-
-      async function muat() {
+      // ── Statistik & grafik ──
+      async function muatRingkasan(hari = 7) {
         try {
-          const anakAnak = await api('/children');
-          daftar.innerHTML = anakAnak.length
-            ? anakAnak.map(gambarAnak).join('')
-            : `<div class="kartu kosong">
-                 <p style="font-size:2rem; margin:0">👧🧒</p>
-                 <p>Belum ada profil anak.<br />Klik <strong>Tambah Anak</strong> untuk memulai.</p>
-               </div>`;
+          const r = await api(`/dashboard/summary?days=${hari}`);
 
-          daftar.querySelectorAll('[data-kode]').forEach((tombol) => {
-            tombol.addEventListener('click', () => buatKode(tombol.dataset.kode, tombol));
-          });
-          daftar.querySelectorAll('[data-hapus]').forEach((tombol) => {
-            tombol.addEventListener('click', () => hapusAnak(tombol.dataset.hapus, tombol.dataset.nama));
-          });
+          document.getElementById('s-anak').textContent = r.children_count;
+          document.getElementById('s-anak-kaki').innerHTML = r.devices_count
+            ? `<span class="lembut">${r.devices_count} perangkat terhubung</span>`
+            : '<span class="lembut">Belum ada perangkat</span>';
+
+          document.getElementById('s-perangkat').textContent =
+            `${r.active_devices}/${r.devices_count}`;
+          document.getElementById('s-perangkat-kaki').innerHTML = r.active_devices
+            ? '<strong class="teks-sukses">● Online</strong> <span class="lembut">dalam 30 menit terakhir</span>'
+            : '<span class="lembut">Tidak ada yang online saat ini</span>';
+
+          document.getElementById('s-blokir').textContent = r.blocked_apps;
+          document.getElementById('s-blokir-kaki').innerHTML = r.pending_apps
+            ? `<strong class="teks-peringatan">${r.pending_apps} menunggu</strong> <span class="lembut">persetujuan Anda</span>`
+            : '<span class="lembut">Tidak ada antrean persetujuan</span>';
+
+          document.getElementById('s-waktu').textContent = formatDurasi(r.screen_time_today);
+          const selisih = r.screen_time_today - r.screen_time_yesterday;
+          const persen = r.screen_time_yesterday
+            ? Math.round((selisih / r.screen_time_yesterday) * 100)
+            : null;
+          document.getElementById('s-waktu-kaki').innerHTML = persen === null
+            ? '<span class="lembut">Belum ada pembanding kemarin</span>'
+            : `<strong class="${selisih > 0 ? 'teks-bahaya' : 'teks-sukses'}">${selisih > 0 ? '↑' : '↓'} ${Math.abs(persen)}%</strong> <span class="lembut">dibanding kemarin</span>`;
+
+          gambarGrafikGaris(r.days);
+          gambarGrafikBatang(r.top_apps);
+        } catch (err) {
+          tampilGalat(err.message);
+        }
+      }
+
+      function gambarGrafikGaris(hari) {
+        const konteks = document.getElementById('grafik-garis').getContext('2d');
+        const isian = konteks.createLinearGradient(0, 0, 0, 280);
+        isian.addColorStop(0, 'rgba(94, 114, 228, .35)');
+        isian.addColorStop(1, 'rgba(94, 114, 228, 0)');
+
+        const data = {
+          labels: hari.map((d) => namaHari(d.usage_date)),
+          datasets: [{
+            data: hari.map((d) => menit(d.total_seconds)),
+            borderColor: '#5e72e4',
+            backgroundColor: isian,
+            borderWidth: 3,
+            fill: true,
+            tension: .4,
+            pointRadius: 0,
+            pointHoverRadius: 5,
+            pointHoverBackgroundColor: '#fff',
+            pointHoverBorderColor: '#5e72e4',
+          }],
+        };
+
+        const opsi = {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            tooltip: {
+              callbacks: { label: (k) => `${k.parsed.y} menit` },
+              displayColors: false,
+            },
+          },
+          scales: {
+            x: {
+              grid: { color: 'rgba(255,255,255,.06)' },
+              ticks: { color: 'rgba(255,255,255,.6)', font: { size: 11 } },
+              border: { display: false },
+            },
+            y: {
+              beginAtZero: true,
+              grid: { color: 'rgba(255,255,255,.06)' },
+              ticks: {
+                color: 'rgba(255,255,255,.6)',
+                font: { size: 11 },
+                callback: (v) => `${v}m`,
+              },
+              border: { display: false },
+            },
+          },
+        };
+
+        if (grafikGaris) {
+          grafikGaris.data = data;
+          grafikGaris.update();
+        } else {
+          grafikGaris = new Chart(konteks, { type: 'line', data, options: opsi });
+        }
+      }
+
+      function gambarGrafikBatang(aplikasi) {
+        const konteks = document.getElementById('grafik-batang').getContext('2d');
+        const data = {
+          labels: aplikasi.map((a) => (a.app_name || a.package_name).slice(0, 12)),
+          datasets: [{
+            data: aplikasi.map((a) => menit(a.seconds)),
+            backgroundColor: '#fb6340',
+            borderRadius: 4,
+            barThickness: 12,
+          }],
+        };
+
+        const opsi = {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            tooltip: {
+              callbacks: { label: (k) => `${k.parsed.y} menit` },
+              displayColors: false,
+            },
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { color: '#8898aa', font: { size: 10 } },
+              border: { display: false },
+            },
+            y: {
+              beginAtZero: true,
+              grid: { color: '#e9ecef' },
+              ticks: { color: '#8898aa', font: { size: 10 }, callback: (v) => `${v}m` },
+              border: { display: false },
+            },
+          },
+        };
+
+        if (grafikBatang) {
+          grafikBatang.data = data;
+          grafikBatang.update();
+        } else {
+          grafikBatang = new Chart(konteks, { type: 'bar', data, options: opsi });
+        }
+      }
+
+      document.querySelectorAll('.pil').forEach((pil) => {
+        pil.addEventListener('click', () => {
+          document.querySelectorAll('.pil').forEach((p) => p.classList.remove('aktif'));
+          pil.classList.add('aktif');
+          muatRingkasan(Number(pil.dataset.hari));
+        });
+      });
+
+      // ── Daftar anak & perangkat ──
+      function gambarDaftar(saring = '') {
+        const kata = saring.trim().toLowerCase();
+        const cocok = (anak) => {
+          if (!kata) return true;
+          if (anak.name.toLowerCase().includes(kata)) return true;
+          return anak.devices.some((d) =>
+            `${d.device_name} ${d.brand ?? ''} ${d.model ?? ''}`.toLowerCase().includes(kata));
+        };
+
+        const terpilih = semuaAnak.filter(cocok);
+
+        if (!semuaAnak.length) {
+          daftar.innerHTML = `
+            <div class="kosong">
+              <span class="kosong-ikon">👧🧒</span>
+              <p>Belum ada profil anak.<br />Klik <strong>Tambah Anak</strong> untuk memulai.</p>
+            </div>`;
+          return;
+        }
+        if (!terpilih.length) {
+          daftar.innerHTML = '<div class="kosong"><p>Tidak ada hasil untuk pencarian itu.</p></div>';
+          return;
+        }
+
+        const baris = terpilih.map((anak) => {
+          const kepala = `
+            <tr class="baris-anak">
+              <td colspan="4">
+                <div class="sel-utama" style="justify-content:space-between">
+                  <div>
+                    <span class="nama-tebal">${escapeHtml(anak.name)}</span>
+                    <span class="kecil lembut"> · ${anak.birth_year ? `lahir ${anak.birth_year}` : 'tahun lahir belum diisi'} · ${anak.devices.length} perangkat</span>
+                  </div>
+                  <div class="aksi-anak">
+                    <button class="tombol kecil" data-kode="${anak.id}">Kode Pemasangan</button>
+                    <button class="tombol sekunder kecil" data-hapus="${anak.id}" data-nama="${escapeHtml(anak.name)}">Hapus</button>
+                  </div>
+                </div>
+              </td>
+            </tr>`;
+
+          const perangkat = anak.devices.length
+            ? anak.devices.map((d) => {
+                const online = d.last_seen &&
+                  (Date.now() - new Date(d.last_seen).getTime()) < 30 * 60 * 1000;
+                return `
+                  <tr>
+                    <td>
+                      <div class="sel-utama">
+                        <span class="titik ${online ? 'aktif' : 'mati'}"></span>
+                        <div>
+                          <div class="nama-tebal">${escapeHtml(d.device_name)}</div>
+                          <div class="kecil lembut">${escapeHtml([d.brand, d.model].filter(Boolean).join(' ')) || 'Perangkat Android'}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="lembut">${waktuLalu(d.last_seen)}</td>
+                    <td>
+                      ${d.default_policy === 'block_new'
+                        ? '<span class="lencana tunggu">Mode ketat</span>'
+                        : '<span class="lencana izin">Mode terbuka</span>'}
+                      ${d.daily_limit_minutes ? `<span class="lencana netral">${d.daily_limit_minutes} mnt/hari</span>` : ''}
+                    </td>
+                    <td style="text-align:right">
+                      <a class="tautan-perangkat" href="/perangkat/${d.id}">Kelola <svg class="ikon-panah" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></a>
+                    </td>
+                  </tr>`;
+              }).join('')
+            : `<tr><td colspan="4" class="lembut">
+                 Belum ada perangkat terhubung. Buat kode pemasangan lalu masukkan di HP anak.
+               </td></tr>`;
+
+          return kepala + perangkat;
+        }).join('');
+
+        daftar.innerHTML = `
+          <div class="tabel-gulir">
+            <table>
+              <thead>
+                <tr><th>Perangkat</th><th>Terakhir aktif</th><th>Aturan</th><th></th></tr>
+              </thead>
+              <tbody>${baris}</tbody>
+            </table>
+          </div>`;
+
+        daftar.querySelectorAll('[data-kode]').forEach((t) =>
+          t.addEventListener('click', () => buatKode(t.dataset.kode, t)));
+        daftar.querySelectorAll('[data-hapus]').forEach((t) =>
+          t.addEventListener('click', () => hapusAnak(t.dataset.hapus, t.dataset.nama)));
+      }
+
+      async function muatAnak() {
+        try {
+          semuaAnak = await api('/children');
+          gambarDaftar(document.getElementById('cari-global').value);
         } catch (err) {
           tampilGalat(err.message);
         }
@@ -179,7 +504,7 @@ import Layout from '../layouts/Layout.astro';
           const data = await api(`/children/${childId}/pairing-code`, { method: 'POST' });
           document.getElementById('kode').textContent = data.code;
           document.getElementById('kode-kedaluwarsa').textContent =
-            `Berlaku sampai ${new Date(data.expires_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB`;
+            `Berlaku sampai ${new Date(data.expires_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`;
           tirai.classList.remove('sembunyi');
         } catch (err) {
           tampilGalat(err.message);
@@ -192,11 +517,21 @@ import Layout from '../layouts/Layout.astro';
         if (!confirm(`Hapus profil "${nama}" beserta seluruh perangkat dan riwayatnya?`)) return;
         try {
           await api(`/children/${childId}`, { method: 'DELETE' });
-          muat();
+          await Promise.all([muatAnak(), muatRingkasan()]);
         } catch (err) {
           tampilGalat(err.message);
         }
       }
+
+      // ── Formulir tambah anak ──
+      document.getElementById('tombol-tambah').addEventListener('click', () => {
+        formAnak.classList.toggle('sembunyi');
+        document.getElementById('nama-anak').focus();
+      });
+      document.getElementById('batal-anak').addEventListener('click', () =>
+        formAnak.classList.add('sembunyi'));
+      document.getElementById('tutup-dialog').addEventListener('click', () =>
+        tirai.classList.add('sembunyi'));
 
       formAnak.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -212,13 +547,18 @@ import Layout from '../layouts/Layout.astro';
           formAnak.reset();
           formAnak.classList.add('sembunyi');
           galat.classList.add('sembunyi');
-          muat();
+          await Promise.all([muatAnak(), muatRingkasan()]);
         } catch (err) {
           tampilGalat(err.message);
         }
       });
 
-      muat();
+      // Kotak pencarian di bilah atas menyaring daftar perangkat.
+      document.getElementById('cari-global').addEventListener('input', (e) =>
+        gambarDaftar(e.target.value));
+
+      muatRingkasan();
+      muatAnak();
     }
   </script>
-</Layout>
+</PanelLayout>

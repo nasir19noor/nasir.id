@@ -1,19 +1,15 @@
 ---
-import Layout from '../layouts/Layout.astro';
+import AuthLayout from '../layouts/AuthLayout.astro';
 ---
 
-<Layout title="Daftar">
-  <nav class="navbar">
-    <div class="wadah navbar-isi">
-      <a class="merek" href="/"><span>📱</span><span>LayarSehat</span></a>
-      <div class="nav-tautan"><a href="/masuk">Sudah punya akun?</a></div>
-    </div>
-  </nav>
-
-  <main class="sempit" style="padding-top:3rem">
-    <div class="kartu">
-      <h1 style="font-size:1.4rem">Buat akun orang tua</h1>
-      <p class="lembut">Gratis, cukup satu akun untuk semua perangkat anak Anda.</p>
+<AuthLayout
+  title="Daftar"
+  judul="Buat akun orang tua"
+  keterangan="Gratis — satu akun cukup untuk semua perangkat anak Anda."
+>
+  <div class="kartu">
+    <div class="kartu-isi" style="padding:1.75rem">
+      <p class="pengantar">Isi data berikut untuk memulai</p>
 
       <div id="galat" class="pesan galat sembunyi"></div>
 
@@ -36,23 +32,38 @@ import Layout from '../layouts/Layout.astro';
         </div>
         <button class="tombol penuh" type="submit" id="kirim">Daftar</button>
       </form>
-
-      <p class="lembut" style="text-align:center; margin:1rem 0 0">
-        Sudah punya akun? <a href="/masuk">Masuk di sini</a>
-      </p>
     </div>
-  </main>
+  </div>
+
+  <p class="tautan-bawah">
+    Sudah punya akun? <a href="/masuk">Masuk di sini</a>
+  </p>
+
+  <style>
+    .pengantar {
+      text-align: center;
+      font-size: .8125rem;
+      color: var(--abu-600);
+      margin-bottom: 1.25rem;
+    }
+    .tautan-bawah {
+      text-align: center;
+      margin: 1.25rem 0 0;
+      font-size: .8125rem;
+      color: rgba(255, 255, 255, .75);
+    }
+    .tautan-bawah a { color: #fff; font-weight: 600; }
+  </style>
 
   <script>
     import { api, simpanSesi, ambilToken } from '../lib/api.js';
 
     if (ambilToken()) window.location.href = '/dasbor';
 
-    const form = document.getElementById('form-daftar');
     const galat = document.getElementById('galat');
     const kirim = document.getElementById('kirim');
 
-    form.addEventListener('submit', async (e) => {
+    document.getElementById('form-daftar').addEventListener('submit', async (e) => {
       e.preventDefault();
       galat.classList.add('sembunyi');
       kirim.disabled = true;
@@ -78,4 +89,4 @@ import Layout from '../layouts/Layout.astro';
       }
     });
   </script>
-</Layout>
+</AuthLayout>
