@@ -1,0 +1,224 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Dasbor">
+  <nav class="navbar">
+    <div class="wadah navbar-isi">
+      <a class="merek" href="/dasbor"><span>📱</span><span>LayarSehat</span></a>
+      <div class="nav-tautan">
+        <span class="lembut" id="sapaan"></span>
+        <button class="tombol sekunder kecil" id="tombol-keluar">Keluar</button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="wadah" style="padding-top:2rem; padding-bottom:3rem">
+    <div class="kepala">
+      <div>
+        <h1>Anak &amp; Perangkat</h1>
+        <p class="lembut" style="margin:0">Tambahkan profil anak, lalu hubungkan HP mereka dengan kode pemasangan.</p>
+      </div>
+      <button class="tombol" id="tombol-tambah">+ Tambah Anak</button>
+    </div>
+
+    <div id="galat" class="pesan galat sembunyi" style="margin-top:1rem"></div>
+
+    <form id="form-anak" class="kartu sembunyi" style="margin-top:1.25rem; max-width:460px">
+      <h3>Profil anak baru</h3>
+      <div class="kolom">
+        <label for="nama-anak">Nama anak</label>
+        <input id="nama-anak" type="text" required placeholder="Aisyah" />
+      </div>
+      <div class="kolom">
+        <label for="tahun-lahir">Tahun lahir <span class="lembut">(opsional)</span></label>
+        <input id="tahun-lahir" type="number" min="2000" max="2030" placeholder="2014" />
+      </div>
+      <div style="display:flex; gap:.5rem">
+        <button class="tombol" type="submit">Simpan</button>
+        <button class="tombol sekunder" type="button" id="batal-anak">Batal</button>
+      </div>
+    </form>
+
+    <div id="daftar" style="margin-top:1.5rem">
+      <p class="kosong">Memuat data…</p>
+    </div>
+  </main>
+
+  <!-- Dialog kode pemasangan -->
+  <div id="tirai" class="tirai sembunyi">
+    <div class="kartu dialog">
+      <h3>Kode Pemasangan</h3>
+      <p class="lembut">
+        Buka aplikasi LayarSehat di HP anak, lalu masukkan kode ini. Kode berlaku 15 menit
+        dan hanya bisa dipakai sekali.
+      </p>
+      <div class="kode" id="kode">——————</div>
+      <p class="lembut" id="kode-kedaluwarsa" style="text-align:center"></p>
+      <button class="tombol penuh sekunder" id="tutup-dialog">Tutup</button>
+    </div>
+  </div>
+
+  <style>
+    .kepala { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+    .anak { margin-bottom: 1rem; }
+    .anak-kepala { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: .85rem; }
+    .anak-nama { font-weight: 700; font-size: 1.08rem; }
+    .perangkat {
+      display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+      padding: .8rem; border: 1px solid var(--garis); border-radius: 10px; margin-bottom: .5rem;
+      text-decoration: none; color: inherit;
+    }
+    .perangkat:hover { border-color: var(--hijau); background: var(--hijau-muda); }
+    .titik { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: .4rem; }
+    .titik.aktif { background: #22a06b; }
+    .titik.mati { background: #c2ccc9; }
+    .tirai {
+      position: fixed; inset: 0; background: rgba(16, 32, 29, .5);
+      display: grid; place-items: center; padding: 1.25rem; z-index: 50;
+    }
+    .dialog { max-width: 380px; width: 100%; }
+    .kode {
+      font-size: 2.4rem; font-weight: 700; letter-spacing: .35em; text-align: center;
+      padding: 1rem; background: var(--hijau-muda); color: var(--hijau-tua);
+      border-radius: 10px; margin: .5rem 0; text-indent: .35em;
+    }
+  </style>
+
+  <script>
+    import { api, ambilOrangTua, keluar, wajibMasuk, waktuLalu, escapeHtml } from '../lib/api.js';
+
+    if (wajibMasuk()) {
+      const daftar = document.getElementById('daftar');
+      const galat = document.getElementById('galat');
+      const formAnak = document.getElementById('form-anak');
+      const tirai = document.getElementById('tirai');
+
+      const orangTua = ambilOrangTua();
+      if (orangTua) {
+        document.getElementById('sapaan').textContent = `Halo, ${orangTua.full_name || orangTua.email}`;
+      }
+
+      document.getElementById('tombol-keluar').addEventListener('click', keluar);
+      document.getElementById('tombol-tambah').addEventListener('click', () => {
+        formAnak.classList.toggle('sembunyi');
+        document.getElementById('nama-anak').focus();
+      });
+      document.getElementById('batal-anak').addEventListener('click', () => formAnak.classList.add('sembunyi'));
+      document.getElementById('tutup-dialog').addEventListener('click', () => tirai.classList.add('sembunyi'));
+
+      function tampilGalat(pesan) {
+        galat.textContent = pesan;
+        galat.classList.remove('sembunyi');
+      }
+
+      function gambarAnak(anak) {
+        const perangkat = anak.devices.length
+          ? anak.devices.map((d) => {
+              const aktif = d.last_seen && (Date.now() - new Date(d.last_seen).getTime()) < 30 * 60 * 1000;
+              return `
+                <a class="perangkat" href="/perangkat/${d.id}">
+                  <div>
+                    <div style="font-weight:600">${escapeHtml(d.device_name)}</div>
+                    <div class="lembut">
+                      <span class="titik ${aktif ? 'aktif' : 'mati'}"></span>${waktuLalu(d.last_seen)}
+                      ${d.brand ? ' · ' + escapeHtml(d.brand) : ''}${d.model ? ' ' + escapeHtml(d.model) : ''}
+                    </div>
+                  </div>
+                  <div style="display:flex; gap:.4rem; align-items:center">
+                    ${d.default_policy === 'block_new'
+                      ? '<span class="lencana tunggu">Aplikasi baru diblokir</span>'
+                      : '<span class="lencana izin">Mode terbuka</span>'}
+                    ${d.daily_limit_minutes ? `<span class="lencana sistem">${d.daily_limit_minutes} mnt/hari</span>` : ''}
+                    <span class="lembut">›</span>
+                  </div>
+                </a>`;
+            }).join('')
+          : '<p class="lembut" style="margin:0">Belum ada perangkat terhubung. Buat kode pemasangan lalu masukkan di HP anak.</p>';
+
+        return `
+          <section class="kartu anak">
+            <div class="anak-kepala">
+              <div>
+                <div class="anak-nama">${escapeHtml(anak.name)}</div>
+                <div class="lembut">${anak.birth_year ? `Lahir ${anak.birth_year}` : 'Tahun lahir belum diisi'} · ${anak.devices.length} perangkat</div>
+              </div>
+              <div style="display:flex; gap:.5rem">
+                <button class="tombol kecil" data-kode="${anak.id}">Kode Pemasangan</button>
+                <button class="tombol sekunder kecil" data-hapus="${anak.id}" data-nama="${escapeHtml(anak.name)}">Hapus</button>
+              </div>
+            </div>
+            ${perangkat}
+          </section>`;
+      }
+
+      async function muat() {
+        try {
+          const anakAnak = await api('/children');
+          daftar.innerHTML = anakAnak.length
+            ? anakAnak.map(gambarAnak).join('')
+            : `<div class="kartu kosong">
+                 <p style="font-size:2rem; margin:0">👧🧒</p>
+                 <p>Belum ada profil anak.<br />Klik <strong>Tambah Anak</strong> untuk memulai.</p>
+               </div>`;
+
+          daftar.querySelectorAll('[data-kode]').forEach((tombol) => {
+            tombol.addEventListener('click', () => buatKode(tombol.dataset.kode, tombol));
+          });
+          daftar.querySelectorAll('[data-hapus]').forEach((tombol) => {
+            tombol.addEventListener('click', () => hapusAnak(tombol.dataset.hapus, tombol.dataset.nama));
+          });
+        } catch (err) {
+          tampilGalat(err.message);
+        }
+      }
+
+      async function buatKode(childId, tombol) {
+        tombol.disabled = true;
+        try {
+          const data = await api(`/children/${childId}/pairing-code`, { method: 'POST' });
+          document.getElementById('kode').textContent = data.code;
+          document.getElementById('kode-kedaluwarsa').textContent =
+            `Berlaku sampai ${new Date(data.expires_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB`;
+          tirai.classList.remove('sembunyi');
+        } catch (err) {
+          tampilGalat(err.message);
+        } finally {
+          tombol.disabled = false;
+        }
+      }
+
+      async function hapusAnak(childId, nama) {
+        if (!confirm(`Hapus profil "${nama}" beserta seluruh perangkat dan riwayatnya?`)) return;
+        try {
+          await api(`/children/${childId}`, { method: 'DELETE' });
+          muat();
+        } catch (err) {
+          tampilGalat(err.message);
+        }
+      }
+
+      formAnak.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const tahun = document.getElementById('tahun-lahir').value;
+        try {
+          await api('/children', {
+            method: 'POST',
+            body: JSON.stringify({
+              name: document.getElementById('nama-anak').value.trim(),
+              birth_year: tahun ? Number(tahun) : null,
+            }),
+          });
+          formAnak.reset();
+          formAnak.classList.add('sembunyi');
+          galat.classList.add('sembunyi');
+          muat();
+        } catch (err) {
+          tampilGalat(err.message);
+        }
+      });
+
+      muat();
+    }
+  </script>
+</Layout>

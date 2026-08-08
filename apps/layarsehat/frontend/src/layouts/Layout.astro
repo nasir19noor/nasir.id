@@ -1,0 +1,142 @@
+---
+interface Props {
+  title: string;
+  description?: string;
+}
+const { title, description = 'LayarSehat — pantau dan kendalikan aktivitas smartphone anak Anda.' } = Astro.props;
+---
+
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <title>{title} · LayarSehat</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📱</text></svg>" />
+  </head>
+  <body>
+    <slot />
+
+    <style is:global>
+      :root {
+        --hijau: #17876d;
+        --hijau-tua: #0f5f4c;
+        --hijau-muda: #e6f5f0;
+        --teks: #16201d;
+        --teks-lembut: #5c6b66;
+        --garis: #dfe7e4;
+        --latar: #f6f9f8;
+        --putih: #ffffff;
+        --merah: #c0392b;
+        --merah-muda: #fdecea;
+        --kuning: #b7791f;
+        --kuning-muda: #fdf6e3;
+        --radius: 12px;
+        --bayangan: 0 1px 2px rgba(16, 40, 34, .06), 0 4px 16px rgba(16, 40, 34, .05);
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        background: var(--latar);
+        color: var(--teks);
+        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      h1, h2, h3 { line-height: 1.25; margin: 0 0 .5rem; letter-spacing: -.015em; }
+      h1 { font-size: 1.9rem; }
+      h2 { font-size: 1.3rem; }
+      h3 { font-size: 1.05rem; }
+      p { margin: 0 0 1rem; }
+      a { color: var(--hijau); }
+
+      .wadah { max-width: 1080px; margin: 0 auto; padding: 0 1.25rem; }
+      .sempit { max-width: 420px; margin: 0 auto; padding: 0 1.25rem; }
+
+      /* ── Navbar ── */
+      .navbar {
+        background: var(--putih);
+        border-bottom: 1px solid var(--garis);
+        position: sticky; top: 0; z-index: 20;
+      }
+      .navbar-isi {
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 1rem; height: 62px;
+      }
+      .merek {
+        display: flex; align-items: center; gap: .5rem;
+        font-weight: 700; font-size: 1.1rem; color: var(--teks); text-decoration: none;
+      }
+      .merek span:first-child { font-size: 1.35rem; }
+      .nav-tautan { display: flex; align-items: center; gap: 1.25rem; font-size: .93rem; }
+      .nav-tautan a { color: var(--teks-lembut); text-decoration: none; }
+      .nav-tautan a:hover { color: var(--hijau); }
+
+      /* ── Tombol ── */
+      .tombol {
+        display: inline-flex; align-items: center; justify-content: center; gap: .45rem;
+        padding: .6rem 1.1rem; border-radius: 9px; border: 1px solid transparent;
+        background: var(--hijau); color: #fff; font: inherit; font-weight: 600; font-size: .93rem;
+        cursor: pointer; text-decoration: none; transition: background .15s, opacity .15s;
+      }
+      .tombol:hover { background: var(--hijau-tua); }
+      .tombol:disabled { opacity: .55; cursor: not-allowed; }
+      .tombol.sekunder { background: var(--putih); color: var(--teks); border-color: var(--garis); }
+      .tombol.sekunder:hover { background: var(--latar); }
+      .tombol.bahaya { background: var(--merah); }
+      .tombol.bahaya:hover { background: #a13224; }
+      .tombol.kecil { padding: .35rem .7rem; font-size: .83rem; }
+      .tombol.penuh { width: 100%; }
+
+      /* ── Kartu & form ── */
+      .kartu {
+        background: var(--putih); border: 1px solid var(--garis);
+        border-radius: var(--radius); box-shadow: var(--bayangan); padding: 1.25rem;
+      }
+      .kolom { display: block; margin-bottom: 1rem; }
+      .kolom label { display: block; font-size: .87rem; font-weight: 600; margin-bottom: .35rem; }
+      input, select {
+        width: 100%; padding: .6rem .75rem; font: inherit; font-size: .95rem;
+        border: 1px solid var(--garis); border-radius: 9px; background: var(--putih); color: var(--teks);
+      }
+      input:focus, select:focus { outline: 2px solid var(--hijau); outline-offset: -1px; border-color: var(--hijau); }
+
+      /* ── Lencana & pesan ── */
+      .lencana {
+        display: inline-block; padding: .15rem .55rem; border-radius: 999px;
+        font-size: .76rem; font-weight: 600; white-space: nowrap;
+      }
+      .lencana.izin { background: var(--hijau-muda); color: var(--hijau-tua); }
+      .lencana.blokir { background: var(--merah-muda); color: var(--merah); }
+      .lencana.tunggu { background: var(--kuning-muda); color: var(--kuning); }
+      .lencana.sistem { background: #eef1f0; color: var(--teks-lembut); }
+
+      .pesan { padding: .7rem .9rem; border-radius: 9px; font-size: .9rem; margin-bottom: 1rem; }
+      .pesan.galat { background: var(--merah-muda); color: var(--merah); }
+      .pesan.sukses { background: var(--hijau-muda); color: var(--hijau-tua); }
+      .sembunyi { display: none !important; }
+
+      .kosong { text-align: center; color: var(--teks-lembut); padding: 2.5rem 1rem; }
+      .lembut { color: var(--teks-lembut); font-size: .88rem; }
+
+      table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+      th, td { text-align: left; padding: .7rem .5rem; border-bottom: 1px solid var(--garis); }
+      th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--teks-lembut); font-weight: 600; }
+      tr:last-child td { border-bottom: none; }
+
+      footer {
+        margin-top: 3rem; padding: 2rem 0; border-top: 1px solid var(--garis);
+        color: var(--teks-lembut); font-size: .87rem; text-align: center;
+      }
+
+      @media (max-width: 640px) {
+        h1 { font-size: 1.55rem; }
+        .nav-tautan { gap: .85rem; font-size: .88rem; }
+      }
+    </style>
+  </body>
+</html>

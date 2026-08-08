@@ -1,0 +1,140 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const fitur = [
+  {
+    ikon: '🛡️',
+    judul: 'Kendali Aplikasi',
+    teks: 'Tentukan aplikasi mana yang boleh dan tidak boleh dipakai di HP anak. Aplikasi baru bisa otomatis diblokir sampai Anda menyetujuinya.',
+  },
+  {
+    ikon: '⏰',
+    judul: 'Batas Waktu Layar',
+    teks: 'Atur durasi pemakaian harian dan jam tidur. Setelah kuota habis, aplikasi hiburan berhenti dengan sendirinya.',
+  },
+  {
+    ikon: '📊',
+    judul: 'Laporan Pemakaian',
+    teks: 'Lihat aplikasi apa saja yang paling sering dibuka anak dan berapa lama, lengkap dengan tren harian.',
+  },
+  {
+    ikon: '🔔',
+    judul: 'Pemasangan Baru Terpantau',
+    teks: 'Setiap kali ada aplikasi baru terpasang, Anda langsung melihatnya di dasbor beserta waktu pemasangannya.',
+  },
+];
+
+const langkah = [
+  { no: '1', judul: 'Buat akun orang tua', teks: 'Daftar gratis di layarsehat.nasir.id, lalu tambahkan profil anak Anda.' },
+  { no: '2', judul: 'Pasang di HP anak', teks: 'Unduh aplikasi LayarSehat, masukkan kode pemasangan 6 digit dari dasbor.' },
+  { no: '3', judul: 'Atur & pantau', teks: 'Tentukan aturan aplikasi dan batas waktu. Perangkat menyesuaikan secara otomatis.' },
+];
+---
+
+<Layout title="Pantau HP Anak dengan Tenang">
+  <nav class="navbar">
+    <div class="wadah navbar-isi">
+      <a class="merek" href="/"><span>📱</span><span>LayarSehat</span></a>
+      <div class="nav-tautan">
+        <a href="#fitur">Fitur</a>
+        <a href="#cara">Cara Kerja</a>
+        <a href="/masuk">Masuk</a>
+        <a class="tombol kecil" href="/daftar">Daftar Gratis</a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="wadah">
+      <p class="kicker">Kontrol orang tua buatan Indonesia</p>
+      <h1>Ketahui apa yang anak Anda<br />lakukan di layar HP-nya</h1>
+      <p class="hero-teks">
+        LayarSehat membantu Anda memantau aplikasi yang terpasang di HP anak, memblokir
+        yang tidak pantas, serta membatasi waktu bermain — semuanya dari satu dasbor.
+      </p>
+      <div class="hero-tombol">
+        <a class="tombol" href="/daftar">Mulai Sekarang, Gratis</a>
+        <a class="tombol sekunder" href="https://layarsehat.nasir.id/unduh">Unduh Aplikasi Android</a>
+      </div>
+      <p class="lembut" style="margin-top:1rem">Tanpa biaya langganan · Data tersimpan di server Indonesia</p>
+    </div>
+  </header>
+
+  <section id="fitur" class="wadah bagian">
+    <h2>Semua yang orang tua butuhkan</h2>
+    <p class="lembut" style="margin-bottom:1.75rem">Sederhana dipakai, tetapi cukup rinci untuk menjaga anak tetap aman.</p>
+    <div class="kisi">
+      {fitur.map((f) => (
+        <article class="kartu fitur">
+          <div class="ikon">{f.ikon}</div>
+          <h3>{f.judul}</h3>
+          <p class="lembut" style="margin:0">{f.teks}</p>
+        </article>
+      ))}
+    </div>
+  </section>
+
+  <section id="cara" class="wadah bagian">
+    <h2>Tiga langkah, selesai dalam 5 menit</h2>
+    <div class="kisi langkah-kisi">
+      {langkah.map((l) => (
+        <article class="kartu">
+          <div class="nomor">{l.no}</div>
+          <h3>{l.judul}</h3>
+          <p class="lembut" style="margin:0">{l.teks}</p>
+        </article>
+      ))}
+    </div>
+  </section>
+
+  <section class="wadah bagian">
+    <div class="kartu jujur">
+      <h3>🤝 Pantau dengan jujur, bukan diam-diam</h3>
+      <p class="lembut" style="margin:0">
+        LayarSehat dirancang untuk dipakai secara terbuka bersama anak. Aplikasi tetap
+        terlihat di HP anak dan tidak menyembunyikan dirinya. Bicarakan aturannya bersama —
+        pengawasan yang disepakati jauh lebih efektif daripada yang disembunyikan.
+      </p>
+    </div>
+  </section>
+
+  <section class="wadah bagian">
+    <div class="ajakan">
+      <h2 style="margin-bottom:.35rem">Siap mencoba?</h2>
+      <p class="lembut">Buat akun orang tua dan hubungkan perangkat pertama Anda hari ini.</p>
+      <a class="tombol" href="/daftar">Buat Akun Orang Tua</a>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wadah">
+      <p style="margin:0">© {new Date().getFullYear()} LayarSehat · layarsehat.nasir.id</p>
+    </div>
+  </footer>
+
+  <style>
+    .hero { padding: 4rem 0 3rem; text-align: center; background: linear-gradient(180deg, #eef7f4 0%, var(--latar) 100%); }
+    .kicker {
+      display: inline-block; background: var(--hijau-muda); color: var(--hijau-tua);
+      padding: .25rem .8rem; border-radius: 999px; font-size: .82rem; font-weight: 600; margin-bottom: 1rem;
+    }
+    .hero h1 { font-size: 2.6rem; margin-bottom: 1rem; }
+    .hero-teks { max-width: 620px; margin: 0 auto 1.75rem; font-size: 1.06rem; color: var(--teks-lembut); }
+    .hero-tombol { display: flex; gap: .75rem; justify-content: center; flex-wrap: wrap; }
+
+    .bagian { padding: 2.75rem 1.25rem; }
+    .kisi { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; }
+    .fitur .ikon { font-size: 1.7rem; margin-bottom: .5rem; }
+    .nomor {
+      width: 30px; height: 30px; border-radius: 50%; background: var(--hijau); color: #fff;
+      display: grid; place-items: center; font-weight: 700; font-size: .9rem; margin-bottom: .65rem;
+    }
+    .jujur { background: var(--hijau-muda); border-color: #cfe8e0; }
+    .ajakan { text-align: center; padding: 2rem 1rem; }
+
+    @media (max-width: 640px) {
+      .hero { padding: 2.75rem 0 2rem; }
+      .hero h1 { font-size: 1.85rem; }
+    }
+  </style>
+</Layout>

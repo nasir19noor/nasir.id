@@ -1,0 +1,169 @@
+name: 'Deploy layarsehat.nasir.id'
+
+on:
+  push:
+    paths:
+      - 'apps/layarsehat/frontend/**'
+      - 'apps/layarsehat/backend/**'
+      - 'apps/layarsehat/android/**'
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  changes:
+    runs-on: [self-hosted, nasir-contabo]
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      android: ${{ steps.filter.outputs.android }}
+    steps:
+    - name: Remove stale nested .git directories
+      run: find "$GITHUB_WORKSPACE" -mindepth 2 -name ".git" -exec rm -rf {} + 2>/dev/null || true
+
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Detect changed paths
+      uses: dorny/paths-filter@v3
+      id: filter
+      with:
+        filters: |
+          backend:
+            - 'apps/layarsehat/backend/**'
+          frontend:
+            - 'apps/layarsehat/frontend/**'
+          android:
+            - 'apps/layarsehat/android/**'
+
+  deploy-backend:
+    needs: changes
+    if: ${{ needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch' }}
+    runs-on: [self-hosted, nasir-contabo]
+    steps:
+    - name: Deploy backend
+      env:
+        SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+      working-directory: apps/layarsehat/backend
+      run: |
+        echo "Pulling .env from S3..."
+        rm -f .env
+        aws s3 cp s3://layarsehat.nasir.id/backend/.env .env
+
+        echo "Stopping and removing existing backend container..."
+        echo "$SSH_PASSWORD" | sudo -S docker stop layarsehat-backend 2>/dev/null || true
+        echo "$SSH_PASSWORD" | sudo -S docker rm layarsehat-backend 2>/dev/null || true
+        echo "$SSH_PASSWORD" | sudo -S docker rmi layarsehat-backend:latest 2>/dev/null || true
+
+        echo "Building backend image..."
+        echo "$SSH_PASSWORD" | sudo -S docker build -t layarsehat-backend:latest .
+
+        echo "Running backend container..."
+        echo "$SSH_PASSWORD" | sudo -S docker run -d --network host --env-file .env \
+          --restart unless-stopped \
+          --name layarsehat-backend layarsehat-backend:latest
+
+        echo "Backend deployed successfully"
+
+    - name: Verify backend health
+      run: |
+        for i in $(seq 1 10); do
+          if curl -fsS http://localhost:9005/health; then
+            echo ""
+            echo "Backend healthy"
+            exit 0
+          fi
+          echo "Waiting for backend... ($i/10)"
+          sleep 3
+        done
+        echo "Backend did not become healthy"
+        exit 1
+
+    - name: Remove .env
+      if: always()
+      working-directory: apps/layarsehat/backend
+      run: rm -f .env
+
+  deploy-frontend:
+    needs: changes
+    if: ${{ needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch' }}
+    runs-on: [self-hosted, nasir-contabo]
+    steps:
+    - name: Deploy frontend
+      env:
+        SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+      working-directory: apps/layarsehat/frontend
+      run: |
+        echo "Stopping and removing existing frontend container..."
+        echo "$SSH_PASSWORD" | sudo -S docker stop layarsehat-frontend 2>/dev/null || true
+        echo "$SSH_PASSWORD" | sudo -S docker rm layarsehat-frontend 2>/dev/null || true
+        echo "$SSH_PASSWORD" | sudo -S docker rmi layarsehat-frontend:latest 2>/dev/null || true
+
+        echo "Building frontend image..."
+        echo "$SSH_PASSWORD" | sudo -S docker build \
+          --build-arg PUBLIC_API_URL=https://api.layarsehat.nasir.id \
+          -t layarsehat-frontend:latest .
+
+        echo "Running frontend container..."
+        echo "$SSH_PASSWORD" | sudo -S docker run -d -p 5005:5005 \
+          --restart unless-stopped \
+          --name layarsehat-frontend layarsehat-frontend:latest
+
+        echo "Frontend deployed successfully"
+
+    - name: Verify frontend is serving
+      run: |
+        for i in $(seq 1 10); do
+          if curl -fsS -o /dev/null http://localhost:5005/; then
+            echo "Frontend healthy"
+            exit 0
+          fi
+          echo "Waiting for frontend... ($i/10)"
+          sleep 3
+        done
+        echo "Frontend did not become healthy"
+        exit 1
+
+  deploy-android:
+    needs: changes
+    if: ${{ needs.changes.outputs.android == 'true' || github.event_name == 'workflow_dispatch' }}
+    runs-on: [self-hosted, nasir-contabo]
+    steps:
+    - name: Decode keystore
+      run: |
+        echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > $GITHUB_WORKSPACE/apps/layarsehat/android/android/app/my-release-key.keystore
+
+    - name: Build release AAB and APK
+      working-directory: apps/layarsehat/android
+      env:
+        KEYSTORE_PATH: ${{ github.workspace }}/apps/layarsehat/android/android/app/my-release-key.keystore
+        KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      run: |
+        export PATH=$PATH:$HOME/flutter/bin:$HOME/android-sdk/cmdline-tools/latest/bin:$HOME/android-sdk/platform-tools
+        export ANDROID_HOME=$HOME/android-sdk
+
+        flutter pub get
+
+        echo "Building AAB..."
+        flutter build appbundle --release
+
+        echo "Building APK..."
+        flutter build apk --release
+
+    - name: Upload AAB and APK to S3
+      run: |
+        aws s3 rm s3://layarsehat.nasir.id/android/LayarSehat.aab || true
+        aws s3 cp apps/layarsehat/android/build/app/outputs/bundle/release/app-release.aab \
+          s3://layarsehat.nasir.id/android/LayarSehat.aab
+
+        aws s3 rm s3://layarsehat.nasir.id/android/LayarSehat.apk || true
+        aws s3 cp apps/layarsehat/android/build/app/outputs/flutter-apk/app-release.apk \
+          s3://layarsehat.nasir.id/android/LayarSehat.apk
+
+        echo "Android AAB and APK uploaded successfully"
+
+    - name: Clean up keystore
+      if: always()
+      run: rm -f $GITHUB_WORKSPACE/apps/layarsehat/android/android/app/my-release-key.keystore

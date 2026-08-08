@@ -1,0 +1,81 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Daftar">
+  <nav class="navbar">
+    <div class="wadah navbar-isi">
+      <a class="merek" href="/"><span>📱</span><span>LayarSehat</span></a>
+      <div class="nav-tautan"><a href="/masuk">Sudah punya akun?</a></div>
+    </div>
+  </nav>
+
+  <main class="sempit" style="padding-top:3rem">
+    <div class="kartu">
+      <h1 style="font-size:1.4rem">Buat akun orang tua</h1>
+      <p class="lembut">Gratis, cukup satu akun untuk semua perangkat anak Anda.</p>
+
+      <div id="galat" class="pesan galat sembunyi"></div>
+
+      <form id="form-daftar">
+        <div class="kolom">
+          <label for="nama">Nama lengkap</label>
+          <input id="nama" type="text" required placeholder="Budi Santoso" />
+        </div>
+        <div class="kolom">
+          <label for="email">Email</label>
+          <input id="email" type="email" required autocomplete="email" placeholder="nama@email.com" />
+        </div>
+        <div class="kolom">
+          <label for="telepon">Nomor WhatsApp <span class="lembut">(opsional)</span></label>
+          <input id="telepon" type="tel" placeholder="08123456789" />
+        </div>
+        <div class="kolom">
+          <label for="sandi">Kata sandi</label>
+          <input id="sandi" type="password" required minlength="6" autocomplete="new-password" placeholder="Minimal 6 karakter" />
+        </div>
+        <button class="tombol penuh" type="submit" id="kirim">Daftar</button>
+      </form>
+
+      <p class="lembut" style="text-align:center; margin:1rem 0 0">
+        Sudah punya akun? <a href="/masuk">Masuk di sini</a>
+      </p>
+    </div>
+  </main>
+
+  <script>
+    import { api, simpanSesi, ambilToken } from '../lib/api.js';
+
+    if (ambilToken()) window.location.href = '/dasbor';
+
+    const form = document.getElementById('form-daftar');
+    const galat = document.getElementById('galat');
+    const kirim = document.getElementById('kirim');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      galat.classList.add('sembunyi');
+      kirim.disabled = true;
+      kirim.textContent = 'Memproses…';
+
+      try {
+        const data = await api('/parents/register', {
+          method: 'POST',
+          body: JSON.stringify({
+            full_name: document.getElementById('nama').value.trim(),
+            email: document.getElementById('email').value.trim(),
+            phone_number: document.getElementById('telepon').value.trim() || null,
+            password: document.getElementById('sandi').value,
+          }),
+        });
+        simpanSesi(data.access_token, data.parent);
+        window.location.href = '/dasbor';
+      } catch (err) {
+        galat.textContent = err.message;
+        galat.classList.remove('sembunyi');
+        kirim.disabled = false;
+        kirim.textContent = 'Daftar';
+      }
+    });
+  </script>
+</Layout>

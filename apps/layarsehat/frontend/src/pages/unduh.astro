@@ -1,0 +1,59 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const apkUrl = 'https://layarsehat.nasir.id.s3.ap-southeast-1.amazonaws.com/android/LayarSehat.apk';
+---
+
+<Layout title="Unduh Aplikasi">
+  <nav class="navbar">
+    <div class="wadah navbar-isi">
+      <a class="merek" href="/"><span>📱</span><span>LayarSehat</span></a>
+      <div class="nav-tautan"><a href="/dasbor">Dasbor</a></div>
+    </div>
+  </nav>
+
+  <main class="wadah" style="max-width:640px; padding-top:2.5rem; padding-bottom:3rem">
+    <h1>Unduh LayarSehat untuk Android</h1>
+    <p class="lembut">
+      Aplikasi ini dipasang di <strong>HP anak</strong>. Orang tua cukup memakai dasbor web ini.
+    </p>
+
+    <div class="kartu" style="text-align:center; margin:1.5rem 0">
+      <p style="font-size:2.5rem; margin:0">📥</p>
+      <p class="lembut" style="margin:.25rem 0 1rem">Berkas APK · Android 8.0 ke atas</p>
+      <a class="tombol" href={apkUrl}>Unduh APK</a>
+    </div>
+
+    <div class="kartu">
+      <h3>Langkah pemasangan</h3>
+      <ol class="langkah">
+        <li>Unduh berkas APK di HP anak, lalu buka berkasnya.</li>
+        <li>Jika muncul peringatan, izinkan pemasangan dari sumber ini di pengaturan.</li>
+        <li>Buka aplikasi LayarSehat, masukkan <strong>kode pemasangan 6 digit</strong> dari dasbor orang tua.</li>
+        <li>Berikan izin <strong>Akses Penggunaan</strong> (Usage Access) agar laporan waktu layar bisa terbaca.</li>
+        <li>Berikan izin <strong>Tampilkan di atas aplikasi lain</strong> agar penguncian aplikasi berfungsi.</li>
+      </ol>
+      <p class="lembut" style="margin:0">
+        Izin-izin di atas diminta langsung oleh aplikasi saat pertama dijalankan — cukup ikuti panduannya di layar.
+      </p>
+    </div>
+
+    <div class="kartu" style="margin-top:1rem; background:var(--hijau-muda); border-color:#cfe8e0">
+      <h3>Catatan penting</h3>
+      <p style="margin:0" class="lembut">
+        LayarSehat tidak menyembunyikan diri dari HP anak dan tidak membaca isi pesan pribadi.
+        Yang dipantau hanyalah daftar aplikasi terpasang dan lama pemakaiannya. Pasanglah
+        dengan sepengetahuan anak agar tumbuh kepercayaan.
+      </p>
+    </div>
+  </main>
+
+  <footer>
+    <div class="wadah"><p style="margin:0">© {new Date().getFullYear()} LayarSehat · layarsehat.nasir.id</p></div>
+  </footer>
+
+  <style>
+    .langkah { padding-left: 1.15rem; margin: 0 0 1rem; }
+    .langkah li { margin-bottom: .5rem; }
+  </style>
+</Layout>

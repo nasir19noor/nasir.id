@@ -1,0 +1,372 @@
+---
+import Layout from '../../layouts/Layout.astro';
+const { id } = Astro.params;
+---
+
+<Layout title="Detail Perangkat">
+  <nav class="navbar">
+    <div class="wadah navbar-isi">
+      <a class="merek" href="/dasbor"><span>📱</span><span>LayarSehat</span></a>
+      <div class="nav-tautan">
+        <a href="/dasbor">← Kembali ke dasbor</a>
+        <button class="tombol sekunder kecil" id="tombol-keluar">Keluar</button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="wadah" style="padding-top:2rem; padding-bottom:3rem" data-device-id={id}>
+    <div id="galat" class="pesan galat sembunyi"></div>
+
+    <div id="kepala-perangkat">
+      <p class="kosong">Memuat perangkat…</p>
+    </div>
+
+    <div class="tab" role="tablist">
+      <button class="tab-tombol aktif" data-tab="aplikasi">Aplikasi</button>
+      <button class="tab-tombol" data-tab="pemakaian">Pemakaian</button>
+      <button class="tab-tombol" data-tab="pengaturan">Pengaturan</button>
+    </div>
+
+    <!-- ── Tab Aplikasi ── -->
+    <section id="tab-aplikasi" class="tab-isi">
+      <div class="saring">
+        <input id="cari" type="search" placeholder="Cari aplikasi…" style="max-width:280px" />
+        <select id="filter" style="max-width:200px">
+          <option value="semua">Semua aplikasi</option>
+          <option value="pending">Menunggu persetujuan</option>
+          <option value="blocked">Diblokir</option>
+          <option value="allowed">Diizinkan</option>
+          <option value="pengguna">Bukan aplikasi sistem</option>
+        </select>
+      </div>
+      <div class="kartu" style="padding:.5rem 1rem">
+        <div id="daftar-aplikasi"><p class="kosong">Memuat…</p></div>
+      </div>
+    </section>
+
+    <!-- ── Tab Pemakaian ── -->
+    <section id="tab-pemakaian" class="tab-isi sembunyi">
+      <div id="ringkas-pemakaian" class="kisi-ringkas"></div>
+      <div class="kartu" style="margin-top:1rem">
+        <h3>7 hari terakhir</h3>
+        <div id="grafik" class="grafik"></div>
+      </div>
+      <div class="kartu" style="margin-top:1rem">
+        <h3>Aplikasi paling sering dipakai</h3>
+        <div id="aplikasi-teratas"></div>
+      </div>
+    </section>
+
+    <!-- ── Tab Pengaturan ── -->
+    <section id="tab-pengaturan" class="tab-isi sembunyi">
+      <div id="pesan-simpan" class="pesan sukses sembunyi">Pengaturan tersimpan.</div>
+      <form id="form-pengaturan" class="kartu" style="max-width:520px">
+        <div class="kolom">
+          <label for="kebijakan">Aturan aplikasi baru</label>
+          <select id="kebijakan">
+            <option value="allow">Terbuka — aplikasi baru boleh dipakai kecuali saya blokir</option>
+            <option value="block_new">Ketat — aplikasi baru diblokir sampai saya setujui</option>
+          </select>
+          <p class="lembut" style="margin:.4rem 0 0">
+            Mode ketat cocok untuk anak yang lebih kecil: setiap aplikasi yang baru terpasang
+            langsung terkunci hingga Anda menyetujuinya dari tab Aplikasi.
+          </p>
+        </div>
+        <div class="kolom">
+          <label for="batas">Batas pemakaian harian (menit)</label>
+          <input id="batas" type="number" min="0" max="1440" placeholder="Kosongkan untuk tanpa batas" />
+        </div>
+        <div class="dua-kolom">
+          <div class="kolom">
+            <label for="tidur-mulai">Jam tidur mulai</label>
+            <input id="tidur-mulai" type="time" />
+          </div>
+          <div class="kolom">
+            <label for="tidur-selesai">Jam tidur selesai</label>
+            <input id="tidur-selesai" type="time" />
+          </div>
+        </div>
+        <button class="tombol" type="submit" id="simpan">Simpan Pengaturan</button>
+      </form>
+
+      <div class="kartu" style="max-width:520px; margin-top:1rem; border-color:#f0d5d1">
+        <h3 style="color:var(--merah)">Putuskan perangkat</h3>
+        <p class="lembut">
+          Perangkat berhenti menerima aturan dan seluruh riwayat pemakaiannya dihapus.
+          Tindakan ini tidak bisa dibatalkan.
+        </p>
+        <button class="tombol bahaya" id="hapus-perangkat">Putuskan &amp; Hapus</button>
+      </div>
+    </section>
+  </main>
+
+  <style>
+    .kartu-perangkat { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+    .tab { display: flex; gap: .25rem; margin: 1.5rem 0 1rem; border-bottom: 1px solid var(--garis); }
+    .tab-tombol {
+      background: none; border: none; border-bottom: 2px solid transparent;
+      padding: .6rem .9rem; font: inherit; font-size: .95rem; font-weight: 600;
+      color: var(--teks-lembut); cursor: pointer;
+    }
+    .tab-tombol.aktif { color: var(--hijau); border-bottom-color: var(--hijau); }
+    .saring { display: flex; gap: .6rem; margin-bottom: .85rem; flex-wrap: wrap; }
+    .dua-kolom { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+
+    .baris-aplikasi {
+      display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+      padding: .7rem .25rem; border-bottom: 1px solid var(--garis); flex-wrap: wrap;
+    }
+    .baris-aplikasi:last-child { border-bottom: none; }
+    .aplikasi-nama { font-weight: 600; }
+    .aplikasi-paket { font-size: .8rem; color: var(--teks-lembut); font-family: ui-monospace, monospace; }
+
+    .kisi-ringkas { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: .75rem; }
+    .ringkas { background: var(--putih); border: 1px solid var(--garis); border-radius: var(--radius); padding: 1rem; }
+    .ringkas-angka { font-size: 1.6rem; font-weight: 700; line-height: 1.2; }
+
+    .grafik { display: flex; align-items: flex-end; gap: .5rem; height: 170px; padding-top: .5rem; }
+    .batang-bungkus { flex: 1; display: flex; flex-direction: column; align-items: center; gap: .35rem; height: 100%; justify-content: flex-end; }
+    .batang { width: 100%; max-width: 46px; background: var(--hijau); border-radius: 5px 5px 0 0; min-height: 3px; }
+    .batang-label { font-size: .74rem; color: var(--teks-lembut); text-align: center; }
+
+    @media (max-width: 560px) { .dua-kolom { grid-template-columns: 1fr; } }
+  </style>
+
+  <script>
+    import { api, keluar, wajibMasuk, waktuLalu, formatDurasi, formatTanggal, escapeHtml } from '../../lib/api.js';
+
+    if (wajibMasuk()) {
+      const deviceId = document.querySelector('main').dataset.deviceId;
+      const galat = document.getElementById('galat');
+      let semuaAplikasi = [];
+
+      document.getElementById('tombol-keluar').addEventListener('click', keluar);
+
+      function tampilGalat(pesan) {
+        galat.textContent = pesan;
+        galat.classList.remove('sembunyi');
+      }
+
+      // ── Tab ──
+      document.querySelectorAll('.tab-tombol').forEach((tombol) => {
+        tombol.addEventListener('click', () => {
+          document.querySelectorAll('.tab-tombol').forEach((t) => t.classList.remove('aktif'));
+          document.querySelectorAll('.tab-isi').forEach((s) => s.classList.add('sembunyi'));
+          tombol.classList.add('aktif');
+          document.getElementById(`tab-${tombol.dataset.tab}`).classList.remove('sembunyi');
+          if (tombol.dataset.tab === 'pemakaian') muatPemakaian();
+        });
+      });
+
+      // ── Perangkat ──
+      async function muatPerangkat() {
+        try {
+          const d = await api(`/devices/${deviceId}`);
+          document.getElementById('kepala-perangkat').innerHTML = `
+            <div class="kartu kartu-perangkat">
+              <div>
+                <h1 style="font-size:1.5rem; margin-bottom:.2rem">${escapeHtml(d.device_name)}</h1>
+                <p class="lembut" style="margin:0">
+                  ${[d.brand, d.model].filter(Boolean).map(escapeHtml).join(' ') || 'Perangkat Android'}
+                  ${d.android_version ? ` · Android ${escapeHtml(d.android_version)}` : ''}
+                </p>
+                <p class="lembut" style="margin:.2rem 0 0">Terakhir aktif: ${waktuLalu(d.last_seen)}</p>
+              </div>
+              <div style="display:flex; gap:.4rem; flex-wrap:wrap">
+                ${d.default_policy === 'block_new'
+                  ? '<span class="lencana tunggu">Mode ketat</span>'
+                  : '<span class="lencana izin">Mode terbuka</span>'}
+                ${d.daily_limit_minutes ? `<span class="lencana sistem">Batas ${d.daily_limit_minutes} mnt/hari</span>` : ''}
+                ${d.bedtime_start ? `<span class="lencana sistem">Tidur ${d.bedtime_start}–${d.bedtime_end || ''}</span>` : ''}
+              </div>
+            </div>`;
+
+          document.getElementById('kebijakan').value = d.default_policy;
+          document.getElementById('batas').value = d.daily_limit_minutes ?? '';
+          document.getElementById('tidur-mulai').value = d.bedtime_start || '';
+          document.getElementById('tidur-selesai').value = d.bedtime_end || '';
+        } catch (err) {
+          tampilGalat(err.message);
+        }
+      }
+
+      // ── Aplikasi ──
+      function gambarAplikasi() {
+        const cari = document.getElementById('cari').value.toLowerCase();
+        const filter = document.getElementById('filter').value;
+
+        const hasil = semuaAplikasi.filter((a) => {
+          const cocokCari = !cari
+            || (a.app_name || '').toLowerCase().includes(cari)
+            || a.package_name.toLowerCase().includes(cari);
+          const cocokFilter =
+            filter === 'semua' ? true :
+            filter === 'pengguna' ? !a.is_system :
+            a.status === filter;
+          return cocokCari && cocokFilter;
+        });
+
+        const wadah = document.getElementById('daftar-aplikasi');
+        if (!hasil.length) {
+          wadah.innerHTML = `<p class="kosong">${semuaAplikasi.length
+            ? 'Tidak ada aplikasi yang cocok dengan pencarian.'
+            : 'Belum ada data aplikasi. Perangkat akan mengirimkannya saat pertama kali tersinkronisasi.'}</p>`;
+          return;
+        }
+
+        wadah.innerHTML = hasil.map((a) => {
+          const lencana =
+            a.status === 'blocked' ? '<span class="lencana blokir">Diblokir</span>' :
+            a.status === 'pending' ? '<span class="lencana tunggu">Menunggu persetujuan</span>' :
+            '<span class="lencana izin">Diizinkan</span>';
+
+          const aksi = a.status === 'blocked'
+            ? `<button class="tombol kecil" data-izinkan="${escapeHtml(a.package_name)}">Izinkan</button>`
+            : `<button class="tombol sekunder kecil" data-blokir="${escapeHtml(a.package_name)}">Blokir</button>`;
+
+          return `
+            <div class="baris-aplikasi">
+              <div style="min-width:0">
+                <div class="aplikasi-nama">
+                  ${escapeHtml(a.app_name || a.package_name)}
+                  ${a.is_system ? '<span class="lencana sistem">Sistem</span>' : ''}
+                  ${!a.is_installed ? '<span class="lencana sistem">Sudah dihapus</span>' : ''}
+                </div>
+                <div class="aplikasi-paket">${escapeHtml(a.package_name)}</div>
+                ${a.first_seen ? `<div class="lembut" style="font-size:.78rem">Terpasang sejak ${formatTanggal(a.first_seen)}</div>` : ''}
+              </div>
+              <div style="display:flex; gap:.5rem; align-items:center">${lencana}${aksi}</div>
+            </div>`;
+        }).join('');
+
+        wadah.querySelectorAll('[data-blokir]').forEach((t) =>
+          t.addEventListener('click', () => ubahStatus(t.dataset.blokir, 'blocked', t)));
+        wadah.querySelectorAll('[data-izinkan]').forEach((t) =>
+          t.addEventListener('click', () => ubahStatus(t.dataset.izinkan, 'allowed', t)));
+      }
+
+      async function ubahStatus(paket, status, tombol) {
+        tombol.disabled = true;
+        try {
+          await api(`/devices/${deviceId}/apps/${encodeURIComponent(paket)}`, {
+            method: 'PUT',
+            body: JSON.stringify({ status }),
+          });
+          const app = semuaAplikasi.find((a) => a.package_name === paket);
+          if (app) app.status = status;
+          gambarAplikasi();
+        } catch (err) {
+          tampilGalat(err.message);
+          tombol.disabled = false;
+        }
+      }
+
+      async function muatAplikasi() {
+        try {
+          semuaAplikasi = await api(`/devices/${deviceId}/apps`);
+          gambarAplikasi();
+        } catch (err) {
+          tampilGalat(err.message);
+        }
+      }
+
+      document.getElementById('cari').addEventListener('input', gambarAplikasi);
+      document.getElementById('filter').addEventListener('change', gambarAplikasi);
+
+      // ── Pemakaian ──
+      let pemakaianDimuat = false;
+      async function muatPemakaian() {
+        if (pemakaianDimuat) return;
+        pemakaianDimuat = true;
+        try {
+          const laporan = await api(`/devices/${deviceId}/usage?days=7`);
+          const hariIni = new Date().toISOString().slice(0, 10);
+          const detikHariIni = laporan.days.find((d) => d.usage_date === hariIni)?.total_seconds || 0;
+          const totalMinggu = laporan.days.reduce((n, d) => n + d.total_seconds, 0);
+          const rata = laporan.days.length ? Math.round(totalMinggu / laporan.days.length) : 0;
+
+          document.getElementById('ringkas-pemakaian').innerHTML = `
+            <div class="ringkas"><div class="lembut">Hari ini</div><div class="ringkas-angka">${formatDurasi(detikHariIni)}</div></div>
+            <div class="ringkas"><div class="lembut">Total 7 hari</div><div class="ringkas-angka">${formatDurasi(totalMinggu)}</div></div>
+            <div class="ringkas"><div class="lembut">Rata-rata harian</div><div class="ringkas-angka">${formatDurasi(rata)}</div></div>`;
+
+          const maks = Math.max(...laporan.days.map((d) => d.total_seconds), 1);
+          document.getElementById('grafik').innerHTML = laporan.days.length
+            ? laporan.days.map((d) => {
+                const tinggi = Math.round((d.total_seconds / maks) * 130);
+                const tanggal = new Date(d.usage_date + 'T00:00:00');
+                return `
+                  <div class="batang-bungkus" title="${formatDurasi(d.total_seconds)}">
+                    <div class="batang-label">${formatDurasi(d.total_seconds)}</div>
+                    <div class="batang" style="height:${tinggi}px"></div>
+                    <div class="batang-label">${tanggal.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric' })}</div>
+                  </div>`;
+              }).join('')
+            : '<p class="kosong" style="width:100%">Belum ada data pemakaian.</p>';
+
+          document.getElementById('aplikasi-teratas').innerHTML = laporan.top_apps.length
+            ? `<table>
+                 <thead><tr><th>Aplikasi</th><th style="text-align:right">Durasi</th></tr></thead>
+                 <tbody>${laporan.top_apps.map((a) => `
+                   <tr>
+                     <td>
+                       <div style="font-weight:600">${escapeHtml(a.app_name || a.package_name)}</div>
+                       <div class="aplikasi-paket">${escapeHtml(a.package_name)}</div>
+                     </td>
+                     <td style="text-align:right; white-space:nowrap">${formatDurasi(a.seconds)}</td>
+                   </tr>`).join('')}
+                 </tbody>
+               </table>`
+            : '<p class="kosong">Belum ada data pemakaian aplikasi.</p>';
+        } catch (err) {
+          pemakaianDimuat = false;
+          tampilGalat(err.message);
+        }
+      }
+
+      // ── Pengaturan ──
+      document.getElementById('form-pengaturan').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const simpan = document.getElementById('simpan');
+        const pesan = document.getElementById('pesan-simpan');
+        simpan.disabled = true;
+        simpan.textContent = 'Menyimpan…';
+
+        const batas = document.getElementById('batas').value;
+        try {
+          await api(`/devices/${deviceId}/settings`, {
+            method: 'PUT',
+            body: JSON.stringify({
+              default_policy: document.getElementById('kebijakan').value,
+              daily_limit_minutes: batas === '' ? -1 : Number(batas),
+              bedtime_start: document.getElementById('tidur-mulai').value,
+              bedtime_end: document.getElementById('tidur-selesai').value,
+            }),
+          });
+          pesan.classList.remove('sembunyi');
+          setTimeout(() => pesan.classList.add('sembunyi'), 3000);
+          muatPerangkat();
+          muatAplikasi();
+        } catch (err) {
+          tampilGalat(err.message);
+        } finally {
+          simpan.disabled = false;
+          simpan.textContent = 'Simpan Pengaturan';
+        }
+      });
+
+      document.getElementById('hapus-perangkat').addEventListener('click', async () => {
+        if (!confirm('Putuskan perangkat ini dan hapus seluruh riwayatnya?')) return;
+        try {
+          await api(`/devices/${deviceId}`, { method: 'DELETE' });
+          window.location.href = '/dasbor';
+        } catch (err) {
+          tampilGalat(err.message);
+        }
+      });
+
+      muatPerangkat();
+      muatAplikasi();
+    }
+  </script>
+</Layout>
