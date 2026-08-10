@@ -166,13 +166,14 @@ jobs:
 
     - name: Upload AAB and APK to S3
       run: |
-        aws s3 rm s3://layarsehat.nasir.id/android/LayarSehat.aab || true
+        # aws s3 rm s3://layarsehat.nasir.id/android/LayarSehat.aab || true
+        aws s3 rm s3://www.nasir.id/android/LayarSehat.aab || true        
         aws s3 cp apps/layarsehat/android/build/app/outputs/bundle/release/app-release.aab \
-          s3://layarsehat.nasir.id/android/LayarSehat.aab
+          s3://www.nasir.id/android/LayarSehat.aab
 
-        aws s3 rm s3://layarsehat.nasir.id/android/LayarSehat.apk || true
+        aws s3 rm s3://www.nasir.id/android/LayarSehat.apk || true
         aws s3 cp apps/layarsehat/android/build/app/outputs/flutter-apk/app-release.apk \
-          s3://layarsehat.nasir.id/android/LayarSehat.apk
+          s3://www.nasir.id/android/LayarSehat.apk
 
         echo "Android AAB and APK uploaded successfully"
 
