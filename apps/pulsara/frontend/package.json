@@ -20,7 +20,7 @@
     "autoprefixer": "^10.4.0",
     "postcss": "^8.5.10",
     "lucide-react": "^0.292.0",
-    "axios": "^1.15.0",
+    "axios": "^1.18.0",
     "react-hook-form": "^7.47.0",
     "@hookform/resolvers": "^3.3.2",
     "zod": "^3.22.4"
