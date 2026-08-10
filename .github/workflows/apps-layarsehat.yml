@@ -125,10 +125,22 @@ jobs:
         exit 1
 
   deploy-android:
-    needs: changes
-    if: ${{ needs.changes.outputs.android == 'true' || github.event_name == 'workflow_dispatch' }}
+    # Menunggu dua job lain selesai (berhasil, gagal, atau dilewati) supaya build
+    # Gradle tidak berebut memori dengan build Docker di runner yang sama.
+    needs: [changes, deploy-backend, deploy-frontend]
+    if: ${{ always() && (needs.changes.outputs.android == 'true' || github.event_name == 'workflow_dispatch') }}
     runs-on: [self-hosted, nasir-contabo]
     steps:
+    - name: Show runner resources
+      run: |
+        echo "── Memori ──"
+        free -h
+        echo "── Beban & CPU ──"
+        uptime
+        nproc
+        echo "── Ruang disk ──"
+        df -h "$HOME" | tail -1
+
     - name: Decode keystore
       run: |
         echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > $GITHUB_WORKSPACE/apps/layarsehat/android/android/app/my-release-key.keystore
