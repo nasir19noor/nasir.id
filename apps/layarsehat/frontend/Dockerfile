@@ -21,5 +21,3 @@ COPY --from=build /app/package.json ./
 
 EXPOSE 5005
 CMD ["node", "./dist/server/entry.mjs"]
-
-
