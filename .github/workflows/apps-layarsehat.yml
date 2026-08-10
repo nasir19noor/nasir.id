@@ -11,6 +11,19 @@ on:
   workflow_dispatch:
 
 jobs:
+  sonarqube:
+    runs-on: ubuntu-latest          # deliberately NOT self-hosted — see note below
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0            # SonarQube needs full history for blame/new-code
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v8
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        with:
+          args: -Dsonar.qualitygate.wait=true  
   changes:
     runs-on: [self-hosted, nasir-contabo]
     outputs:
@@ -37,7 +50,7 @@ jobs:
             - 'apps/layarsehat/android/**'
 
   deploy-backend:
-    needs: changes
+    needs: [changes, sonarqube]
     if: ${{ needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch' }}
     runs-on: [self-hosted, nasir-contabo]
     steps:
@@ -85,7 +98,7 @@ jobs:
       run: rm -f .env
 
   deploy-frontend:
-    needs: changes
+    needs: [changes, sonarqube]
     if: ${{ needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch' }}
     runs-on: [self-hosted, nasir-contabo]
     steps:
@@ -127,7 +140,7 @@ jobs:
   deploy-android:
     # Menunggu dua job lain selesai (berhasil, gagal, atau dilewati) supaya build
     # Gradle tidak berebut memori dengan build Docker di runner yang sama.
-    needs: [changes, deploy-backend, deploy-frontend]
+    needs: [changes, sonarqube, deploy-backend, deploy-frontend]
     if: ${{ always() && (needs.changes.outputs.android == 'true' || github.event_name == 'workflow_dispatch') }}
     runs-on: [self-hosted, nasir-contabo]
     steps:
