@@ -10,6 +10,7 @@ aws:
     instance_tenancy: "default"
     enable_dns_support: true
     enable_dns_hostnames: true
+    subnet_name: "nasir-subnet"
     subnet_count: 3
     subnet_mask: "24"
   s3:
