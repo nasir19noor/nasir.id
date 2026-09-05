@@ -54,3 +54,21 @@ def fixtures_today(db: Session = Depends(get_db)):
            .filter(Fixture.kickoff >= start, Fixture.kickoff < end)
            .order_by(Fixture.kickoff))
     return [to_out(f) for f in q.all()]
+
+
+@router.get("/upcoming", response_model=list[FixtureOut])
+def fixtures_upcoming(
+    limit: int = Query(5, ge=1, le=50, description="how many matches to return"),
+    db: Session = Depends(get_db),
+):
+    """The next `limit` matches that have not finished yet.
+
+    In-progress matches sort first (their kickoff is already in the past), so
+    the home page shows live action before the fixtures still to come. Returns
+    fewer rows — possibly none — when the season is over or before the draw.
+    """
+    q = (db.query(Fixture)
+           .filter(Fixture.status != "finished", Fixture.kickoff.isnot(None))
+           .order_by(Fixture.kickoff)
+           .limit(limit))
+    return [to_out(f) for f in q.all()]

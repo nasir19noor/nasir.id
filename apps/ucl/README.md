@@ -34,7 +34,8 @@ backend/
 ├─ schemas.py            — Pydantic response models
 ├─ routers/
 │  ├─ table.py           — /table (single 36-club league table + zones)
-│  ├─ fixtures.py        — /fixtures[?round=&matchday=&status=], /fixtures/today
+│  ├─ fixtures.py        — /fixtures[?round=&matchday=&status=], /fixtures/today,
+│  │                       /fixtures/upcoming?limit=
 │  ├─ knockout.py        — /knockout (rounds → two-leg ties with aggregates)
 │  ├─ scorers.py         — /scorers
 │  └─ teams.py           — /teams, /teams/{id} (club info + standing + fixtures + scorers)
@@ -49,7 +50,7 @@ backend/
 
 ```
 app/
-├─ page.tsx              — Dashboard (today + top 8 + top scorers)
+├─ page.tsx              — Dashboard (next 5 matches + top 8 + top scorers)
 ├─ table/page.tsx        — Full 36-club table with qualification zones
 ├─ fixtures/page.tsx     — League fixtures with a matchday filter
 ├─ knockout/page.tsx     — Play-offs → final as two-leg ties

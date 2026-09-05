@@ -5,16 +5,26 @@ import TeamBadge from '@/components/TeamBadge'
 
 export const revalidate = 300
 
+// How many upcoming matches the dashboard asks for. Fewer are shown when
+// fewer remain (end of season, or before the draw).
+const UPCOMING_LIMIT = 5
+
 export default async function HomePage() {
   // Pull everything in parallel for speed. Every call falls back to an empty
   // value so the page renders even before the draw populates the database.
-  const [table, today, scorers] = await Promise.all([
+  const [table, upcoming, scorers] = await Promise.all([
     api<Table>('/table').catch(() => ({ standings: [], matchdays: 0 }) as Table),
-    api<Fixture[]>('/fixtures/today').catch(() => [] as Fixture[]),
+    api<Fixture[]>(`/fixtures/upcoming?limit=${UPCOMING_LIMIT}`).catch(() => [] as Fixture[]),
     api<Scorer[]>('/scorers?limit=5').catch(() => [] as Scorer[]),
   ])
 
   const preseason = table.standings.length === 0
+
+  // Heading adapts to however many matches are actually left.
+  const upcomingTitle =
+    upcoming.length === 0 ? 'Next matches'
+    : upcoming.length === 1 ? 'Next match'
+    : `Next ${upcoming.length} matches`
 
   return (
     <div className="space-y-8">
@@ -43,11 +53,18 @@ export default async function HomePage() {
       )}
 
       <section>
-        <h2 className="mb-3 text-lg font-bold">Today&apos;s matches</h2>
+        <div className="mb-3 flex items-baseline justify-between">
+          <h2 className="text-lg font-bold">
+            {upcomingTitle}
+          </h2>
+          <Link href="/fixtures" className="text-sm text-night underline">
+            All fixtures →
+          </Link>
+        </div>
         <div className="card">
-          {today.length
-            ? <FixturesList fixtures={today} />
-            : <p className="p-4 text-sm text-black/60">No matches today.</p>}
+          {upcoming.length
+            ? <FixturesList fixtures={upcoming} />
+            : <p className="p-4 text-sm text-black/60">No upcoming matches.</p>}
         </div>
       </section>
 
