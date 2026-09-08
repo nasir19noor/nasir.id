@@ -35,6 +35,25 @@ def resolve_docx_path() -> str:
         pass
     return os.path.join(BANK_DIR, FALLBACK_DOCX)
 
+def exam_meta(path: str) -> dict:
+    """Display name and provider for the active bank, derived from the file.
+
+    The title is the docx's own Title property when the bank carries one
+    (the scraper stamps the exam's full name there); otherwise the filename
+    is prettified, so a bank dropped in without metadata still reads sensibly.
+    The provider is the bank/ subfolder the file sits in — aws, gcp, anthropic.
+    """
+    title = ""
+    try:
+        title = (Document(path).core_properties.title or "").strip()
+    except Exception:
+        pass
+    if not title:
+        title = os.path.splitext(os.path.basename(path))[0].replace("-", " ").replace("_", " ")
+    provider = os.path.basename(os.path.dirname(path)).upper()
+    return {"title": title, "provider": provider}
+
+
 # Option lines look like "A. text". The source is inconsistent — some options
 # are malformed as "B..Remove" or "C.Modify" (missing the space after the dot),
 # so the whitespace is optional and any leading dots/spaces are stripped below.
@@ -230,7 +249,9 @@ def parse_questions(path: str, keep_invalid: bool = False) -> list:
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    # Title and provider follow the active bank, so switching banks in
+    # config.json re-labels the page without touching the template.
+    return render_template("index.html", **exam_meta(resolve_docx_path()))
 
 
 @app.route("/api/questions")
@@ -245,7 +266,8 @@ def get_questions():
 def get_info():
     path = resolve_docx_path()
     questions = parse_questions(path)
-    return jsonify({"total": len(questions), "source": os.path.basename(path)})
+    return jsonify({"total": len(questions), "source": os.path.basename(path),
+                    **exam_meta(path)})
 
 
 @app.route("/api/validate")
