@@ -57,7 +57,8 @@ def exam_meta(path: str) -> dict:
 # Option lines look like "A. text". The source is inconsistent — some options
 # are malformed as "B..Remove" or "C.Modify" (missing the space after the dot),
 # so the whitespace is optional and any leading dots/spaces are stripped below.
-_OPTION_RE = re.compile(r"^([A-F])\.\s*(.+)$", re.DOTALL)
+# The range runs to H because some banks ask you to pick five of eight options.
+_OPTION_RE = re.compile(r"^([A-H])\.\s*(.+)$", re.DOTALL)
 
 
 def _channel_dominant(rgb_hex: str, dominant: str) -> bool:
@@ -103,7 +104,7 @@ def _has_green(para) -> bool:
 # that opens "Explanation:\nA. kms:GenerateDataKey\nHere's why...". Only the
 # contiguous letter lines at the very top are the answer(s); the per-option
 # "Why the others are wrong" list further down is intentionally excluded.
-_EXPL_LETTER_RE = re.compile(r"^([A-F])[.\s]")
+_EXPL_LETTER_RE = re.compile(r"^([A-H])[.\s]")
 
 
 def _answer_letters_from_explanation(expl_lines: list) -> list:

@@ -1,12 +1,14 @@
 {
   "_comment": "Selects which quiz bank (.docx) the app serves. 'active' is a path relative to this bank/ directory. Change it and click 'Start New Quiz' — no rebuild needed. The QUIZ_DOCX env var, if set, overrides this file.",
-  "active": "anthropic/claude-certified-architect-foundations.docx",
+  "active": "hashicorp/Hashicorp-Vault-Associate-003.docx",
   "available": [
     "anthropic/claude-certified-architect-foundations.docx",
     "aws/AWS-DevOps-Professional.docx",
     "aws/AWS-Generative-AI-Developer-Professional.docx",
     "aws/AWS-Security-Specialty.docx",
     "aws/AWS-Solution-Architect-Professional.docx",
-    "gcp/Professional-Cloud-Security-Engineer.docx"
+    "gcp/Professional-Cloud-Architect.docx",
+    "gcp/Professional-Cloud-Security-Engineer.docx",
+    "hashicorp/Hashicorp-Vault-Associate-003.docx"
   ]
 }
