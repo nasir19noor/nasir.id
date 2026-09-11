@@ -24,7 +24,7 @@ import requests
 from sqlalchemy.orm import Session
 
 from database import SessionLocal
-from models import Fixture, Player, Team
+from models import Fixture, MatchEvent, Player, Team
 from services.videos import apply_video_links
 
 logger = logging.getLogger(__name__)
@@ -182,6 +182,9 @@ def _parse_event(db: Session, ev: dict, idx: dict[str, Team]) -> dict | None:
         "kickoff":       kickoff,
         "status":        status_map.get(state, "scheduled"),
         "venue":         ((comp.get("venue") or {}).get("fullName")),
+        # ESPN reports 0 for matches it has no gate figure for; treat that as
+        # "unknown" rather than an empty stadium.
+        "attendance":    (_to_int(comp.get("attendance")) or None),
     }
 
 
@@ -197,6 +200,7 @@ def _upsert_fixture(db: Session, p: dict) -> None:
     fx.away_team_id = p["away"].id
     if p["kickoff"]: fx.kickoff = p["kickoff"]
     if p["venue"]:   fx.venue   = p["venue"]
+    if p["attendance"]: fx.attendance = p["attendance"]
     fx.status = p["status"]
     # ESPN reports score "0" before kickoff. Only trust scores once live or
     # finished, so standings never count unplayed games as 0-0 draws.
@@ -232,6 +236,87 @@ def _assign_matchdays(db: Session) -> int:
         fx.matchday = md
         prev_day = day
     return md
+
+
+def _goal_note(detail: dict) -> str | None:
+    """Short label for the kind of goal: Penalty, Own Goal, Header, Free-kick."""
+    if detail.get("ownGoal"):
+        return "Own Goal"
+    if detail.get("penaltyKick"):
+        return "Penalty"
+    text = ((detail.get("type") or {}).get("text") or "")
+    # "Goal - Header" / "Goal - Free-kick" / "Goal - Volley"
+    if " - " in text:
+        return text.split(" - ", 1)[1].strip() or None
+    return None
+
+
+def _rebuild_match_events(db: Session, events: list[dict],
+                          idx: dict[str, Team]) -> dict:
+    """Store each match's goals and cards from ESPN's per-event `details`.
+
+    A fixture's rows are replaced outright rather than merged: ESPN revises
+    scorers and minutes after full time, and these rows carry no state worth
+    keeping. Shootout kicks are skipped — they belong to the shootout score,
+    not the match timeline.
+    """
+    by_event = {f.espn_event_id: f for f in db.query(Fixture).all() if f.espn_event_id}
+    made, touched = 0, 0
+
+    for ev in events:
+        fx = by_event.get(str(ev.get("id") or ""))
+        comp = (ev.get("competitions") or [{}])[0]
+        details = comp.get("details") or []
+        if fx is None or not details:
+            continue
+
+        rows = []
+        for d in details:
+            if d.get("shootout"):
+                continue
+            if d.get("scoringPlay") and not d.get("shootout"):
+                kind = "goal"
+            elif d.get("redCard"):
+                kind = "red"
+            elif d.get("yellowCard"):
+                kind = "yellow"
+            else:
+                continue
+
+            athletes = d.get("athletesInvolved") or []
+            who = athletes[0] if athletes else {}
+            espn_team = str((who.get("team") or {}).get("id")
+                            or (d.get("team") or {}).get("id") or "")
+            team = idx.get(espn_team)
+            team_id = team.id if team else None
+            # An own goal counts for the opposing side, so file it there — the
+            # "Own Goal" note keeps the scorer's allegiance clear. Cards stay
+            # with the player's own team.
+            if kind == "goal" and d.get("ownGoal") and team_id is not None:
+                if team_id == fx.home_team_id:
+                    team_id = fx.away_team_id
+                elif team_id == fx.away_team_id:
+                    team_id = fx.home_team_id
+            clock = (d.get("clock") or {}).get("value")
+            rows.append(MatchEvent(
+                fixture_id=fx.id,
+                team_id=team_id,
+                kind=kind,
+                clock=float(clock) if clock is not None else 0.0,
+                minute=((d.get("clock") or {}).get("displayValue") or "")[:12] or None,
+                player=(who.get("fullName") or who.get("displayName") or None),
+                note=_goal_note(d) if kind == "goal" else None,
+            ))
+
+        db.query(MatchEvent).filter(MatchEvent.fixture_id == fx.id).delete(
+            synchronize_session=False)
+        for r in rows:
+            db.add(r)
+        made += len(rows)
+        touched += 1
+
+    db.flush()
+    return {"matches": touched, "events": made}
 
 
 # ─── Top scorers ──────────────────────────────────────────────────
@@ -350,6 +435,8 @@ def refresh_from_espn() -> dict:
 
         summary["matchdays"] = _stage("assign_matchdays",
                                       lambda: _assign_matchdays(db)) or 0
+        summary["match_events"] = _stage("match_events",
+                                         lambda: _rebuild_match_events(db, events, idx)) or {}
         summary["scorers"] = _stage("apply_goals",
                                     lambda: _apply_goal_counts(db, events, idx)) or {}
         # Curated highlight links live in a JSON file, not in ESPN. Re-applied

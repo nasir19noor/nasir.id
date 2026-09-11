@@ -41,6 +41,18 @@ no key) is the **sole** data source, fetched hourly by APScheduler
   plays (no squads); own goals and shootout kicks (stamped at clock 7200)
   are excluded.
 
+Per-match detail (goals and cards) comes from each event's `details` block
+and is rebuilt wholesale into `match_events` every refresh — ESPN revises
+scorers and minutes after full time, so the rows are disposable. Each row
+carries kind (`goal|yellow|red`), the ESPN display minute (`45+2'`), player,
+team and a goal note (Penalty / Own Goal / Header / …). **Own goals are filed
+against the team they count for**, not the scorer's, so summing a fixture's
+goal events per side reproduces the score exactly (asserted across all 18 MD1
+matches). Shootout kicks are excluded. `attendance` rides along on the fixture
+(ESPN reports 0 when unknown — stored as NULL). The fixtures list renders this
+as a native `<details>` accordion, which keeps the component server-rendered
+with no client JS.
+
 Highlight videos aren't in ESPN, so they're curated in
 `backend/data/match_videos.json` (club names, accent/case-insensitive) and
 written to `Fixture.video_url` at the end of every refresh by

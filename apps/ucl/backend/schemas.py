@@ -37,7 +37,19 @@ class FixtureOut(BaseModel):
     status:        str
     kickoff:       Optional[datetime]
     venue:         Optional[str]
+    attendance:    Optional[int] = None
     video_url:     Optional[str] = None   # highlights, when one is curated
+    events:        List["MatchEventOut"] = []   # goals and cards, chronological
+
+
+class MatchEventOut(BaseModel):
+    """A goal or card inside a match, ordered by clock."""
+    model_config = ConfigDict(from_attributes=True)
+    kind:    str                      # goal | yellow | red
+    minute:  Optional[str] = None     # "39'", "45+2'"
+    player:  Optional[str] = None
+    team_id: Optional[int] = None     # which side it belongs to
+    note:    Optional[str] = None     # Penalty | Own Goal | Header | …
 
 
 class StandingRow(BaseModel):

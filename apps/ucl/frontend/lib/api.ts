@@ -116,6 +116,14 @@ export type Team = {
   logo?: string | null
 }
 
+export type MatchEvent = {
+  kind: 'goal' | 'yellow' | 'red'
+  minute?: string | null
+  player?: string | null
+  team_id?: number | null
+  note?: string | null      // Penalty | Own Goal | Header | Free-kick | Volley
+}
+
 export type Fixture = {
   id: number
   round_code: 'league' | 'playoff' | 'r16' | 'qf' | 'sf' | 'final'
@@ -129,7 +137,9 @@ export type Fixture = {
   status: 'scheduled' | 'live' | 'finished'
   kickoff?: string | null
   venue?: string | null
+  attendance?: number | null
   video_url?: string | null
+  events?: MatchEvent[]
 }
 
 export type Standing = {

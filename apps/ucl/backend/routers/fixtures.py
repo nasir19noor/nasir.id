@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import Fixture
-from schemas import FixtureOut, TeamBase
+from schemas import FixtureOut, MatchEventOut, TeamBase
 
 router = APIRouter(prefix="/fixtures", tags=["fixtures"])
 
@@ -24,7 +24,9 @@ def to_out(f: Fixture) -> FixtureOut:
         status=f.status,
         kickoff=f.kickoff,
         venue=f.venue,
+        attendance=f.attendance,
         video_url=f.video_url,
+        events=[MatchEventOut.model_validate(e) for e in f.events],
     )
 
 

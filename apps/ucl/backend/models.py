@@ -6,7 +6,8 @@ fixtures appear, keyed by ESPN's stable team id. The league-phase draw lands
 in late August 2026 and fixtures materialise then.
 """
 from sqlalchemy import (
-    Column, Integer, String, Boolean, DateTime, ForeignKey, UniqueConstraint, func,
+    Column, Integer, String, Boolean, DateTime, Float, ForeignKey,
+    UniqueConstraint, func,
 )
 from sqlalchemy.orm import relationship
 from database import Base
@@ -67,6 +68,7 @@ class Fixture(Base):
     status        = Column(String, default="scheduled")  # scheduled | live | finished
     kickoff       = Column(DateTime(timezone=True))
     venue         = Column(String)
+    attendance    = Column(Integer)   # ESPN reports it for most, not all
     # Curated highlight video (services/videos.py); ESPN has no such field,
     # so refreshes never overwrite it.
     video_url     = Column(String)
@@ -76,3 +78,31 @@ class Fixture(Base):
 
     home_team = relationship("Team", foreign_keys=[home_team_id])
     away_team = relationship("Team", foreign_keys=[away_team_id])
+    events = relationship("MatchEvent", back_populates="fixture",
+                          cascade="all, delete-orphan",
+                          order_by="MatchEvent.clock")
+
+
+class MatchEvent(Base):
+    """A goal or card within a match, from ESPN's per-event `details` feed.
+
+    Rebuilt wholesale for a fixture on every refresh (ESPN can correct a
+    scorer or a minute after full time), so rows are disposable — nothing
+    references them and there is no natural key worth preserving.
+    """
+    __tablename__ = "match_events"
+    id          = Column(Integer, primary_key=True)
+    fixture_id  = Column(Integer, ForeignKey("fixtures.id", ondelete="CASCADE"),
+                         index=True, nullable=False)
+    team_id     = Column(Integer, ForeignKey("teams.id"), index=True)
+    # goal | yellow | red — what icon the UI draws.
+    kind        = Column(String(8), nullable=False)
+    # Seconds into the match; the sort key, since "45+2'" doesn't sort as text.
+    clock       = Column(Float, default=0.0)
+    minute      = Column(String(12))    # ESPN's display value, e.g. "45+2'"
+    player      = Column(String)
+    # Goal flavour for the UI: Header, Free-kick, Penalty, Own Goal, …
+    note        = Column(String(32))
+
+    fixture = relationship("Fixture", back_populates="events")
+    team    = relationship("Team")
