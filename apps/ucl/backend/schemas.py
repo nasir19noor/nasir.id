@@ -37,6 +37,7 @@ class FixtureOut(BaseModel):
     status:        str
     kickoff:       Optional[datetime]
     venue:         Optional[str]
+    video_url:     Optional[str] = None   # highlights, when one is curated
 
 
 class StandingRow(BaseModel):

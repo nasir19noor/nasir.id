@@ -41,6 +41,13 @@ def run_migrations() -> None:
             with engine.begin() as c:
                 c.execute(text(f"ALTER TABLE teams ADD COLUMN {col} {ddl}"))
 
+    if insp.has_table("fixtures"):
+        fcols = {c["name"] for c in insp.get_columns("fixtures")}
+        if "video_url" not in fcols:
+            logger.info("Migration: adding fixtures.video_url")
+            with engine.begin() as c:
+                c.execute(text("ALTER TABLE fixtures ADD COLUMN video_url VARCHAR"))
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

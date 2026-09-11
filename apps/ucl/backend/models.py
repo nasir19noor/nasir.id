@@ -67,6 +67,9 @@ class Fixture(Base):
     status        = Column(String, default="scheduled")  # scheduled | live | finished
     kickoff       = Column(DateTime(timezone=True))
     venue         = Column(String)
+    # Curated highlight video (services/videos.py); ESPN has no such field,
+    # so refreshes never overwrite it.
+    video_url     = Column(String)
     espn_event_id = Column(String, unique=True, index=True)
     updated_at    = Column(DateTime(timezone=True),
                            server_default=func.now(), onupdate=func.now())

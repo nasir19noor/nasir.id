@@ -1,0 +1,23 @@
+{
+  "_comment": "Highlight videos per fixture, matched on club names as they appear in the database (accents and case are ignored). Add an entry per matchday; unmatched rows are logged and skipped, so a typo is visible rather than silent.",
+  "videos": [
+    { "home": "AEK Athens",          "away": "LASK Linz",           "url": "https://www.youtube.com/watch?v=-ocIU_SJejc" },
+    { "home": "Club Brugge",         "away": "Aston Villa",         "url": "https://www.youtube.com/watch?v=KLTpLjMyhss" },
+    { "home": "Borussia Dortmund",   "away": "Villarreal",          "url": "https://www.youtube.com/watch?v=hmQQUwD2tV4" },
+    { "home": "FC Porto",            "away": "Manchester City",     "url": "https://www.youtube.com/watch?v=8R9gGztNm3I" },
+    { "home": "Lille",               "away": "Real Betis",          "url": "https://www.youtube.com/watch?v=6X8vLu2JgGI" },
+    { "home": "Real Madrid",         "away": "Internazionale",      "url": "https://www.youtube.com/watch?v=EBv3-fQRABM" },
+    { "home": "Barcelona",           "away": "Feyenoord Rotterdam", "url": "https://www.youtube.com/watch?v=CeEJIPQEens" },
+    { "home": "VfB Stuttgart",       "away": "Viking FK",           "url": "https://www.youtube.com/watch?v=XNdL6vK3ej4" },
+    { "home": "Liverpool",           "away": "Atlético Madrid",     "url": "https://www.youtube.com/watch?v=s2xZ75w8BiE" },
+    { "home": "Napoli",              "away": "Arsenal",             "url": "https://www.youtube.com/watch?v=EKDZV2yN3c8" },
+    { "home": "Paris Saint-Germain", "away": "Slovan Bratislava",   "url": "https://www.youtube.com/watch?v=wqZ4EHT0c_Q" },
+    { "home": "Sporting CP",         "away": "Galatasaray",         "url": "https://www.youtube.com/watch?v=hysDaT7-lVw" },
+    { "home": "Fenerbahce",          "away": "AS Roma",             "url": "https://www.youtube.com/watch?v=HC7RCqfvFLc" },
+    { "home": "PSV Eindhoven",       "away": "Shakhtar Donetsk",    "url": "https://www.youtube.com/watch?v=caoFZbVZlQU" },
+    { "home": "Bayern Munich",       "away": "Bodo/Glimt",          "url": "https://www.youtube.com/watch?v=7F2lXrRmSDc" },
+    { "home": "Como",                "away": "RB Leipzig",          "url": "https://www.youtube.com/watch?v=33vl5EJgR1E" },
+    { "home": "Manchester United",   "away": "Sabah FK",            "url": "https://www.youtube.com/watch?v=v-xGe7tnAzs&t=14s" },
+    { "home": "Slavia Prague",       "away": "Lens",                "url": "https://www.youtube.com/watch?v=RX7VY_aKvlM" }
+  ]
+}

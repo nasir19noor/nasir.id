@@ -99,6 +99,7 @@ export type Fixture = {
   status: 'scheduled' | 'live' | 'finished'
   kickoff?: string | null
   venue?: string | null
+  video_url?: string | null
 }
 
 export type Standing = {

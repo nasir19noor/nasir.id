@@ -41,6 +41,14 @@ no key) is the **sole** data source, fetched hourly by APScheduler
   plays (no squads); own goals and shootout kicks (stamped at clock 7200)
   are excluded.
 
+Highlight videos aren't in ESPN, so they're curated in
+`backend/data/match_videos.json` (club names, accent/case-insensitive) and
+written to `Fixture.video_url` at the end of every refresh by
+`services/videos.py` — ESPN upserts never touch that column. Add a matchday's
+links to the file and redeploy; an entry matching no fixture is logged as
+`unmatched` in the refresh summary rather than failing silently. The fixtures
+list shows a YouTube icon for any fixture that has one.
+
 Knockout ties (two legs + aggregate + winner) are computed in
 `routers/knockout.py` by grouping same-round fixtures by team pair; the
 final is single-leg and may carry a shootout score.

@@ -7,6 +7,20 @@ function statusBadge(status: Fixture['status']) {
   return null
 }
 
+function HighlightsLink({ url, match }: { url: string; match: string }) {
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer"
+       title={`Watch highlights: ${match}`}
+       aria-label={`Watch highlights: ${match}`}
+       className="flex h-6 w-6 shrink-0 items-center justify-center rounded
+                  text-black/40 transition hover:bg-red-600 hover:text-white">
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden="true">
+        <path d="M21.6 7.2a2.5 2.5 0 0 0-1.77-1.77C18.25 5 12 5 12 5s-6.25 0-7.83.43A2.5 2.5 0 0 0 2.4 7.2 26 26 0 0 0 2 12a26 26 0 0 0 .4 4.8 2.5 2.5 0 0 0 1.77 1.77C5.75 19 12 19 12 19s6.25 0 7.83-.43a2.5 2.5 0 0 0 1.77-1.77A26 26 0 0 0 22 12a26 26 0 0 0-.4-4.8ZM10 15.5v-7l6 3.5-6 3.5Z" />
+      </svg>
+    </a>
+  )
+}
+
 export default function FixturesList({ fixtures }: { fixtures: Fixture[] }) {
   if (!fixtures.length) {
     return <p className="p-4 text-sm text-black/60">No fixtures.</p>
@@ -15,6 +29,7 @@ export default function FixturesList({ fixtures }: { fixtures: Fixture[] }) {
     <ul className="divide-y divide-black/5">
       {fixtures.map(f => {
         const played = f.home_score != null && f.away_score != null
+        const label = `${f.home.name} vs ${f.away.name}`
         return (
           <li key={f.id}
               className="flex items-center gap-3 px-4 py-3 text-sm">
@@ -28,8 +43,9 @@ export default function FixturesList({ fixtures }: { fixtures: Fixture[] }) {
               </div>
               <div><TeamBadge team={f.away} /></div>
             </div>
-            <div className="flex w-12 shrink-0 items-center justify-end">
+            <div className="flex w-20 shrink-0 items-center justify-end gap-1.5">
               {statusBadge(f.status)}
+              {f.video_url && <HighlightsLink url={f.video_url} match={label} />}
             </div>
           </li>
         )

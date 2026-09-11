@@ -12,6 +12,7 @@ the draw lands and fixtures are published.
   4. Derive league-phase matchday numbers by clustering match dates — the
      soccer scoreboard has no week/matchday field.
   5. Rebuild top-scorer totals from scoring plays.
+  6. Re-apply curated highlight-video links (data/match_videos.json).
 """
 import os
 import logging
@@ -24,6 +25,7 @@ from sqlalchemy.orm import Session
 
 from database import SessionLocal
 from models import Fixture, Player, Team
+from services.videos import apply_video_links
 
 logger = logging.getLogger(__name__)
 
@@ -350,6 +352,10 @@ def refresh_from_espn() -> dict:
                                       lambda: _assign_matchdays(db)) or 0
         summary["scorers"] = _stage("apply_goals",
                                     lambda: _apply_goal_counts(db, events, idx)) or {}
+        # Curated highlight links live in a JSON file, not in ESPN. Re-applied
+        # here so a newly added link lands on the next refresh.
+        summary["videos"] = _stage("apply_videos",
+                                   lambda: apply_video_links(db)) or {}
         db.commit()
     finally:
         db.close()

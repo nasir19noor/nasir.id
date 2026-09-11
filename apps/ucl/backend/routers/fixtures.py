@@ -24,6 +24,7 @@ def to_out(f: Fixture) -> FixtureOut:
         status=f.status,
         kickoff=f.kickoff,
         venue=f.venue,
+        video_url=f.video_url,
     )
 
 
