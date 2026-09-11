@@ -73,3 +73,21 @@ def fixtures_upcoming(
            .order_by(Fixture.kickoff)
            .limit(limit))
     return [to_out(f) for f in q.all()]
+
+
+@router.get("/latest", response_model=list[FixtureOut])
+def fixtures_latest(
+    limit: int = Query(5, ge=1, le=50, description="how many results to return"),
+    db: Session = Depends(get_db),
+):
+    """The `limit` most recently finished matches, newest first.
+
+    The plain /fixtures list runs oldest-first, which puts the newest results
+    last — awkward for a "latest results" panel, hence this ordering. Empty
+    until the first match is played.
+    """
+    q = (db.query(Fixture)
+           .filter(Fixture.status == "finished", Fixture.kickoff.isnot(None))
+           .order_by(Fixture.kickoff.desc(), Fixture.id.desc())
+           .limit(limit))
+    return [to_out(f) for f in q.all()]

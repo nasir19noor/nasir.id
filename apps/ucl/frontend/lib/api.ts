@@ -59,6 +59,36 @@ export function fmtWIBTime(value?: string | number | Date | null): string {
   }) + ' WIB'
 }
 
+// ─── YouTube embedding ────────────────────────────────────────────
+// Curated highlight links are stored as ordinary watch URLs (sometimes with a
+// ?t= start offset). Turn one into an embeddable player URL, or null when the
+// link isn't a YouTube video we recognise — the caller then just omits the
+// player rather than rendering a broken frame.
+
+export function youtubeEmbedUrl(url?: string | null): string | null {
+  if (!url) return null
+  let id: string | null = null
+  let start: string | null = null
+  try {
+    const u = new URL(url)
+    const host = u.hostname.replace(/^www\./, '')
+    if (host === 'youtu.be') id = u.pathname.slice(1)
+    else if (host.endsWith('youtube.com')) {
+      id = u.searchParams.get('v')
+      if (!id && u.pathname.startsWith('/embed/')) id = u.pathname.slice(7)
+    }
+    const t = u.searchParams.get('t') || u.searchParams.get('start')
+    if (t) start = t.replace(/[^0-9]/g, '') || null
+  } catch {
+    return null
+  }
+  if (!id || !/^[\w-]{6,}$/.test(id)) return null
+  // nocookie host keeps the home page from setting tracking cookies on load.
+  const q = new URLSearchParams({ rel: '0' })
+  if (start) q.set('start', start)
+  return `https://www.youtube-nocookie.com/embed/${id}?${q}`
+}
+
 /**
  * Server-side fetch helper. Responses are cached for REVALIDATE_SECONDS;
  * pass `{ noStore: true }` to bypass the cache entirely.

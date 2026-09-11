@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { api, type Fixture, type Scorer, type Table } from '@/lib/api'
+import { api, fmtWIB, youtubeEmbedUrl, type Fixture, type Scorer, type Table } from '@/lib/api'
 import FixturesList from '@/components/FixturesList'
 import TeamBadge from '@/components/TeamBadge'
 
@@ -9,16 +9,27 @@ export const revalidate = 300
 // fewer remain (end of season, or before the draw).
 const UPCOMING_LIMIT = 5
 
+// Recent results shown under "Latest results"; the newest one that has a
+// highlight video is featured with an embedded player.
+const LATEST_LIMIT = 5
+
 export default async function HomePage() {
   // Pull everything in parallel for speed. Every call falls back to an empty
   // value so the page renders even before the draw populates the database.
-  const [table, upcoming, scorers] = await Promise.all([
+  const [table, upcoming, latest, scorers] = await Promise.all([
     api<Table>('/table').catch(() => ({ standings: [], matchdays: 0 }) as Table),
     api<Fixture[]>(`/fixtures/upcoming?limit=${UPCOMING_LIMIT}`).catch(() => [] as Fixture[]),
+    api<Fixture[]>(`/fixtures/latest?limit=${LATEST_LIMIT}`).catch(() => [] as Fixture[]),
     api<Scorer[]>('/scorers?limit=5').catch(() => [] as Scorer[]),
   ])
 
   const preseason = table.standings.length === 0
+
+  // Feature the newest result that actually has highlights; if none of them
+  // do, the section still lists the results, just without a player.
+  const featured = latest.find(f => youtubeEmbedUrl(f.video_url)) ?? null
+  const featuredEmbed = youtubeEmbedUrl(featured?.video_url)
+  const otherResults = latest.filter(f => f.id !== featured?.id)
 
   // Heading adapts to however many matches are actually left.
   const upcomingTitle =
@@ -49,6 +60,55 @@ export default async function HomePage() {
           The league-phase draw takes place in late August 2026 and matchday 1
           kicks off in mid-September. Clubs and fixtures appear here
           automatically once the draw is made.
+        </section>
+      )}
+
+      {latest.length > 0 && (
+        <section>
+          <div className="mb-3 flex items-baseline justify-between">
+            <h2 className="text-lg font-bold">
+              Latest results
+              {featured?.matchday ? ` — Matchday ${featured.matchday}` : ''}
+            </h2>
+            <Link href="/fixtures" className="text-sm text-night underline">
+              All fixtures →
+            </Link>
+          </div>
+
+          {featured && featuredEmbed && (
+            <div className="card mb-3 overflow-hidden">
+              <div className="aspect-video w-full bg-black">
+                <iframe
+                  src={featuredEmbed}
+                  title={`Highlights: ${featured.home.name} vs ${featured.away.name}`}
+                  className="h-full w-full border-0"
+                  loading="lazy"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                />
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-3 p-4">
+                <div className="grid flex-1 grid-cols-[1fr_auto_1fr] items-center gap-2">
+                  <div className="flex justify-end text-right"><TeamBadge team={featured.home} /></div>
+                  <div className="rounded bg-night px-3 py-1 text-center font-mono text-base font-bold text-chalk">
+                    {featured.home_score} - {featured.away_score}
+                  </div>
+                  <div><TeamBadge team={featured.away} /></div>
+                </div>
+                <span className="text-xs text-black/50">
+                  {featured.kickoff ? fmtWIB(featured.kickoff) : ''}
+                  {featured.venue ? ` · ${featured.venue}` : ''}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {otherResults.length > 0 && (
+            <div className="card">
+              <FixturesList fixtures={otherResults} />
+            </div>
+          )}
         </section>
       )}
 

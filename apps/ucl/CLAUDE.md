@@ -58,7 +58,9 @@ final is single-leg and may carry a shootout score.
 `/table` (standings + zones: 1-8 direct, 9-24 playoff, 25-36 out) ·
 `/fixtures[?round=&matchday=&status=]` · `/fixtures/today` ·
 `/fixtures/upcoming?limit=` (next unfinished matches, live first — the home
-page's "next 5") · `/knockout` ·
+page's "next 5") · `/fixtures/latest?limit=` (most recent finished matches,
+newest first — the home page's "latest results", whose top entry with a
+`video_url` gets an embedded player) · `/knockout` ·
 `/scorers?limit=` · `/teams` · `/teams/{id}` (club + standing + fixtures +
 scorers) · `/status` · `/docs`. Team rows carry `color`/`venue`/`city`/
 `country`, learned from ESPN competitor blocks and home-fixture venue
