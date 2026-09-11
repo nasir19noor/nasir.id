@@ -63,7 +63,7 @@ jobs:
           DATABASE_URL=$DB_URL
 
           ESPN_SCOREBOARD_URL=https://site.api.espn.com/apis/site/v2/sports/soccer/uefa.champions/scoreboard
-          ESPN_START_DATE=2026-09-14
+          ESPN_START_DATE=2026-08-01
           ESPN_END_DATE=2027-06-06
 
           SEASON_ACTIVE=true
@@ -76,6 +76,18 @@ jobs:
           ADMIN_USERNAME=admin
           ADMIN_PASSWORD=$ADMIN_PW
           EOF
+            aws s3 cp .env s3://ucl.nasir.id/backend/.env
+          fi
+
+          # The .env first bootstrapped for this app set ESPN_START_DATE to
+          # 2026-09-14, which turned out to fall *after* matchday 1 (played
+          # 8-10 Sep 2026): the opening 18 fixtures were never fetched, so the
+          # table sat empty at 0-0. The container reads this file via
+          # --env-file, so it overrides the code default — correct it in place
+          # and push it back to S3 so the fix sticks.
+          if grep -q '^ESPN_START_DATE=2026-09-14' .env 2>/dev/null; then
+            echo "Correcting stale ESPN_START_DATE (2026-09-14 -> 2026-08-01)..."
+            sed -i 's/^ESPN_START_DATE=2026-09-14$/ESPN_START_DATE=2026-08-01/' .env
             aws s3 cp .env s3://ucl.nasir.id/backend/.env
           fi
 
