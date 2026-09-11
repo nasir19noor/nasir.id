@@ -56,7 +56,7 @@ class StandingRow(BaseModel):
 
 class TableOut(BaseModel):
     standings: List[StandingRow]
-    matchdays: int   # highest matchday seen so far (0 before the draw)
+    matchdays: int   # matchdays fully played so far (0 before MD1 finishes)
 
 
 # ─── Knockout ties (two legs + aggregate) ─────────────────────────

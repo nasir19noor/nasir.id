@@ -31,9 +31,13 @@ ESPN_URL = os.getenv(
     "ESPN_SCOREBOARD_URL",
     "https://site.api.espn.com/apis/site/v2/sports/soccer/uefa.champions/scoreboard",
 )
-# Fixed season window: league phase MD1 (16 Sep 2026) → final (Jun 2027).
-# Starting after the August qualifying rounds keeps qualifiers out of the DB.
-ESPN_START_DATE = os.getenv("ESPN_START_DATE", "2026-09-14")
+# Fixed season window: league phase MD1 → final (Jun 2027). MD1 was played
+# 8-10 Sep 2026, not mid-September as first assumed, and a window starting
+# after it silently cost the table its only played matchday — so the window
+# opens well before the season. Qualifying rounds cannot leak in: ESPN serves
+# them under a different league code (this endpoint has no events at all
+# before MD1), and any unmapped season.slug is ignored regardless.
+ESPN_START_DATE = os.getenv("ESPN_START_DATE", "2026-08-01")
 ESPN_END_DATE   = os.getenv("ESPN_END_DATE",   "2027-06-06")
 # One league matchday is 18 matches over 2-3 days; 10-day chunks stay well
 # under ESPN's ~100-event response cap.

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy import func
+from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -13,9 +13,17 @@ router = APIRouter(prefix="/table", tags=["table"])
 @router.get("", response_model=TableOut)
 def get_table(db: Session = Depends(get_db)):
     rows = league_table(db)
-    max_md = (db.query(func.max(Fixture.matchday))
-                .filter(Fixture.round_code == "league")
-                .scalar()) or 0
+    # Matchdays *played*, not scheduled: the full 8-matchday calendar is in the
+    # database from the moment the draw is published, so counting every
+    # matchday that exists would report 8 before a ball is kicked. A matchday
+    # counts once all of its fixtures are finished.
+    played = (db.query(Fixture.matchday)
+                .filter(Fixture.round_code == "league",
+                        Fixture.matchday.isnot(None))
+                .group_by(Fixture.matchday)
+                .having(func.count(Fixture.id) ==
+                        func.sum(case((Fixture.status == "finished", 1), else_=0)))
+                .count())
     return TableOut(
         standings=[
             StandingRow(
@@ -27,5 +35,5 @@ def get_table(db: Session = Depends(get_db)):
             )
             for r in rows
         ],
-        matchdays=int(max_md),
+        matchdays=int(played),
     )

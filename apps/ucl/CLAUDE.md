@@ -18,8 +18,14 @@ no key) is the **sole** data source, fetched hourly by APScheduler
 `services/espn_fetcher.py`:
 
 - Fetches the fixed season window `ESPN_START_DATE..ESPN_END_DATE`
-  (2026-09-14 → 2027-06-06, post-qualifying) in 10-day chunks (ESPN caps
-  ~100 events/response).
+  (2026-08-01 → 2027-06-06) in 10-day chunks (ESPN caps ~100
+  events/response). **The window must open before matchday 1, which was
+  played 8-10 Sep 2026** — the original 2026-09-14 start silently dropped
+  MD1's 18 fixtures, leaving the table at 0-0 for every club. Qualifiers
+  can't leak in: ESPN serves them under a different league code (this
+  endpoint returns nothing before MD1) and unmapped slugs are ignored.
+  The date also lives in the S3 `.env`, which overrides the code default —
+  the workflow rewrites a stale value in place.
 - **Teams are upserted dynamically** from event competitor blocks, keyed by
   ESPN team id (`Team.espn_id`); crest URL in `Team.logo`. Empty DB before
   the draw (late Aug 2026) is expected — the site self-populates.
