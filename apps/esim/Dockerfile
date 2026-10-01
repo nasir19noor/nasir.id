@@ -23,5 +23,3 @@ EXPOSE 6000
 CMD ["gunicorn", "--workers=1", "--bind=0.0.0.0:6000", "--timeout=120", "app:app"]
 
 
-
-
