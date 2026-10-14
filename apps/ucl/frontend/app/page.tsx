@@ -9,9 +9,16 @@ export const revalidate = 300
 // fewer remain (end of season, or before the draw).
 const UPCOMING_LIMIT = 5
 
-// Recent results shown under "Latest results"; the newest one that has a
-// highlight video is featured with an embedded player.
+// Recent results listed under "Latest results".
 const LATEST_LIMIT = 5
+
+// How far back to look for a highlight video to feature. Highlight links are
+// curated by hand and land hours or days after a match, by which time that
+// match has usually dropped out of the few results listed above — searching
+// only those left the player showing a previous matchday, then nothing at
+// all, while newer highlights sat in the database unused. Two matchdays'
+// worth of lookback keeps the newest available highlight reachable.
+const VIDEO_LOOKBACK = 40
 
 export default async function HomePage() {
   // Pull everything in parallel for speed. Every call falls back to an empty
@@ -19,17 +26,19 @@ export default async function HomePage() {
   const [table, upcoming, latest, scorers] = await Promise.all([
     api<Table>('/table').catch(() => ({ standings: [], matchdays: 0 }) as Table),
     api<Fixture[]>(`/fixtures/upcoming?limit=${UPCOMING_LIMIT}`).catch(() => [] as Fixture[]),
-    api<Fixture[]>(`/fixtures/latest?limit=${LATEST_LIMIT}`).catch(() => [] as Fixture[]),
+    api<Fixture[]>(`/fixtures/latest?limit=${VIDEO_LOOKBACK}`).catch(() => [] as Fixture[]),
     api<Scorer[]>('/scorers?limit=5').catch(() => [] as Scorer[]),
   ])
 
   const preseason = table.standings.length === 0
 
-  // Feature the newest result that actually has highlights; if none of them
-  // do, the section still lists the results, just without a player.
+  // The listed results are the newest few; the featured highlight is the
+  // newest match with a video anywhere in the lookback window, so a player
+  // keeps showing even once that match is no longer among those listed.
+  const results = latest.slice(0, LATEST_LIMIT)
   const featured = latest.find(f => youtubeEmbedUrl(f.video_url)) ?? null
   const featuredEmbed = youtubeEmbedUrl(featured?.video_url)
-  const otherResults = latest.filter(f => f.id !== featured?.id)
+  const otherResults = results.filter(f => f.id !== featured?.id)
 
   // Heading adapts to however many matches are actually left.
   const upcomingTitle =
@@ -68,7 +77,7 @@ export default async function HomePage() {
           <div className="mb-3 flex items-baseline justify-between">
             <h2 className="text-lg font-bold">
               Latest results
-              {featured?.matchday ? ` — Matchday ${featured.matchday}` : ''}
+              {results[0]?.matchday ? ` — Matchday ${results[0].matchday}` : ''}
             </h2>
             <Link href="/fixtures" className="text-sm text-night underline">
               All fixtures →
@@ -77,6 +86,14 @@ export default async function HomePage() {
 
           {featured && featuredEmbed && (
             <div className="card mb-3 overflow-hidden">
+              <div className="flex items-baseline justify-between px-4 pt-3 pb-2">
+                <span className="text-xs font-semibold uppercase tracking-wide text-black/50">
+                  Highlights
+                </span>
+                {featured.matchday && (
+                  <span className="text-xs text-black/40">Matchday {featured.matchday}</span>
+                )}
+              </div>
               <div className="aspect-video w-full bg-black">
                 <iframe
                   src={featuredEmbed}
