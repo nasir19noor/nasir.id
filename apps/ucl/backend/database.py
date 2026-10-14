@@ -11,6 +11,16 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL is not set")
 
+# Name the Postgres driver explicitly. SQLAlchemy 2.1 changed the DBAPI a bare
+# "postgresql://" URL resolves to, from psycopg2 to psycopg (v3); requirements
+# installs psycopg2-binary, so an unpinned rebuild picking up 2.1 crashed the
+# container on import with "No module named 'psycopg'". Spelling out the
+# dialect works the same on 2.0 and 2.1, whatever the .env carries.
+for _scheme in ("postgresql://", "postgres://"):
+    if DATABASE_URL.startswith(_scheme):
+        DATABASE_URL = "postgresql+psycopg2://" + DATABASE_URL[len(_scheme):]
+        break
+
 # Managed Postgres providers usually require SSL; allow opt-out via env.
 # sslmode is Postgres-specific — omit it for sqlite (local dev/tests).
 connect_args = (
