@@ -18,6 +18,9 @@
     { "home": "Bayern Munich",       "away": "Bodo/Glimt",          "url": "https://www.youtube.com/watch?v=7F2lXrRmSDc" },
     { "home": "Como",                "away": "RB Leipzig",          "url": "https://www.youtube.com/watch?v=33vl5EJgR1E" },
     { "home": "Manchester United",   "away": "Sabah FK",            "url": "https://www.youtube.com/watch?v=v-xGe7tnAzs&t=14s" },
-    { "home": "Slavia Prague",       "away": "Lens",                "url": "https://www.youtube.com/watch?v=RX7VY_aKvlM" }
+    { "home": "Slavia Prague",       "away": "Lens",                "url": "https://www.youtube.com/watch?v=RX7VY_aKvlM" },
+
+    { "home": "Lens",                "away": "Sporting CP",         "url": "https://www.youtube.com/watch?v=d0eGh_fZ0gc" },
+    { "home": "Sabah FK",            "away": "Slavia Prague",       "url": "https://www.youtube.com/watch?v=YHTUaoLWp5Y" }
   ]
 }
