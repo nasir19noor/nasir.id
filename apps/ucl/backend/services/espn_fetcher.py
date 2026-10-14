@@ -41,9 +41,9 @@ ESPN_URL = os.getenv(
 # before MD1), and any unmapped season.slug is ignored regardless.
 ESPN_START_DATE = os.getenv("ESPN_START_DATE", "2026-08-01")
 ESPN_END_DATE   = os.getenv("ESPN_END_DATE",   "2027-06-06")
-# One league matchday is 18 matches over 2-3 days; 10-day chunks stay well
+# The scoreboard is queried one calendar month at a time (see _fetch_events).
+# A month holds at most two or three matchdays — 36-54 events — comfortably
 # under ESPN's ~100-event response cap.
-ESPN_CHUNK_DAYS = int(os.getenv("ESPN_CHUNK_DAYS", "10"))
 
 # ESPN tags each event's round via season.slug (verified against the 2025/26
 # season). Anything unmapped is ignored — e.g. qualifying legs.
@@ -62,10 +62,11 @@ LEAGUE_MATCHDAYS = 8
 # ─── Fetch ────────────────────────────────────────────────────────
 
 def _fetch_window() -> tuple[date, date]:
-    """±1-day buffer guards against timezone edges on first/last match days."""
+    """The configured season window. Only the months are significant, since
+    whole months are requested, so no timezone-edge buffer is needed."""
     try:
-        s = date.fromisoformat(ESPN_START_DATE) - timedelta(days=1)
-        e = date.fromisoformat(ESPN_END_DATE) + timedelta(days=1)
+        s = date.fromisoformat(ESPN_START_DATE)
+        e = date.fromisoformat(ESPN_END_DATE)
         return s, e
     except ValueError:
         logger.warning("Invalid ESPN_START_DATE/ESPN_END_DATE; using rolling window")
@@ -73,28 +74,56 @@ def _fetch_window() -> tuple[date, date]:
         return today - timedelta(days=30), today + timedelta(days=30)
 
 
+def _season_months(start: date, end: date) -> list[str]:
+    """The YYYYMM keys covering start..end inclusive."""
+    months, y, m = [], start.year, start.month
+    while (y, m) <= (end.year, end.month):
+        months.append(f"{y}{m:02d}")
+        y, m = (y + 1, 1) if m == 12 else (y, m + 1)
+    return months
+
+
 def _fetch_events() -> list[dict]:
-    """Fetch all events across the season window, chunked and de-duplicated."""
+    """Fetch all events across the season window, by month, de-duplicated.
+
+    One request per calendar month (`dates=YYYYMM`). ESPN used to accept a
+    `dates=YYYYMMDD-YYYYMMDD` range and the season was walked in 10-day
+    chunks, but that form started returning HTTP 400 — which silently froze
+    the whole dataset, since every chunk failed and a failed chunk is skipped.
+    Months are also fewer requests than 10-day chunks were.
+
+    Raises when every month fails, so a repeat of that outage surfaces as a
+    refresh error instead of a successful no-op.
+    """
     start, end = _fetch_window()
+    months = _season_months(start, end)
     events_by_id: dict[str, dict] = {}
-    cur = start
-    step = timedelta(days=ESPN_CHUNK_DAYS)
-    while cur <= end:
-        chunk_end = min(cur + step - timedelta(days=1), end)
-        params = {"dates": f"{cur.strftime('%Y%m%d')}-{chunk_end.strftime('%Y%m%d')}"}
+    failed: list[str] = []
+
+    for key in months:
         try:
-            r = requests.get(ESPN_URL, params=params, timeout=20)
+            r = requests.get(ESPN_URL, params={"dates": key}, timeout=20)
             r.raise_for_status()
             batch = r.json().get("events", []) or []
             for ev in batch:
                 events_by_id[str(ev.get("id") or id(ev))] = ev
             if len(batch) >= 100:
-                logger.warning("ESPN chunk %s hit the ~100-event cap; "
-                               "reduce ESPN_CHUNK_DAYS", params["dates"])
+                logger.warning("ESPN month %s hit the ~100-event cap; "
+                               "some fixtures may be missing", key)
         except Exception as e:
-            logger.warning("ESPN fetch failed for %s: %s", params["dates"], e)
-        cur = chunk_end + timedelta(days=1)
-    logger.info("ESPN fetch: %d events across %s..%s", len(events_by_id), start, end)
+            failed.append(key)
+            logger.warning("ESPN fetch failed for %s: %s", key, e)
+
+    if failed and len(failed) == len(months):
+        raise RuntimeError(
+            f"every ESPN month request failed ({len(failed)}/{len(months)}): "
+            f"{', '.join(failed)} — the scoreboard API may have changed")
+    if failed:
+        logger.warning("ESPN fetch: %d of %d months failed: %s",
+                       len(failed), len(months), ", ".join(failed))
+
+    logger.info("ESPN fetch: %d events across %s..%s (%d months)",
+                len(events_by_id), start, end, len(months))
     return list(events_by_id.values())
 
 
@@ -416,6 +445,13 @@ def refresh_from_espn() -> dict:
         events = _stage("fetch_events", _fetch_events) or []
         summary["events"] = len(events)
         if not events:
+            # Returning quietly here once let a month of dead fetches look
+            # like healthy refreshes: /status kept advancing last_refresh
+            # while the data stood still. Make it visible instead.
+            if not summary["errors"]:
+                summary["errors"].append(
+                    {"stage": "fetch_events",
+                     "error": "no events returned by ESPN; data left unchanged"})
             return summary
 
         idx: dict[str, Team] = {t.espn_id: t for t in db.query(Team).all()}

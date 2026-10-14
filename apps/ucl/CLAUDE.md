@@ -18,8 +18,16 @@ no key) is the **sole** data source, fetched hourly by APScheduler
 `services/espn_fetcher.py`:
 
 - Fetches the fixed season window `ESPN_START_DATE..ESPN_END_DATE`
-  (2026-08-01 → 2027-06-06) in 10-day chunks (ESPN caps ~100
-  events/response). **The window must open before matchday 1, which was
+  (2026-08-01 → 2027-06-06) **one calendar month per request**
+  (`dates=YYYYMM`, 11 requests). ESPN once accepted
+  `dates=YYYYMMDD-YYYYMMDD` and the season was walked in 10-day chunks, but
+  in Oct 2026 that form began returning **HTTP 400** — and since a failed
+  chunk is skipped, *every* chunk failing froze the whole dataset at MD1
+  while `last_refresh` kept advancing. Single dates and whole months still
+  work; a month holds at most 2-3 matchdays (36-54 events), under the ~100
+  cap. `_fetch_events()` now raises when every month fails, and a zero-event
+  fetch is recorded as a refresh error, so the same outage cannot look
+  healthy again — check `GET /admin/last-summary` when data looks stale. **The window must open before matchday 1, which was
   played 8-10 Sep 2026** — the original 2026-09-14 start silently dropped
   MD1's 18 fixtures, leaving the table at 0-0 for every club. Qualifiers
   can't leak in: ESPN serves them under a different league code (this
