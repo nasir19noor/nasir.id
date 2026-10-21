@@ -3,6 +3,6 @@ resource "cloudflare_record" "vault_nasir_id" {
   name    = "vault.nasir.id"
   content = "62.169.18.141"
   type    = "A"
-  proxied = true
-  ttl     = 1
+  proxied = false
+  ttl     = 3600
 }
