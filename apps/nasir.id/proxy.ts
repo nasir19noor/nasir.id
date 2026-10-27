@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   // Handle upload routes with larger body size limits
   if (request.nextUrl.pathname.startsWith('/api/upload')) {
     // Add headers to handle large uploads

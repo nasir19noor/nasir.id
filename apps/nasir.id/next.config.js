@@ -17,9 +17,10 @@ const nextConfig = {
             },
         ],
     },
-    // Increase body size limit for file uploads
+    // Kept out of the server bundle (native binary). Top-level since
+    // Next 15; it was experimental.serverComponentsExternalPackages before.
+    serverExternalPackages: ['sharp'],
     experimental: {
-        serverComponentsExternalPackages: ['sharp'],
         // Increase body parser limit for App Router
         serverActions: {
             bodySizeLimit: '50mb',

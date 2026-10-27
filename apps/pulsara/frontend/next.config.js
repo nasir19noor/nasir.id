@@ -3,8 +3,12 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'https://api.pulsara.nasir.id',
   },
+  // remotePatterns replaces the deprecated `domains` (Next 16).
   images: {
-    domains: ['threads.net', 'scontent.cdninstagram.com'],
+    remotePatterns: [
+      { protocol: 'https', hostname: 'threads.net' },
+      { protocol: 'https', hostname: 'scontent.cdninstagram.com' },
+    ],
   },
   output: 'standalone',
 }

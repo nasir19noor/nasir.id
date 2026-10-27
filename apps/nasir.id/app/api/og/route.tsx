@@ -75,7 +75,9 @@ export async function GET(request: NextRequest) {
               >
                 NN
               </div>
-              <div>
+              {/* Satori needs an explicit display on any div with more than
+                  one child; without it the whole image fails (502). */}
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <div style={{ fontSize: 28, fontWeight: 800, color: '#1e293b' }}>
                   Nasir Noor
                 </div>

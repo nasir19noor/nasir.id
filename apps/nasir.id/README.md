@@ -35,7 +35,7 @@ A modern, responsive portfolio website built with Next.js, featuring a comprehen
 ## 🛠️ Tech Stack
 
 ### Frontend
-- **Next.js 14** - React framework with App Router
+- **Next.js 16** - React framework with App Router (React 19, Node 22)
 - **TypeScript** - Type-safe development
 - **Tailwind CSS** - Utility-first CSS framework
 - **Lucide React** - Modern icon library
