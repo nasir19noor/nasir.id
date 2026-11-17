@@ -5,7 +5,8 @@ Authentication — single-user JWT auth
 import os
 from datetime import datetime, timedelta
 from passlib.context import CryptContext
-from jose import JWTError, jwt
+import jwt
+from jwt import InvalidTokenError as JWTError
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 

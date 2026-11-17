@@ -59,7 +59,7 @@ async def auth_middleware(request, call_next):
     from fastapi.security import HTTPAuthorizationCredentials
     try:
         token = auth_header.split(" ", 1)[1]
-        from jose import jwt as _jwt, JWTError
+        import jwt as _jwt
         import os as _os
         payload = _jwt.decode(token, _os.getenv("SECRET_KEY", "changeme"), algorithms=[_os.getenv("ALGORITHM", "HS256")])
         if not payload.get("sub"):
